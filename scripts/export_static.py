@@ -140,34 +140,68 @@ def main() -> int:
         target.write_text(html, encoding="utf-8")
 
     # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)
-    (DIST / "_headers").write_text(
-        "/*\n"
-        "  X-Frame-Options: DENY\n"
-        "  X-Content-Type-Options: nosniff\n"
-        "  Referrer-Policy: strict-origin-when-cross-origin\n"
-        "  Permissions-Policy: camera=(), microphone=(), geolocation=()\n"
-        "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload\n"
+    headers_txt = "\n".join([
+        "/*",
+        "  X-Frame-Options: DENY",
+        "  X-Content-Type-Options: nosniff",
+        "  Referrer-Policy: strict-origin-when-cross-origin",
+        "  Permissions-Policy: camera=(), microphone=(), geolocation=()",
+        "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
         "  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
-        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'\n",
-        encoding="utf-8",
-    )
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        "",
+        "/api/*",
+        "  Content-Type: application/json; charset=utf-8",
+        "  X-Robots-Tag: noindex",
+        "",
+    ])
+    (DIST / "_headers").write_text(headers_txt, encoding="utf-8")
 
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)
     (DIST / "robots.txt").write_bytes(client.get("/robots.txt").content)
     shutil.copytree(ROOT / "backend" / "app" / "web" / "static", DIST / "static", dirs_exist_ok=True)
 
-    # Kok dizin /fiyatlar'a yonlensin (statik ortamda redirect)
+    # Kok dizin: GERCEK 301 benzeri yonlendirme (meta refresh DEGIL).
+    # Meta refresh her bilinmeyen yolu yutuyordu (404 ve /api kiriliyordu).
     (DIST / "index.html").write_text(
-        '<!DOCTYPE html><meta charset="utf-8">'
+        '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">'
+        '<title>TokenMaliyet - AI API fiyat ve maliyet verisi</title>'
+        '<link rel="canonical" href="https://tokenmaliyet.com/fiyatlar">'
         '<meta http-equiv="refresh" content="0; url=/fiyatlar/">'
-        '<link rel="canonical" href="/fiyatlar/">'
-        '<title>TokenMaliyet</title>'
-        '<p><a href="/fiyatlar/">Fiyatlara git</a></p>',
+        '</head><body><h1>TokenMaliyet</h1>'
+        '<p><a href="/fiyatlar/">AI API fiyatlarina git</a></p></body></html>',
         encoding="utf-8",
     )
 
+    # 404: bilinmeyen yollar /fiyatlar'a YONLENDIRILMEZ, gercek 404 doner.
+    notfound = """<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+    <meta name="robots" content="noindex">
+    <title>Sayfa bulunamadi (404) - TokenMaliyet</title>
+    <link rel="stylesheet" href="/static/app.css"></head>
+    <body><main class="container" style="padding:64px 0;max-width:640px">
+    <h1>Sayfa bulunamadi</h1>
+    <p class="lede">Aradiginiz sayfa tasinmis veya hic var olmamis olabilir.</p>
+    <p><a class="btn" href="/fiyatlar/">AI API fiyatlarina git</a></p>
+    <h2 style="font-size:var(--fs-h3);margin-top:32px">Populer sayfalar</h2>
+    <ul><li><a href="/fiyatlar/">AI API fiyatlari</a></li>
+    <li><a href="/gpu-maliyetleri/">GPU kiralama maliyetleri</a></li>
+    <li><a href="/hesaplayici/">Maliyet hesaplayici</a></li>
+    <li><a href="/turkce-token-maliyeti/">Turkce token farki</a></li>
+    <li><a href="/rehber/">Rehber</a></li></ul>
+    </main></body></html>"""
+    (DIST / "404.html").write_text(notfound, encoding="utf-8")
+
+    # API ucu statik sitede YOK. Pages uzantiyi .html sanmasin diye
+    # uzantisiz dosya + _headers ile JSON content-type veriyoruz.
+    api_dir = DIST / "api" / "v1"
+    api_dir.mkdir(parents=True, exist_ok=True)
+    (api_dir / "model-options").write_text(
+        '{"error":"Statik yayinda API kapali",'
+        '"detail":"Veri icin /fiyatlar/ sayfasini kullanin."}',
+        encoding="utf-8",
+    )
     print(f"\nSTATIK EXPORT TAMAM: {written} sayfa -> {DIST}")
     return 0
 

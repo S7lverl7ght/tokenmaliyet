@@ -597,3 +597,9 @@ details.disclosure .body{padding:0 var(--sp-4) var(--sp-4); font-size:var(--fs-s
 .calc-tight .btn{padding:8px 16px; min-height:36px}
 .calc-tight .result .v{font-size:1.2rem}
 .calc-tight .result .n{display:none}
+
+/* Uc alan esit genislikte: metin dili, onbellek, (bos). Dil alani artik dev degil. */
+.calc-tight .form-grid[style*="1fr 1fr 1fr"]{gap:var(--sp-3)}
+.calc-tight .form-grid[style*="1fr 1fr 1fr"] > .field{min-width:0}
+.calc-tight #dil{width:100%; max-width:100%}
+.calc-tight #cache{width:100%; max-width:110px}

@@ -70,22 +70,22 @@
           {% if errors.get('out') %}<span class="error-text" id="out-err">{{ errors['out'] }}</span>{% endif %}
         </div>
       </div>
-      <div class="form-grid mt-4" style="grid-template-columns:1.3fr .7fr;align-items:start">
+            <div class="form-grid mt-4" style="grid-template-columns:1fr 1fr 1fr;align-items:start">
         <div class="field">
           <label for="dil">{{ t('calc.text_lang') }}</label>
           <select id="dil" name="dil">
-            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>{{ 'English (no multiplier)' if lang == 'en' else 'İngilizce (çarpan yok)' }}</option>
-            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>{{ 'Turkish — ' if lang == 'en' else 'Türkçe — ' }}{{ turkce.ratio|tl(2) }}×</option>
+            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>{{ 'English' if lang == 'en' else 'İngilizce' }}</option>
+            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>{{ 'Turkish ' if lang == 'en' else 'Türkçe ' }}{{ turkce.ratio|tl(2) }}×</option>
           </select>
         </div>
         <div class="field">
-          <label for="cache">{{ 'Cache read' if lang == 'en' else 'Önbellek okuma' }}</label>
-          <select id="cache" name="cache">
-            <option value="0" {% if f.cache == '0' %}selected{% endif %}>{{ 'None' if lang == 'en' else 'Yok' }}</option>
-            <option value="25" {% if f.cache == '25' %}selected{% endif %}>%25</option>
-            <option value="50" {% if f.cache == '50' %}selected{% endif %}>%50</option>
-            <option value="75" {% if f.cache == '75' %}selected{% endif %}>%75</option>
-          </select>
+          <label for="cache">{{ 'Cache read %' if lang == 'en' else 'Önbellek okuma %' }}</label>
+          <input id="cache" name="cache" type="text" inputmode="numeric" value="{{ f.cache }}"
+                 autocomplete="off" placeholder="0"
+                 aria-describedby="cache-help{% if errors.get('cache') %} cache-err{% endif %}"
+                 {% if errors.get('cache') %}aria-invalid="true"{% endif %}>
+          <span class="help-text" id="cache-help">{{ '0–95, share of input read from cache' if lang == 'en' else '0–95, girdinin önbellekten okunan yüzdesi' }}</span>
+          {% if errors.get('cache') %}<span class="error-text" id="cache-err">{{ errors['cache'] }}</span>{% endif %}
         </div>
       </div>
       <p class="help mt-3" id="formSummary" aria-live="polite"></p>

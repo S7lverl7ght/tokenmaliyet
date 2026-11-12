@@ -322,9 +322,27 @@ def calculator_page(
     a = _find(rows, source)
     b = _find(rows, target)
     result = None
+
+    # Onbellek orani: serbest giris (0-95).
+    # Hatali deger sessizce yutulmaz; kullaniciya soylenir, hesap 0 ile devam eder.
+    cache_share = 0.0
+    _cache_raw = (cache or "0").strip().replace("%", "").replace(",", ".")
     try:
-        cache_share = max(0.0, min(0.95, float(cache or 0) / 100))
+        _cache_val = float(_cache_raw or 0)
+        if _cache_val < 0 or _cache_val > 95:
+            errors["cache"] = (
+                "Önbellek oranı 0 ile 95 arasında olmalı."
+                if (dil or "tr").lower() != "en"
+                else "Cache ratio must be between 0 and 95."
+            )
+            _cache_val = max(0.0, min(95.0, _cache_val))
+        cache_share = _cache_val / 100.0
     except ValueError:
+        errors["cache"] = (
+            "Önbellek oranı için sayı girin (0–95)."
+            if (dil or "tr").lower() != "en"
+            else "Enter a number for the cache ratio (0–95)."
+        )
         cache_share = 0.0
 
     # Turkce token carpani: OLCULMUS deger (tek kaynak).

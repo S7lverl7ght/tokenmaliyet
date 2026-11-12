@@ -10,8 +10,8 @@
       <ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li></ol>
     </nav>
     <h1>AI API fiyatları</h1>
-    <p class="lede">{{ provider_count }} sağlayıcıdan {{ total }} model. Fiyatlar resmî sayfalardan toplanır,
-    yayın öncesi doğrulama kontrolünden geçer. TRY karşılığı {{ fx_date }} tarihli kurla hesaplanır.</p>
+    <p class="lede">{{ total }} model: {{ direct_provider_count }} resmî sağlayıcı API'si{% if marketplace_provider_count %} ve {{ marketplace_provider_count }} pazaryeri{% endif %}. Fiyatlar resmî sağlayıcı sayfalarından{% if marketplace_provider_count %} ve OpenRouter pazaryeri API'sinden{% endif %} toplanır,
+    yayın öncesi doğrulama kontrolünden geçer. Pazaryeri fiyatı, model sahibinin doğrudan API fiyatı değildir. TRY karşılığı {{ fx_date }} tarihli kurla hesaplanır.</p>
     <div class="meta">
       <span>Son veri kontrolü: <strong>{{ last_checked }}</strong></span>
       <span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong>{% if fx_date %} ({{ fx_date }}){% endif %}</span>
@@ -47,13 +47,13 @@
       <div class="field field-xs">
         <label for="sort">Sıralama</label>
         <select id="sort" name="sort">
-          <option value="popular" {% if f.sort == 'popular' %}selected{% endif %}>Önerilen (bilinen sağlayıcılar önce)</option>
-          <option value="input_asc" {% if f.sort == 'input_asc' %}selected{% endif %}>Girdi fiyatı (artan)</option>
-          <option value="input_desc" {% if f.sort == 'input_desc' %}selected{% endif %}>Girdi fiyatı (azalan)</option>
-          <option value="output_asc" {% if f.sort == 'output_asc' %}selected{% endif %}>Çıktı fiyatı (artan)</option>
-          <option value="output_desc" {% if f.sort == 'output_desc' %}selected{% endif %}>Çıktı fiyatı (azalan)</option>
-          <option value="name_asc" {% if f.sort == 'name_asc' %}selected{% endif %}>Model adı (A–Z)</option>
-          <option value="recent" {% if f.sort == 'recent' %}selected{% endif %}>Son doğrulama (yeni)</option>
+          <option value="popular" {% if f.sort == 'popular' %}selected{% endif %}>Önerilen</option>
+          <option value="input_asc" {% if f.sort == 'input_asc' %}selected{% endif %}>Girdi: düşük → yüksek</option>
+          <option value="input_desc" {% if f.sort == 'input_desc' %}selected{% endif %}>Girdi: yüksek → düşük</option>
+          <option value="output_asc" {% if f.sort == 'output_asc' %}selected{% endif %}>Çıktı: düşük → yüksek</option>
+          <option value="output_desc" {% if f.sort == 'output_desc' %}selected{% endif %}>Çıktı: yüksek → düşük</option>
+          <option value="name_asc" {% if f.sort == 'name_asc' %}selected{% endif %}>Model A–Z</option>
+          <option value="recent" {% if f.sort == 'recent' %}selected{% endif %}>En yeni</option>
         </select>
       </div>
       <div class="field">

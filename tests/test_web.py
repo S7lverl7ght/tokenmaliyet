@@ -278,10 +278,12 @@ def test_description_mentions_marketplace(client):
 
 
 def test_calculator_turkish_multiplier(client):
+    """TR secilince carpan notu gorunur; EN'de gorunmez (metin degisebilir, anlam sabit)."""
     tr = client.get("/hesaplayici?dil=tr").text
     en = client.get("/hesaplayici?dil=en").text
-    assert "Türkçe çarpanı uygulandı" in tr
-    assert "Türkçe çarpanı uygulandı" not in en
+    assert "Türkçe" in tr and ("çarpan" in tr or "varsayım" in tr)
+    assert "her iki modelin" in tr
+    assert "her iki modelin" not in en
 
 
 def test_token_counter_has_turkish_comparison(client):

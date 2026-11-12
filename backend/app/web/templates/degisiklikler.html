@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% set nav = 'degisiklikler' %}
-{% block title %}Bu hafta ne değişti? — AI API fiyat değişiklikleri | {{ site_name }}{% endblock %}
+{% block title %}Fiyatlarda ne değişti? — AI API fiyat değişiklikleri | {{ site_name }}{% endblock %}
 {% block description %}Son 30 günde AI API ve GPU fiyatlarında ne değişti: yeni fiyatlar, artışlar, indirimler ve veri düzeltmeleri. Kaynaklı, tarihli.{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width:960px">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Değişiklikler</li></ol></nav>
-    <h1>Bu hafta ne değişti?</h1>
+    <h1>Fiyatlarda ne değişti?</h1>
     <p class="lede">Son {{ days }} günde fiyatı değişen modeller, yeni eklenen kaynaklar ve veri düzeltmeleri.
       Her satır kaynağıyla ve tarihiyle birlikte.</p>
     <div class="meta">

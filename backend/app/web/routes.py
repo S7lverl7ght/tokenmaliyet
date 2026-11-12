@@ -139,6 +139,8 @@ def prices_page(
         alias_count=len(rows) - len(visible_rows),
         total_filtered=len(filtered),
         provider_count=len({r.provider_slug for r in rows}),
+        direct_provider_count=len({r.provider_slug for r in rows if r.channel == "direct"}),
+        marketplace_provider_count=len({r.provider_slug for r in rows if r.channel != "direct"}),
         approved_count=sum(1 for r in rows for _ in r.dims),
         provider_options=queries.providers(db),
         f={"q": q, "provider": provider, "channel": channel, "sort": sort, "kind": kind},
@@ -384,6 +386,7 @@ def compare_page(
     models: list[str] = Query(default=[]),
     tokens_in: str = Query("100000000", alias="in"),
     tokens_out: str = Query("25000000", alias="out"),
+    dil: str = Query("tr"),
     db: Session = Depends(get_session),
 ):
     rows = queries.price_rows(db)
@@ -450,7 +453,10 @@ def compare_page(
             from .queries import to_model_price
             import app.web.calc as calc
 
-            tr_mult = float(turkce_multiplier().get("ratio") or 1.0)
+            # Rapor 4. tur P0-3: carpan sessizce uygulanmasin; dil secici ve rozet var.
+            tr_mult = 1.0
+            if (dil or "").lower() == "tr":
+                tr_mult = float(turkce_multiplier().get("ratio") or 1.0)
             costs = []
             for row in picked:
                 breakdown = calc.monthly_cost(
@@ -486,7 +492,7 @@ def compare_page(
         options=options, selected=chosen, cards=cards, error=error,
         f={"from": "", "to": "", "in": tokens_in, "out": tokens_out,
            "cache": "0", "dil": "tr"},
-        base_q={"models": chosen, "in": tokens_in, "out": tokens_out},
+        base_q={"models": chosen, "in": tokens_in, "out": tokens_out, "dil": dil},
     )
     ctx["canonical"] = SITE_URL + "/karsilastir"
     ctx["noindex"] = False   # varsayilan ornek her zaman ayni; indekslenebilir

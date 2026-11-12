@@ -83,7 +83,9 @@
         </select>
         <noscript><button class="btn btn-secondary" type="submit">Uygula</button></noscript>
       </form>
+      {% if nav != 'fiyatlar' %}
       <a class="btn btn-secondary" href="/fiyatlar#filtreler" style="min-height:38px">{{ t('nav.search') }}</a>
+      {% endif %}
       <button class="icon-btn" id="theme-toggle" type="button" aria-label="{{ t('theme.toggle') }}" title="{{ t('common.language') }}">
         <span aria-hidden="true" id="theme-icon">◐</span>
       </button>
@@ -194,6 +196,9 @@
   var selects = document.querySelectorAll("select[data-model-options]");
   if (!selects.length || !window.fetch) return;
   function apply(sel, list){
+    // ONEMLI: placeholder ("— secin —") korunur; aksi halde liste yeniden
+    // dolduruldugunda tarayici ilk modeli otomatik secer (rapor 4. tur P0-2).
+    var placeholder = sel.querySelector('option[value=""]');
     var current = sel.value;
     var direct = document.createElement("optgroup"); direct.label = "Doğrudan API";
     var market = document.createElement("optgroup"); market.label = "Pazaryeri";
@@ -203,15 +208,28 @@
       (o.group === "marketplace" ? market : direct).appendChild(opt);
     });
     sel.innerHTML = "";
+    if (placeholder) {
+      var ph = document.createElement("option");
+      ph.value = ""; ph.textContent = placeholder.textContent;
+      sel.appendChild(ph);
+    }
     sel.appendChild(direct); sel.appendChild(market);
+
+    // Secim SADECE acik bir istek varsa yapilir: mevcut deger veya data-default-model.
     var wanted = current || sel.dataset.defaultModel || "";
     if (wanted) {
       var found = false;
       for (var i = 0; i < sel.options.length; i++) {
         if (sel.options[i].value === wanted) { found = true; break; }
       }
-      if (found) { sel.value = wanted; }
-      else { var keep = document.createElement("option"); keep.value = wanted; keep.textContent = wanted; keep.hidden = true; sel.appendChild(keep); sel.value = wanted; }
+      if (!found) {
+        var keep = document.createElement("option");
+        keep.value = wanted; keep.textContent = wanted; keep.hidden = true;
+        sel.appendChild(keep);
+      }
+      sel.value = wanted;
+    } else if (placeholder) {
+      sel.value = "";   // varsayilan: "Secilmedi"
     }
     sel.dispatchEvent(new Event("change", { bubbles: true }));
   }
@@ -219,6 +237,51 @@
     if (!list || !list.length) return;
     selects.forEach(function(sel){ apply(sel, list); });
   }).catch(function(){ /* sessiz: sunucudan gelen liste yeterli */ });
+})();
+</script>
+<script>
+/* STATIK HOSTING ICIN ZORUNLU (rapor 4. tur bolum 2.3):
+   Cloudflare Pages'te sunucu query string islemez; secimler ve filtreler
+   istemci tarafinda uygulanmalidir. */
+(function(){
+  function initFromQuery(){
+    var params = new URLSearchParams(window.location.search);
+    var changed = false;
+    // model secimleri + token alanlari
+    ["from","to","models","in","out","dil","cache","currency","lang","q","provider","kind","sort"].forEach(function(name){
+      if(!params.has(name)) return;
+      var val = params.get(name);
+      if(val === null || val === "") return;
+      document.querySelectorAll('[name="'+name+'"]').forEach(function(el){
+        if(el.tagName === "SELECT"){
+          var found = false;
+          for(var i=0;i<el.options.length;i++){ if(el.options[i].value === val){ found = true; break; } }
+          if(!found){ var o=document.createElement("option"); o.value=val; o.textContent=val; el.appendChild(o); }
+        }
+        el.value = val;
+        changed = true;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+    return changed;
+  }
+
+  // Statik ortamda form gonderimi sayfa yeniler; GET formlarini JS ile ele al.
+  document.querySelectorAll('form[method="get"]').forEach(function(form){
+    form.addEventListener("submit", function(e){
+      if(window.__STATIC__ !== true) return;
+      e.preventDefault();
+      var qs = new URLSearchParams(new FormData(form)).toString();
+      window.location.href = window.location.pathname + (qs ? "?" + qs : "");
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function(){
+    initFromQuery();
+    window.initFromQuery = initFromQuery;
+  });
+  // model listesi JS ile doldugu icin tekrar dene
+  window.addEventListener("load", function(){ setTimeout(initFromQuery, 120); });
 })();
 </script>
 {% block scripts %}{% endblock %}

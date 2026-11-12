@@ -46,8 +46,8 @@
     <div class="field field-xs">
       <label for="sort">Sıralama</label>
       <select id="sort" name="sort">
-        <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>VRAM (büyük → küçük)</option>
-        <option value="price" {% if f.sort == 'price' %}selected{% endif %}>Fiyat (ucuz → pahalı)</option>
+        <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>VRAM: yüksek → düşük</option>
+        <option value="price" {% if f.sort == 'price' %}selected{% endif %}>Fiyat: düşük → yüksek</option>
       </select>
     </div>
     <div class="field"><button class="btn" type="submit">Uygula</button></div>
@@ -87,12 +87,12 @@
               </details>
             </td>
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
-            <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
             <td data-label="En düşük" class="cell-price">
               <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
               <span class="pu">≈ {{ (f.best.price * fx_rate)|tl(2) }} ₺ / saat</span>
               <span class="pu">≈ {{ (f.best.price * 730 * fx_rate)|tl(0) }} ₺ / ay (730 saat)</span>
             </td>
+            <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
             <td data-label="Sağlayıcı" class="text-sm">{{ f.best.provider }}</td>
             <td data-label="Tip">
               {% if f.best.kind == 'on_demand' %}<span class="badge badge-info">On-demand</span>

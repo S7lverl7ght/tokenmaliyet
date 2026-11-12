@@ -52,6 +52,11 @@
                  aria-describedby="in-help{% if errors.get('in') %} in-err{% endif %}"
                  {% if errors.get('in') %}aria-invalid="true"{% endif %}>
           <span class="help-text" id="in-help">Örnek: 100.000.000 (yüz milyon token)</span>
+          <div class="chip-row" data-chips="inTok" aria-label="Hızlı girdi token seçimi">
+            {% for v, label in [('1000000','1M'),('10000000','10M'),('50000000','50M'),('100000000','100M'),('500000000','500M'),('1000000000','1B')] %}
+            <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
+            {% endfor %}
+          </div>
           {% if errors.get('in') %}<span class="error-text" id="in-err">{{ errors['in'] }}</span>{% endif %}
         </div>
         <div class="field">
@@ -60,6 +65,11 @@
                  aria-describedby="out-help{% if errors.get('out') %} out-err{% endif %}"
                  {% if errors.get('out') %}aria-invalid="true"{% endif %}>
           <span class="help-text" id="out-help">Örnek: 25.000.000 (yirmi beş milyon token)</span>
+          <div class="chip-row" data-chips="outTok" aria-label="Hızlı çıktı token seçimi">
+            {% for v, label in [('1000000','1M'),('5000000','5M'),('10000000','10M'),('25000000','25M'),('50000000','50M')] %}
+            <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
+            {% endfor %}
+          </div>
           {% if errors.get('out') %}<span class="error-text" id="out-err">{{ errors['out'] }}</span>{% endif %}
         </div>
       </div>
@@ -84,6 +94,7 @@
         </select>
         <span class="help-text">Önbellek fiyatı modelde varsa hesaba katılır; yoksa yok sayılır.</span>
       </div>
+      <p class="help mt-3" id="formSummary" aria-live="polite"></p>
       <p class="mt-4"><button class="btn" type="submit">Hesapla</button>
         <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">Alanları sıfırla</a></p>
     </fieldset>
@@ -124,9 +135,10 @@
     {% if result.tr_mult and result.tr_mult > 1 %}
     <div class="notice notice-info mt-3" role="note">
       <div>
-        <strong>Türkçe çarpanı uygulandı: {{ result.tr_mult }}×</strong> —
-        alternatif modelin maliyeti, aynı içeriğin Türkçe'de {{ result.tr_mult }}× daha fazla token
-        harcaması hesaba katılarak hesaplandı. İngilizce karşılaştırması için yukarıdan dili değiştirin.
+        <strong>Türkçe içerik varsayımı: {{ result.tr_mult|tl(2) }}×</strong> —
+        <em>her iki modelin</em> maliyeti de aynı Türkçe token çarpanıyla hesaplandı
+        (aynı içerik Türkçe'de yaklaşık {{ result.tr_mult|tl(2) }}× daha fazla token harcar).
+        Bu bir tahmindir; İngilizce karşılaştırması için yukarıdan dili değiştirin.
       </div>
     </div>
     {% endif %}
@@ -174,4 +186,57 @@
   </section>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  // Binlik ayirici (rapor 4. tur 2.1)
+  function formatThousands(el){
+    var raw = String(el.value || "").replace(/[^\d]/g, "");
+    if(!raw){ el.value = ""; return; }
+    el.value = Number(raw).toLocaleString("tr-TR");
+  }
+
+  ["inTok","outTok"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    formatThousands(el);
+    el.addEventListener("blur", function(){ formatThousands(el); });
+  });
+
+  // Hizli token cipleri
+  document.querySelectorAll("[data-chips]").forEach(function(group){
+    var target = document.getElementById(group.dataset.chips);
+    group.querySelectorAll("button[data-value]").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.preventDefault();
+        if(!target) return;
+        target.value = Number(btn.dataset.value).toLocaleString("tr-TR");
+        target.focus();
+      });
+    });
+  });
+
+  // Yapisal ozet satiri: "100M girdi + 25M cikti"
+  function shortNum(n){
+    if(n >= 1e9) return (n/1e9).toLocaleString("tr-TR",{maximumFractionDigits:1}) + "B";
+    if(n >= 1e6) return (n/1e6).toLocaleString("tr-TR",{maximumFractionDigits:1}) + "M";
+    if(n >= 1e3) return (n/1e3).toLocaleString("tr-TR",{maximumFractionDigits:0}) + "K";
+    return String(n);
+  }
+  function updateSummary(){
+    var i = document.getElementById("inTok"), o = document.getElementById("outTok"), out = document.getElementById("formSummary");
+    if(!i || !o || !out) return;
+    var iv = Number(String(i.value||"").replace(/[^\d]/g,"")) || 0;
+    var ov = Number(String(o.value||"").replace(/[^\d]/g,"")) || 0;
+    out.textContent = shortNum(iv) + " girdi + " + shortNum(ov) + " çıktı token";
+  }
+  ["inTok","outTok"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener("input", updateSummary);
+  });
+  updateSummary();
+})();
+</script>
 {% endblock %}

@@ -176,3 +176,83 @@ def test_navbar_has_grouped_tools(client):
     import re
     header = re.search(r"<header class=\"site-header\">(.*?)</header>", body, re.S).group(1)
     assert 'class="brand"' in header and 'class="nav"' in header
+
+
+def test_gpu_columns_match_cells(client):
+    """Rapor 4. tur P0-1: GPU tablosunda baslik sirasi ile hucre sirasi ayni olmali."""
+    import re
+    body = client.get("/gpu-maliyetleri").text
+    head_match = re.search(r"<thead>(.*?)</thead>", body, re.S)
+    if not head_match:
+        pytest.skip("gpu tablosu yok")
+    head = head_match.group(1)
+    headers = [re.sub(r"<[^>]+>", "", h).strip() for h in re.findall(r"<th[^>]*>(.*?)</th>", head, re.S)]
+    tbody = re.search(r"<tbody>(.*?)</tbody>", body, re.S)
+    if not tbody:
+        pytest.skip("gpu satiri yok")
+    first = re.findall(r"<tr>(.*?)</tr>", tbody.group(1), re.S)[0]
+    cells = [c for c in re.findall(r'<td[^>]*data-label="([^"]*)"', first)]
+    # Basliklar ile data-label'lar ayni sirada olmali (metin farki normalize edilir)
+    norm = lambda s: s.lower().replace("/", "").replace(" ", "")
+    header_norm = [norm(h) for h in headers]
+    cell_norm = [norm(c) for c in cells]
+    for i, (h, c) in enumerate(zip(header_norm, cell_norm)):
+        assert h in c or c in h, f"sutun {i}: baslik={headers[i]} hucre={cells[i]}"
+
+
+def test_gpu_hourly_price_greater_than_per_gb(client):
+    """Rapor 4. tur: saatlik fiyat, $/GB VRAM degerinden buyuk olmali (VRAM > 1 GB)."""
+    import re
+    body = client.get("/gpu-maliyetleri").text
+    tbody_match = re.search(r"<tbody>(.*?)</tbody>", body, re.S)
+    if not tbody_match:
+        pytest.skip("veri yok")
+    rows = re.findall(r"<tr>(.*?)</tr>", tbody_match.group(1), re.S)[:5]
+
+    def cells(row):
+        out = {}
+        for label, content in re.findall(r'<td[^>]*data-label="([^"]*)"[^>]*>(.*?)</td>', row, re.S):
+            text = re.sub(r"<[^>]+>", " ", content).strip()
+            nums = re.findall(r"(\d[\d.]*,\d+)", text)
+            if nums:
+                out[label] = float(nums[0].replace(".", "").replace(",", "."))
+        return out
+
+    checked = 0
+    for row in rows:
+        c = cells(row)
+        hourly = next((v for k, v in c.items() if k.startswith("En d")), None)
+        per_gb = next((v for k, v in c.items() if "GB" in k and "$" in k), None)
+        if hourly and per_gb:
+            assert hourly > per_gb, f"saatlik {hourly} <= $/GB {per_gb} — sutunlar karismis"
+            checked += 1
+    assert checked > 0, "karsilastirilacak satir bulunamadi"
+
+
+def test_compare_has_language_selector(client):
+    """Rapor 4. tur P0-3: Compare'de dil secici ve carpan rozeti olmali."""
+    body = client.get("/karsilastir").text
+    assert 'name="dil"' in body
+    assert "içerik varsayımı" in body or "carpan" in body.lower()
+
+
+def test_calculator_notice_mentions_both_models(client):
+    """Rapor 4. tur P1-4: bilgi kutusu 'her iki model' demeli."""
+    body = client.get("/hesaplayici?dil=tr").text
+    if "2,2" in body or "2,29" in body:
+        assert "her iki modelin" in body
+
+
+def test_guide_count_is_dynamic(client):
+    """Rapor 4. tur P1-5: rehber sayisi metinle uyusmali."""
+    import re
+    body = client.get("/rehber").text
+    assert "üç kısa yazı" not in body
+    m = re.search(r"(\d+) kısa yazı", body)
+    assert m, "dinamik sayi bulunamadi"
+
+
+def test_prices_description_mentions_marketplace(client):
+    """Rapor 3.+4. tur: aciklama pazaryerini de soylemeli."""
+    body = client.get("/fiyatlar").text
+    assert "pazaryeri" in body.lower()

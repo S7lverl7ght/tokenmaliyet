@@ -53,7 +53,12 @@ def main() -> int:
             continue
         target = DIST / slug / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(resp.text, encoding="utf-8")
+        html = resp.text.replace(
+            "<head>",
+            '<head>\n<script>window.__STATIC__=true;</script>',
+            1,
+        )
+        target.write_text(html, encoding="utf-8")
         written += 1
         print(f"[ok] {path} -> {target.relative_to(ROOT)}")
 
@@ -89,6 +94,20 @@ def main() -> int:
             count += 1
             if count >= 60:
                 break
+
+    # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)
+    (DIST / "_headers").write_text(
+        "/*\n"
+        "  X-Frame-Options: DENY\n"
+        "  X-Content-Type-Options: nosniff\n"
+        "  Referrer-Policy: strict-origin-when-cross-origin\n"
+        "  Permissions-Policy: camera=(), microphone=(), geolocation=()\n"
+        "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload\n"
+        "  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'\n",
+        encoding="utf-8",
+    )
 
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)

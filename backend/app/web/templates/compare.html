@@ -28,6 +28,14 @@
         </div>
         {% endfor %}
         <div class="field">
+          <label for="dil">Metin dili</label>
+          <select id="dil" name="dil">
+            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio|tl(2) }}× token</option>
+            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce — 1,00×</option>
+          </select>
+          <span class="help-text">Türkçe metin aynı içerik için {{ turkce.ratio|tl(2) }}× daha fazla token harcar; çarpan her iki modele uygulanır.</span>
+        </div>
+        <div class="field">
           <label for="cin">Aylık girdi token</label>
           <input id="cin" name="in" type="text" inputmode="numeric" value="{{ f['in'] }}">
         </div>
@@ -47,7 +55,14 @@
 
   {% if cards %}
   <section class="mt-5" aria-labelledby="sonuc-baslik">
-    <h2 id="sonuc-baslik" style="font-size:var(--fs-h3)">Sonuç · {{ f['in'] }} girdi + {{ f['out'] }} çıktı token/ay</h2>
+    <h2 id="sonuc-baslik" style="font-size:var(--fs-h3)">
+      Sonuç · {{ f['in'] }} girdi + {{ f['out'] }} çıktı token/ay
+      {% if f.dil == 'en' %}
+      <span class="badge badge-neutral">İngilizce · çarpan yok</span>
+      {% else %}
+      <span class="badge badge-info">Türkçe içerik varsayımı · {{ turkce.ratio|tl(2) }}× (tahmin)</span>
+      {% endif %}
+    </h2>
     <div class="compare-grid mt-3">
       {% for c in cards %}
       <article class="compare-card {{ 'is-best' if c.best }}">

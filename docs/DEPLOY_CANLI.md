@@ -12,8 +12,8 @@ Tarih: 12.11.2026
 | SSL | Google sertifikasi, otomatik (Cloudflare) |
 | Account ID | 279485e31b16d58ec7d5603dead31b90 |
 | Zone ID | 98091f09564a94a1c95b11134774e7e8 |
-| Sayfa sayisi | **105 dosya** (17 ana + 39 GPU + 20 karsilastirma + model sayfalari) |
-| Boyut | ~2,5 MB |
+| Yuklenen dosya | **104 dosya** (wrangler raporu) |
+| Boyut | ~2,5 MB (dist/) |
 
 ## Dogrulanan
 

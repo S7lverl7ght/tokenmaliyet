@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $out = Join-Path $OutDir "ai_maliyet_merkezi_$stamp.dump"
-$env:PGPASSWORD = "AiMaliyet2026Local"
+if (-not $env:PGPASSWORD) { throw "PGPASSWORD ortam degiskeni gerekli (sifre kodda tutulmaz)" }
 & "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" -h 127.0.0.1 -U ai_maliyet_user -Fc -f $out ai_maliyet_merkezi
 if ($LASTEXITCODE -ne 0) { throw "pg_dump failed" }
 Write-Host "yedek: $out"

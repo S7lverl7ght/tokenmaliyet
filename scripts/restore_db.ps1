@@ -2,7 +2,7 @@
 param([Parameter(Mandatory=$true)][string]$Dump, [string]$TargetDb = "ai_maliyet_restore_test")
 # NOT: psql NOTICE mesajlarini stderr'e yazar; Stop modu bunu hata sayar.
 $ErrorActionPreference = "Continue"
-$env:PGPASSWORD = "AiMaliyet2026Local"
+if (-not $env:PGPASSWORD) { throw "PGPASSWORD ortam degiskeni gerekli (sifre kodda tutulmaz)" }
 $pg = "C:\Program Files\PostgreSQL\18\bin"
 & "$pg\psql.exe" -h 127.0.0.1 -U ai_maliyet_user -d postgres -c "DROP DATABASE IF EXISTS $TargetDb;" | Out-Null
 & "$pg\psql.exe" -h 127.0.0.1 -U ai_maliyet_user -d postgres -c "CREATE DATABASE $TargetDb;" | Out-Null

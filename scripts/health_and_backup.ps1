@@ -18,7 +18,7 @@ try {
 
 # 2) Sifreli pg_dump (GPG varsa sifrele, yoksa duz dump + uyari)
 $env:PGPASSWORD = $env:PGPASSWORD
-if (-not $env:PGPASSWORD) { $env:PGPASSWORD = "AiMaliyet2026Local" }
+if (-not $env:PGPASSWORD) { throw "PGPASSWORD ortam degiskeni gerekli" }
 $raw = Join-Path $backupDir "ai_$stamp.dump"
 & "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" -h 127.0.0.1 -U ai_maliyet_user -Fc -f $raw ai_maliyet_merkezi 2>&1 | Out-Null
 

@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql+psycopg://ai_maliyet_user:AiMaliyet2026Local@localhost:5432/ai_maliyet_test",
+    "postgresql+psycopg://ai_maliyet_user:test_password_only@localhost:5432/ai_maliyet_test",
 )
 
 import pytest  # noqa: E402

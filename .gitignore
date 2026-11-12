@@ -7,10 +7,11 @@ data/backup/
 *.log
 .pytest_cache/
 .pgdata/
+dist/
+
+# Gecici calisma dosyalari (_push.py, _e1.js ...). __init__.py HARIC.
 _*.py
 _*.txt
 _*.json
-
-dist/
-_*.py
-_*.txt
+_*.js
+!**/__init__.py

@@ -72,6 +72,23 @@
       {% endfor %}
     </div>
 
+    <figure class="mt-4 compare-bar-chart" style="margin:0">
+      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">Aylık maliyet (USD, aynı token hacmi)</figcaption>
+      <div style="display:grid;gap:var(--sp-2)">
+        {% for c in cards %}
+        <div>
+          <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">
+            <span>{{ c.name }}</span>
+            <span class="num">{{ c.month_usd|tl_dyn }} $</span>
+          </div>
+          <div class="bar" style="height:14px">
+            <span style="width:{{ c.bar_pct }}%;background:{{ 'var(--success)' if c.best else 'var(--primary)' }}"></span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </figure>
+
     <details class="disclosure mt-4">
       <summary>Formül ve varsayımlar</summary>
       <div class="body">

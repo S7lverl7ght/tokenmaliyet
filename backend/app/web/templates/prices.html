@@ -80,13 +80,12 @@
           Fiyatlar 1 milyon token başınadır. Model adına tıklayarak detay ve fiyat geçmişini görebilirsiniz.</caption>
         <thead>
           <tr>
-            <th scope="col" style="width:26%">{{ t('col.model') }}</th>
+            <th scope="col" style="width:32%">{{ t('col.model') }}</th>
             <th scope="col" style="width:11%">{{ t('col.provider') }}</th>
             <th scope="col" style="width:11%">Kaynak türü</th>
             <th scope="col" class="is-num" style="width:17%">{{ t('col.input') }}</th>
             <th scope="col" class="is-num" style="width:17%">{{ t('col.output') }}</th>
-            <th scope="col" style="width:11%">{{ t('col.updated') }}</th>
-            <th scope="col" style="width:8%">{{ t('col.source') }}</th>
+            <th scope="col" style="width:13%">{{ t('col.updated') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,12 +134,6 @@
               <time datetime="{{ row.observed_at.isoformat() }}">{{ row.observed_at|dt_tr }}</time>
               {% set st = freshness(row.observed_at) %}
               {% if st[1] == 'badge-warn' %}<span class="text-xs stale">güncelliği geçmiş</span>{% endif %}
-            </td>
-            <td data-label="Kaynak">
-              <div class="row-actions">
-                <a class="link-ext" href="{{ row.model_url }}" target="_blank" rel="noopener nofollow"
-                   aria-label="{{ row.name }} sayfasını sağlayıcıda aç">{{ row.provider_name }} ↗</a>
-              </div>
             </td>
           </tr>
         {% endfor %}

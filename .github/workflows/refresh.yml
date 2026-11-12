@@ -64,11 +64,18 @@ jobs:
       - name: Golden test (bilinen 20 fiyat degismedi mi?)
         run: python scripts/check_golden.py
 
-      - name: Testler
-        run: pytest tests -q
-
       - name: Statik site uret
         run: python scripts/export_static.py
+
+      - name: Testler
+        # ONEMLI: testler conftest.py'de drop_all yapar. Uretim semasini silmesin
+        # diye AYRI veritabaninda kosar.
+        env:
+          DATABASE_URL: postgresql+psycopg://ai_maliyet_user:ci_password@localhost:5432/ai_maliyet_test
+        run: |
+          PGPASSWORD=ci_password psql -h localhost -U ai_maliyet_user -d ai_maliyet_merkezi \
+            -c "CREATE DATABASE ai_maliyet_test OWNER ai_maliyet_user;" || true
+          pytest tests -q
 
       - name: Degisiklik varsa commit et
         run: |

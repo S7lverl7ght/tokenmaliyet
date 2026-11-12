@@ -59,3 +59,40 @@ def test_static_flag_present():
     """Statik sayfalarda window.__STATIC__ bayragi olmali (JS filtre icin)."""
     page = DIST / "fiyatlar" / "index.html"
     assert "__STATIC__" in page.read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(not DIST.exists(), reason="dist/ yok")
+def test_no_noindex_on_sitemap_pages_in_dist():
+    """dist/'te sitemap'e giren sayfalar noindex olmamali.
+
+    Gercek hata (12.11.2026): 22 URL sitemap'te olup noindex idi; GPU detay
+    sayfalari ayrica ana sayfanin canonical'ini gosteriyordu.
+    """
+    import re
+    sm = (DIST / "sitemap.xml").read_text(encoding="utf-8")
+    locs = re.findall(r"<loc>https://tokenmaliyet\.com([^<]*)</loc>", sm)
+    bad = []
+    for path in locs:
+        if not path or path == "/":
+            f = DIST / "index.html"
+        else:
+            f = DIST / path.strip("/") / "index.html"
+        if not f.exists():
+            bad.append((path, "dosya yok"))
+            continue
+        html = f.read_text(encoding="utf-8", errors="ignore")
+        if 'content="noindex' in html:
+            bad.append((path, "noindex"))
+    assert not bad, f"sitemap sayfasi indekslenemez: {bad[:6]}"
+
+
+@pytest.mark.skipif(not DIST.exists(), reason="dist/ yok")
+def test_gpu_detail_canonical_is_self():
+    """GPU detay sayfalari kendi canonical'ini gostermeli."""
+    import re
+    for d in sorted((DIST / "gpu").glob("*/index.html"))[:5]:
+        html = d.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r'<link rel="canonical" href="([^"]+)"', html)
+        assert m, f"{d}: canonical yok"
+        expected = "/gpu/" + d.parent.name
+        assert m.group(1).endswith(expected), f"{d.parent.name}: {m.group(1)}"

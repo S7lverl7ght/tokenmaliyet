@@ -96,19 +96,34 @@ def main() -> int:
                 break
 
     # Programatik GPU detay sayfalari (rapor 4. tur bolum 4: /gpu/<slug>)
+    # Onemli: bu sayfalar KENDI canonical'ini ve index iznini almali.
+    # Onceki hata: filtre parametresi kullanildigi icin noindex kaliyordu ve
+    # canonical ana GPU sayfasini gosteriyordu (Search Console "noindex" hatasi).
     from app.db import SessionLocal as _SL
-    from app.models import GpuPrice as _GP, GpuProvider as _GProv
+    from app.models import GpuPrice as _GP
 
     with _SL() as gdb:
-        fams = {p.gpu_family for p in gdb.query(_GP).filter(_GP.status == "approved").all()}
+        fams = {f.gpu_family for f in gdb.query(_GP).filter(_GP.status == "approved").all()}
     for fam in sorted(fams):
         slug = fam.lower().replace(" ", "-")
         resp = client.get(f"/gpu-maliyetleri?family={fam}")
         if resp.status_code != 200:
             continue
+        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+        # canonical: bu sayfanin kendisi
+        html = html.replace(
+            '<link rel="canonical" href="https://tokenmaliyet.com/gpu-maliyetleri">',
+            f'<link rel="canonical" href="https://tokenmaliyet.com/gpu/{slug}">',
+            1,
+        )
+        # robots: indekslenebilir
+        html = html.replace(
+            '<meta name="robots" content="noindex,nofollow">',
+            '<meta name="robots" content="index,follow,max-image-preview:large">',
+            1,
+        )
         target = DIST / "gpu" / slug / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
-        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
         target.write_text(html, encoding="utf-8")
         print(f"[ok] /gpu/{slug}")
 
@@ -137,6 +152,12 @@ def main() -> int:
         target = DIST / "karsilastir" / slug / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
         html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+        # Her karsilastirma sayfasi KENDI canonical'ini almali (yoksa mukerrer sayilir).
+        html = html.replace(
+            '<link rel="canonical" href="https://tokenmaliyet.com/karsilastir">',
+            f'<link rel="canonical" href="https://tokenmaliyet.com/karsilastir/{slug}">',
+            1,
+        )
         target.write_text(html, encoding="utf-8")
 
     # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)

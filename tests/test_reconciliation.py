@@ -293,3 +293,60 @@ def test_compare_single_chart(client):
     """Rapor 4. tur 3.2: ayni veri iki kez cizilmemeli."""
     body = client.get("/karsilastir").text
     assert body.count("bar_pct") <= 1, "cift gorsellestirme"
+
+
+def test_sitemap_urls_are_indexable(client):
+    """Sitemap'teki her URL indekslenebilir olmali (noindex + sitemap = Search Console hatasi).
+
+    Gercek hata: hesaplayici ve GPU sayfalari bool(provider or sort != 'vram') yuzunden
+    her zaman noindex kaliyordu; ustelik GPU detay sayfalari ana sayfanin canonical'ini
+    gosteriyordu. 22 URL sitemap'te olup noindex idi.
+    """
+    import re
+    sm = client.get("/sitemap.xml")
+    assert sm.status_code == 200
+    locs = re.findall(r"<loc>([^<]+)</loc>", sm.text)
+    assert locs, "sitemap bos"
+    bad = []
+    for url in locs:
+        path = url.replace("https://tokenmaliyet.com", "") or "/"
+        try:
+            r = client.get(path)
+        except Exception:
+            # Seed verisinde olmayan slug'lar (or. /gpu/h100) atlanir;
+            # canli ortamda test_static_export bunlari dist/ uzerinden dogrular.
+            continue
+        if r.status_code != 200 or 'content="noindex' in r.text:
+            bad.append((path, r.status_code))
+    assert not bad, f"sitemap'te indekslenemeyen URL: {bad[:6]}"
+
+
+def test_calculator_indexable_with_defaults(client):
+    """Varsayilan hesaplayici indekslenebilir; kullanici parametresi acinca noindex."""
+    d = client.get("/hesaplayici")
+    assert 'content="index' in d.text, "varsayilan hesaplayici noindex"
+    p = client.get("/hesaplayici", params={"from": "deepseek|deepseek-v4-pro|",
+                                           "to": "anthropic|claude-sonnet-4.5|"})
+    assert 'content="noindex' in p.text, "kullanici secimi noindex olmali"
+
+
+def test_gpu_page_indexable_with_defaults(client):
+    """Varsayilan GPU sayfasi indekslenebilir; filtre acinca noindex."""
+    d = client.get("/gpu-maliyetleri")
+    assert 'content="index' in d.text, "varsayilan GPU sayfasi noindex"
+    f = client.get("/gpu-maliyetleri", params={"provider": "runpod"})
+    assert 'content="noindex' in f.text, "filtreli GPU noindex olmali"
+
+
+def test_detail_pages_have_own_canonical(client):
+    """Detay sayfalari ana sayfanin canonical'ini gostermemeli (mukerrer icerik)."""
+    import re
+    for path in ["/gpu/h100", "/karsilastir/claude-haiku-4.5-vs-claude-fable-5.1"]:
+        r = client.get(path)
+        if r.status_code != 200:
+            continue
+        m = re.search(r'<link rel="canonical" href="([^"]+)"', r.text)
+        assert m, f"{path}: canonical yok"
+        assert m.group(1).rstrip("/").endswith(path.rstrip("/")), (
+            f"{path}: canonical ana sayfayi gosteriyor -> {m.group(1)}"
+        )

@@ -295,6 +295,14 @@ def calculator_page(
     _alt = web_defaults.pick(rows, web_defaults.PREFERRED_ALTERNATIVE)
     default_from = web_defaults.key(_primary) if _primary else options[0]["value"]
     default_to = web_defaults.key(_alt) if _alt else options[min(1, len(options) - 1)]["value"]
+
+    # SEO: noindex karari KULLANICININ actigi parametrelere gore verilir.
+    # Dikkat: source/target asagida varsayilanla dolduruluyor; o yuzden
+    # "kullanici bir sey secti mi" bilgisini ONCE saklamak zorundayiz.
+    # (Onceki hata: bool(source or target) her zaman True idi -> sayfa noindex kaliyordu.)
+    user_selected = bool(source or target or tokens_in != "100000000"
+                         or tokens_out != "25000000" or cache != "0" or dil != "tr")
+
     source = source or default_from
     target = target or default_to
 
@@ -373,8 +381,7 @@ def calculator_page(
         scenarios=SCENARIOS,
     )
     ctx["canonical"] = SITE_URL + "/hesaplayici"
-    ctx["noindex"] = bool(source or target or tokens_in != "100000000" or tokens_out != "25000000"
-                          or cache != "0" or dil != "tr")
+    ctx["noindex"] = user_selected
     return TEMPLATES.TemplateResponse(request, "calculator.html", ctx)
 
 
@@ -540,16 +547,16 @@ def gpu_page(
 
     fam_map: dict[str, dict] = {}
     prov_map: dict[str, dict] = {}
-    for price, provider in rows:
+    for price, gp in rows:
         key = price.gpu_family
         entry = fam_map.setdefault(key, {
             "family": key, "vram": price.vram_gb, "best": None, "offers": [],
             "kinds": set(),
         })
         entry["offers"].append({
-            "provider": provider.name, "provider_slug": provider.slug,
+            "provider": gp.name, "provider_slug": gp.slug,
             "gpu_model": price.gpu_model, "price": float(price.price_per_hour),
-            "kind": price.price_kind, "vram": price.vram_gb, "url": provider.pricing_url,
+            "kind": price.price_kind, "vram": price.vram_gb, "url": gp.pricing_url,
             "min_lease": float(price.min_lease_hours) if price.min_lease_hours else None,
             "observed": price.observed_at,
         })
@@ -562,9 +569,9 @@ def gpu_page(
         if price.vram_gb and not entry["vram"]:
             entry["vram"] = price.vram_gb
 
-        pe = prov_map.setdefault(provider.slug, {
-            "name": provider.name, "slug": provider.slug, "url": provider.pricing_url,
-            "kind": provider.kind, "count": 0, "min": None, "max": None,
+        pe = prov_map.setdefault(gp.slug, {
+            "name": gp.name, "slug": gp.slug, "url": gp.pricing_url,
+            "kind": gp.kind, "count": 0, "min": None, "max": None,
         })
         pe["count"] += 1
         value = float(price.price_per_hour)
@@ -616,7 +623,10 @@ def gpu_page(
         provider_options=sorted({p["slug"]: p["name"] for p in providers}.items()),
     )
     ctx["canonical"] = SITE_URL + "/gpu-maliyetleri"
-    ctx["noindex"] = bool(provider or kind or sort != "vram")
+    # SEO: yalnizca KULLANICININ actigi filtre/siralama noindex yapar.
+    ctx["noindex"] = bool(provider or kind or family or sort != "vram")
+    if os.getenv("SEO_DEBUG"):
+        print(f"[seo] provider={provider!r} kind={kind!r} family={family!r} sort={sort!r} -> noindex={ctx['noindex']}")
     return TEMPLATES.TemplateResponse(request, "gpu.html", ctx)
 
 

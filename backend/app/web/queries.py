@@ -222,3 +222,47 @@ def history(session: Session, model_id: int) -> list[PriceObservation]:
         .where(PriceObservation.model_id == model_id, PriceObservation.status == APPROVED)
         .order_by(desc(PriceObservation.observed_at))
     ))
+
+def to_model_price(row) -> "ModelPrice":
+    """PriceRow -> calc.ModelPrice. Hesaba giren TEK kayit.
+
+    Inceleme raporu 3. tur bulgu 2: ekranda gosterilen fiyat ile hesapta kullanilan
+    fiyat ayni kayittan gelmeli. Bu fonksiyon ikisini de ayni yerden besler.
+    """
+    from .calc import ModelPrice
+
+    inp = row.dim("input")
+    out = row.dim("output")
+    cache = row.dim("cache_read")
+    return ModelPrice(
+        name=row.name,
+        provider=row.provider_slug,
+        slug=row.slug,
+        input_per_1m=(inp.get("usd_per_1m") if inp else None),
+        output_per_1m=(out.get("usd_per_1m") if out else None),
+        cache_read_per_1m=(cache.get("usd_per_1m") if cache else None),
+        tier_label=(inp.get("tier_label") if inp else None),
+        peak_period=(inp.get("peak_period") if inp else None),
+        observed_at=row.observed_at,
+    )
+
+
+EMBEDDING_HINTS = ("embedding", "embed", "-tts", "transcribe", "rerank", "moderation")
+IMAGE_HINTS = ("-image", "dall-e", "imagen", "nano-banana", "flux", "stable-diffusion")
+AUDIO_HINTS = ("audio", "whisper", "speech", "voice", "live-api")
+
+
+def model_kind(name: str) -> str:
+    """Model tipi: chat | embedding | image | audio.
+
+    Rapor 3. tur: ilk ekranda embedding modelleri gorunuyordu.
+    Bu siniflandirma yalnizca ada bakar; kesin degil, filtrelenebilir bir yardimcidir.
+    """
+    low = (name or "").lower()
+    if any(h in low for h in EMBEDDING_HINTS):
+        return "embedding"
+    if any(h in low for h in IMAGE_HINTS):
+        return "image"
+    if any(h in low for h in AUDIO_HINTS):
+        return "audio"
+    return "chat"

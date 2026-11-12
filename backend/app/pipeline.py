@@ -180,30 +180,37 @@ def validate_observation(db: Session, obs: PriceObservation) -> bool:
                  "note": "Cikti/girdi orani aykiri; birim veya kaynak hatasi olabilir" if not ok else "normal aralikta"},
             )
 
-    # --- Ayni model+kalem+donem icin tek fiyat olmali ------------------------
-    # Golden testin yakaladigi hata: ayni kalem iki farkli fiyatla yayinlaniyordu
-    # (baglam dilimi etiketsiz kaldigi icin). Bu kural tekrari engeller.
-    if obs.status in ("pending", "approved"):
-        twins = db.scalars(
-            select(PriceObservation).where(
-                PriceObservation.model_id == obs.model_id,
-                PriceObservation.price_dimension == obs.price_dimension,
-                PriceObservation.peak_period.is_(obs.peak_period) if obs.peak_period is None
-                else PriceObservation.peak_period == obs.peak_period,
-                PriceObservation.tier_label.is_(obs.tier_label) if obs.tier_label is None
-                else PriceObservation.tier_label == obs.tier_label,
-                PriceObservation.id != obs.id,
-                PriceObservation.status.in_(["pending", "approved"]),
-            )
-        ).all()
-        conflicting = [x for x in twins if Decimal(x.amount) != Decimal(obs.amount)]
-        add(
-            "no_duplicate_dimension",
-            not conflicting,
-            {"duplicates": len(conflicting),
-             "amounts": sorted({float(x.amount) for x in conflicting})[:5],
-             "note": "Ayni kalem icin birden fazla farkli fiyat" if conflicting else "tek fiyat"},
+    # --- Ayni model+kalem+donem icin TEK fiyat olmali -----------------------
+    # Iki gercek hata bu kurali dogurdu:
+    #   1) Anthropic baglam dilimi (<=100K / >100K) etiketsiz kaldigi icin ayni kalem
+    #      iki fiyatla yayinlaniyordu.
+    #   2) Gemini "Image/Audio/Video input price" satirlari jenerik "input" boyutuna
+    #      dustugu icin tek modelde 4 farkli "input" fiyati olusuyordu.
+    # Cozum: tier ETIKETINDEN BAGIMSIZ olarak, ayni (model, kalem, donem) icin
+    # yalnizca TEK fiyat olabilir. Farkli baglam dilimi varsa bu bir VERI MODELI
+    # sorunudur ve insan incelemesi gerekir; sessizce yayinlanmaz.
+    twins = db.scalars(
+        select(PriceObservation).where(
+            PriceObservation.model_id == obs.model_id,
+            PriceObservation.price_dimension == obs.price_dimension,
+            PriceObservation.peak_period.is_(obs.peak_period) if obs.peak_period is None
+            else PriceObservation.peak_period == obs.peak_period,
+            PriceObservation.id != obs.id,
+            PriceObservation.status.in_(["pending", "approved"]),
         )
+    ).all()
+    conflicting = [x for x in twins if Decimal(x.amount) != Decimal(obs.amount)]
+    add(
+        "single_price_per_dimension",
+        not conflicting,
+        {
+            "duplicates": len(conflicting),
+            "amounts": sorted({float(x.amount) for x in conflicting})[:6],
+            "tiers": sorted({str(x.tier_label) for x in conflicting})[:4],
+            "note": ("Ayni kalem icin birden fazla farkli fiyat (baglam dilimi veya "
+                     "multimodal etiket ayrimi eksik)") if conflicting else "tek fiyat",
+        },
+    )
 
     # --- Batch varyanti normalden pahali olamaz ------------------------------
     if obs.tier_label and "batch" in str(obs.tier_label).lower() and obs.price_dimension in ("input", "output"):

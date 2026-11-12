@@ -19,7 +19,7 @@
         {% for i in range(4) %}
         <div class="field">
           <label for="m{{ i }}">{{ i+1 }}. model{% if i >= 2 %} <span class="text-muted">(isteğe bağlı)</span>{% endif %}</label>
-          <select id="m{{ i }}" name="models" data-model-options>
+          <select id="m{{ i }}" name="models" data-model-options {% if i < 2 and selected|length > i %}data-default-model="{{ selected[i] }}"{% endif %}>
             <option value="">— seçin —</option>
             {% for opt in options %}
             <option value="{{ opt.value }}" {% if selected|length > i and selected[i] == opt.value %}selected{% endif %}>{{ opt.label }}</option>

@@ -67,7 +67,7 @@
             <th scope="col" style="width:12%">$/GB VRAM</th>
             <th scope="col" style="width:16%">Sağlayıcı</th>
             <th scope="col" style="width:14%">Tip</th>
-            <th scope="col" style="width:18%">Fiyat aralığı</th>
+            <th scope="col" style="width:14%">On-demand aralık</th>
           </tr>
         </thead>
         <tbody>
@@ -87,7 +87,7 @@
               </details>
             </td>
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
-            <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl_dyn }} ${% else %}—{% endif %}</td>
+            <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
             <td data-label="En düşük" class="cell-price">
               <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
               <span class="pu">≈ {{ (f.best.price * fx_rate)|tl(2) }} ₺ / saat</span>
@@ -139,7 +139,12 @@
       </div>
     </div>
     <aside style="grid-column:span 5" class="surface surface-pad">
-      <h2 style="font-size:var(--fs-h3)">Bu veriyi nasıl okumalı?</h2>
+      <h2 style="font-size:var(--fs-h3)">Kaynak ve tazelik</h2>
+      <p class="text-sm text-muted mt-2">
+        Her satırın kaynağı sağlayıcının resmî fiyat sayfasıdır; gözlem zamanı satır açıldığında
+        görünür. Son toplama: <strong>{{ last_checked }}</strong>.
+      </p>
+      <h2 style="font-size:var(--fs-h3);margin-top:var(--sp-5)">Bu veriyi nasıl okumalı?</h2>
       <ul class="text-sm text-muted mt-3" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
         <li><strong>On-demand</strong> = anında açılır, saatlik faturalanır.</li>
         <li><strong>Spot</strong> = kapasite boşken ucuz, kesilebilir; uzun işler için riskli.</li>

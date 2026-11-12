@@ -131,9 +131,12 @@
               {% else %}<span class="text-muted">Belirtilmemiş</span>{% endif %}
             </td>
             <td data-label="Güncelleme" class="cell-date">
+              {% set fb = freshness_badge(row.observed_at) %}
+              {% if fb.dot %}
+              <span class="badge {{ fb.css }}" title="{{ row.observed_at|dt_tr }}"><span class="dot" aria-hidden="true"></span>{{ fb.label }}</span>
+              {% else %}
               <time datetime="{{ row.observed_at.isoformat() }}">{{ row.observed_at|dt_tr }}</time>
-              {% set st = freshness(row.observed_at) %}
-              {% if st[1] == 'badge-warn' %}<span class="text-xs stale">güncelliği geçmiş</span>{% endif %}
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

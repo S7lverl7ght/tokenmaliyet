@@ -1,3 +1,69 @@
+/* ---------- header: marka | menu | araclar ---------- */
+/* Kural: logo blogu asla kuculmez, menu arada esnek bosluk kullanir,
+   araclar saga sabitlenir. Boylece 9 link olsa da ust uste binmez. */
+.site-header .inner{
+  height:var(--header-h); display:flex; align-items:center; gap:var(--sp-4);
+  max-width:var(--container); margin-inline:auto; padding-inline:var(--sp-6);
+  min-width:0;
+}
+.brand{
+  display:flex; align-items:center; gap:10px; font-weight:660; color:var(--ink);
+  font-size:1.0625rem; letter-spacing:-.02em; white-space:nowrap;
+  flex:0 0 auto; min-width:0; margin-right:var(--sp-2);
+}
+.brand:hover{text-decoration:none; color:var(--ink)}
+.brand-mark{
+  width:32px; height:32px; flex:none; border-radius:9px;
+  background:linear-gradient(150deg,#4F46E5 0%,#6366F1 55%,#4338CA 100%);
+  box-shadow:0 1px 2px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.18);
+  display:grid; place-items:center;
+}
+.brand-mark svg{width:18px; height:18px; display:block}
+.brand-word{display:flex; flex-direction:column; line-height:1.12; min-width:0}
+.brand-word b{font-weight:680; letter-spacing:-.025em; white-space:nowrap}
+.brand-word small{
+  font-size:.625rem; font-weight:600; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--muted-2); margin-top:1px; white-space:nowrap;
+}
+.nav{
+  display:flex; align-items:center; gap:2px; margin:0;
+  flex:1 1 auto; min-width:0; justify-content:flex-start;
+}
+.nav a{
+  color:var(--ink-soft); padding:var(--sp-2) 10px; border-radius:var(--r-sm);
+  font-size:var(--fs-sm); font-weight:500; white-space:nowrap; text-decoration:none;
+}
+.nav a:hover{background:var(--surface-2); color:var(--ink)}
+.nav a[aria-current="page"]{color:var(--primary); background:var(--primary-soft); font-weight:600}
+.header-tools{
+  margin-left:auto; display:flex; align-items:center; gap:var(--sp-2);
+  flex:0 0 auto;
+}
+
+/* "Araclar" acilir menusu */
+.nav-group{position:relative; flex:none}
+.nav-group-btn{
+  display:inline-flex; align-items:center; gap:4px;
+  background:none; border:0; cursor:pointer; font:inherit;
+  color:var(--ink-soft); padding:var(--sp-2) 10px; border-radius:var(--r-sm);
+  font-size:var(--fs-sm); font-weight:500; white-space:nowrap;
+}
+.nav-group-btn:hover{background:var(--surface-2); color:var(--ink)}
+.nav-group-btn[data-active="true"]{color:var(--primary); background:var(--primary-soft); font-weight:600}
+.nav-caret{font-size:.7em; line-height:1}
+.nav-menu{
+  display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:60;
+  min-width:220px; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-md); box-shadow:var(--shadow-2); padding:var(--sp-2);
+}
+.nav-group[data-open="true"] .nav-menu{display:block}
+.nav-menu a{
+  display:block; padding:9px 12px; border-radius:var(--r-sm);
+  color:var(--ink-soft); font-size:var(--fs-sm); white-space:nowrap;
+}
+.nav-menu a:hover{background:var(--surface-2); color:var(--ink)}
+.nav-menu a[aria-current="page"]{color:var(--primary); background:var(--primary-soft); font-weight:600}
+
 /* AI Maliyet Merkezi — design tokens
    Açık tema varsayılan; koyu tema [data-theme="dark"] veya sistem tercihi ile. */
 :root{
@@ -141,8 +207,30 @@ a:hover{text-decoration:underline}
     display:flex; flex-direction:column; align-items:stretch; position:absolute; top:var(--header-h);
     left:0; right:0; background:var(--surface); border-bottom:1px solid var(--border);
     padding:var(--sp-3) var(--sp-4) var(--sp-4); gap:var(--sp-1);
+    max-height:calc(100vh - var(--header-h)); overflow-y:auto;
   }
   .nav[data-open="true"] a{padding:var(--sp-3)}
+  /* Mobilde acilir menu duz listeye donusur */
+  .nav[data-open="true"] .nav-group{position:static}
+  .nav[data-open="true"] .nav-group-btn{
+    width:100%; justify-content:space-between; padding:var(--sp-3);
+    font-size:var(--fs-sm); font-weight:600; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .nav[data-open="true"] .nav-menu{
+    display:block !important; position:static; box-shadow:none; border:0;
+    padding:0 0 0 var(--sp-3); min-width:0; background:none;
+  }
+  .nav[data-open="true"] .nav-menu a{padding:var(--sp-3)}
+  .nav-caret{display:none}
+}
+@media (max-width:640px){
+  .site-header .inner{padding-inline:var(--sp-3); gap:var(--sp-2)}
+  .brand{font-size:.9375rem; gap:8px; margin-right:0}
+  .brand-mark{width:28px; height:28px; border-radius:8px}
+  .brand-mark svg{width:16px; height:16px}
+  .brand-word small{display:none}
+  .header-tools .btn{padding-inline:var(--sp-3)}
 }
 .icon-btn{
   appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--ink);
@@ -229,6 +317,12 @@ p{margin:0}
 .field>label{font-size:var(--fs-xs); font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em}
 .field-search{flex:2 1 240px}
 .field-xs{flex:0 1 150px}
+textarea{
+  width:100%; background:var(--surface); color:var(--ink);
+  border:1px solid var(--border-strong); border-radius:var(--r-sm);
+  padding:12px; font:inherit; font-size:var(--fs-sm); resize:vertical;
+}
+textarea:focus{outline:none; border-color:var(--primary); box-shadow:var(--focus)}
 input[type="text"],input[type="search"],input[type="number"],select{
   width:100%; appearance:none; background:var(--surface); color:var(--ink);
   border:1px solid var(--border-strong); border-radius:var(--r-sm);

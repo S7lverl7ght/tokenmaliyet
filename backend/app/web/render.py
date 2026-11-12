@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Statik varlik surumu: tarayici onbellegini guvenle gecersiz kilmak icin.
-ASSET_VERSION = "20261112a"
+ASSET_VERSION = "20261112b"
 
 SITE_NAME = "TokenMaliyet"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
@@ -116,6 +116,26 @@ def price_value(dim: dict | None) -> tuple[float | None, str]:
     if "1M_tokens" in unit:
         return (amount, "USD / 1M token")
     return (amount, unit_label(dim))
+
+
+def freshness_badge(value) -> dict:
+    """Tazelik gostergesi: tek kaynak, tum sayfalar ayni kurali kullanir.
+
+    Rapor 3. tur bulgu 9/10: "UPDATED" kolonu her satirda ayni tarihi gosteriyordu
+    ve sayfa basligi ile satirlar farkli tarihler tasiyordu.
+    Kural: <=24 saat -> yesil nokta + "bugun"; <=48 saat -> sari; sonrasi tarih.
+    """
+    import datetime as _dt
+
+    if value is None:
+        return {"state": "unknown", "label": "Bilinmiyor", "dot": False, "css": "badge-neutral"}
+    ref = value if getattr(value, "tzinfo", None) else value.replace(tzinfo=_dt.timezone.utc)
+    hours = (_dt.datetime.now(_dt.timezone.utc) - ref).total_seconds() / 3600
+    if hours <= 24:
+        return {"state": "fresh", "label": "güncel", "dot": True, "css": "badge-ok", "hours": round(hours, 1)}
+    if hours <= 48:
+        return {"state": "recent", "label": "son 48 saat", "dot": True, "css": "badge-neutral", "hours": round(hours, 1)}
+    return {"state": "stale", "label": dt_tr(value), "dot": False, "css": "badge-warn", "hours": round(hours, 1)}
 
 
 def price_digits(value: float | None) -> int:
@@ -265,6 +285,8 @@ def configure() -> None:
     env.globals["price_value"] = price_value
     env.globals["price_text"] = price_text
     env.globals["dim_label"] = dim_label
+    env.globals["freshness_badge"] = freshness_badge
+    env.filters["freshness_badge"] = freshness_badge
     env.globals["tr_str"] = _t
     env.filters["dim_label"] = dim_label
     env.filters["age_days"] = age_days

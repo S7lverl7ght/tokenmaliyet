@@ -103,6 +103,7 @@ def prices_page(
     q: str = "",
     provider: str = "",
     channel: str = "",
+    kind: str = "chat",
     sort: str = "popular",
     page: int = 1,
     db: Session = Depends(get_session),
@@ -111,6 +112,9 @@ def prices_page(
     rows = queries.price_rows(db)
     # Inceleme raporu madde 4: alias ('~...-latest') kayitlari varsayilan listede gorunmez.
     visible_rows = [r for r in rows if not r.is_alias]
+    # Rapor 3. tur: ilk ekranda embedding/gorsel/ses modelleri gorunmesin.
+    if kind and kind != "all":
+        visible_rows = [r for r in visible_rows if queries.model_kind(r.name) == kind]
     filtered = _filter_sort(visible_rows, q, provider, channel, sort)
     page_count = max(1, math.ceil(len(filtered) / page_size))
     requested_page = page
@@ -137,7 +141,7 @@ def prices_page(
         provider_count=len({r.provider_slug for r in rows}),
         approved_count=sum(1 for r in rows for _ in r.dims),
         provider_options=queries.providers(db),
-        f={"q": q, "provider": provider, "channel": channel, "sort": sort},
+        f={"q": q, "provider": provider, "channel": channel, "sort": sort, "kind": kind},
         page=page,
         page_size=page_size,
         page_count=page_count,
@@ -149,7 +153,8 @@ def prices_page(
     # Filtre kombinasyonlari indekslenmesin (kilavuz: ince/tekrarlanan URL kirliligi).
     # Kilavuz: filtre/sayfa parametreleri indekslenmesin. Istenen sayfa (kisitlanmadan once)
     # esas alinir; aksi halde olmayan sayfa istegi indekslenebilir gorunur.
-    ctx["noindex"] = bool(q or provider or channel or sort != "popular" or requested_page > 1)
+    ctx["noindex"] = bool(q or provider or channel or sort != "popular" or kind != "chat"
+                          or requested_page > 1)
     return TEMPLATES.TemplateResponse(request, "prices.html", ctx)
 
 
@@ -307,48 +312,54 @@ def calculator_page(
     except ValueError:
         cache_share = 0.0
 
-    # Turkce token carpani: ayni icerik Turkce'de daha fazla token harcar.
-    # Inceleme raporu: bu carpan hesaplayiciya girsin (olculmus: ~2,3x).
+    # Turkce token carpani: OLCULMUS deger (tek kaynak).
+    # Rapor 3. tur: carpan HER IKI modele de uygulanir; tek tarafli uygulama tutarsizdi.
     tr_mult = 1.0
     if (dil or "").lower() == "tr":
         tr_mult = float(turkce_multiplier().get("ratio") or 1.0)
+    try:
+        cache_share = max(0.0, min(0.95, float(cache or 0) / 100))
+    except ValueError:
+        cache_share = 0.0
 
-    def _cost(row, fa: float, oa: float, mult: float = 1.0) -> float:
-        """Girdi maliyeti; cache orani verildiyse o kisim onbellek fiyatindan hesaplanir."""
-        cached_price = price_value(row.dim("cache_read"))[0]
-        if cache_share > 0 and cached_price is not None:
-            direct_share = 1 - cache_share
-            per_m_input = fa * direct_share + cached_price * cache_share
-        else:
-            per_m_input = fa
-        return ((n_in * mult) / 1_000_000) * per_m_input + ((n_out * mult) / 1_000_000) * oa
+    a = _find(rows, source)
+    b = _find(rows, target)
+    result = None
+    comparison = None
+    if not errors and a is not None and b is not None and n_in is not None and n_out is not None:
+        from .queries import to_model_price
+        import app.web.calc as calc
 
-    if not errors and a is not None and b is not None:
-        fa = price_value(a.dim("input"))
-        oa = price_value(a.dim("output"))
-        fb = price_value(b.dim("input"))
-        ob = price_value(b.dim("output"))
-        if None not in (fa[0], oa[0], fb[0], ob[0]) and n_in is not None and n_out is not None:
-            fx = float(queries.get_fx(db).rate) if queries.get_fx(db) else None
-            cost_a = _cost(a, fa[0], oa[0], 1.0)
-            cost_b = _cost(b, fb[0], ob[0], tr_mult)
-            diff = cost_a - cost_b
-            pct = (diff / cost_a * 100) if cost_a else None
-            result = {
-                "from_name": a.name, "to_name": b.name,
-                "from_usd": cost_a, "to_usd": cost_b,
-                "from_try": cost_a * fx if fx else None,
-                "to_try": cost_b * fx if fx else None,
-                "diff_usd": diff, "diff_try": diff * fx if fx else None,
-                "year_diff_try": diff * fx * 12 if fx else None,
-                "pct": pct, "saving": diff > 0,
-                "from_in": fa[0], "from_out": oa[0], "to_in": fb[0], "to_out": ob[0],
-                "to_bar": round(min(100.0, (cost_b / cost_a * 100) if cost_a else 100), 1),
-                "cache_share": round(cache_share * 100),
-                "tr_mult": tr_mult,
-                "dil": dil,
-                "cache_used": cache_share > 0 and price_value(a.dim("cache_read"))[0] is not None,
-            }
+        # TEK HESAPLAMA MODULU: Compare, Calculator ve Token sayaci ayni fonksiyonu cagirir.
+        comparison = calc.compare_models(
+            to_model_price(a), to_model_price(b),
+            n_in, n_out, tokens_multiplier=tr_mult, cache_share=cache_share,
+        )
+        fx_row = queries.get_fx(db)
+        fx = float(fx_row.rate) if fx_row else None
+        ca, cb = comparison["a"], comparison["b"]
+        diff = comparison["diff_usd"]
+        pct = comparison["saving_pct"]
+        result = {
+            "from_name": ca.model.name, "to_name": cb.model.name,
+            "from_usd": ca.total_usd, "to_usd": cb.total_usd,
+            "from_try": ca.total_usd * fx if fx else None,
+            "to_try": cb.total_usd * fx if fx else None,
+            "diff_usd": diff, "diff_try": diff * fx if fx else None,
+            "year_diff_try": diff * fx * 12 if fx else None,
+            "pct": pct, "saving": diff > 0,
+            "from_in": ca.model.input_per_1m, "from_out": ca.model.output_per_1m,
+            "to_in": cb.model.input_per_1m, "to_out": cb.model.output_per_1m,
+            "from_tier": ca.model.tier_label, "to_tier": cb.model.tier_label,
+            "from_cache": ca.cache_usd, "to_cache": cb.cache_usd,
+            "to_bar": round(min(100.0, (cb.total_usd / ca.total_usd * 100) if ca.total_usd else 100), 1),
+            "cache_share": round(cache_share * 100),
+            "cache_used": cache_share > 0 and (ca.cache_usd > 0 or cb.cache_usd > 0),
+            "tr_mult": tr_mult,
+            "dil": dil,
+            "eff_in": ca.effective_input_tokens,
+            "eff_out": ca.effective_output_tokens,
+        }
 
     ctx = base_context(
         db, request, nav="hesaplayici",
@@ -426,7 +437,7 @@ def compare_page(
     if len(chosen) < 2:
         if chosen:
             error = "En az iki model seçin."
-    elif not error:
+    elif not error and n_in is not None and n_out is not None:
         picked = []
         for key in chosen:
             row = _find(rows, key)
@@ -435,195 +446,51 @@ def compare_page(
         if len(picked) < 2:
             error = "Seçilen modellerden en az biri için girdi/çıktı fiyatı bulunamadı."
         else:
+            # TEK HESAPLAMA MODULU: Hesaplayici ile ayni fonksiyon, ayni varsayimlar.
+            from .queries import to_model_price
+            import app.web.calc as calc
+
+            tr_mult = float(turkce_multiplier().get("ratio") or 1.0)
             costs = []
             for row in picked:
-                fa = price_value(row.dim("input"))[0]
-                oa = price_value(row.dim("output"))[0]
-                if fa is None or oa is None:
-                    continue
-                cost = (n_in / 1_000_000) * fa + (n_out / 1_000_000) * oa
-                costs.append((row, fa, oa, cost))
+                breakdown = calc.monthly_cost(
+                    to_model_price(row), n_in, n_out, tokens_multiplier=tr_mult
+                )
+                costs.append((row, breakdown))
             if costs:
-                cheapest = min(c[3] for c in costs)
-                top = max(c[3] for c in costs) or 1.0
-                for row, fa, oa, cost in costs:
+                cheapest = min(c[1].total_usd for c in costs)
+                top = max(c[1].total_usd for c in costs) or 1.0
+                for row, bd in costs:
                     cards.append({
-                        "name": row.name, "provider_slug": row.provider_slug, "slug": row.slug,
-                        "provider_label": PROVIDER_LABELS.get(row.provider_slug, row.provider_name),
+                        "name": bd.model.name,
+                        "provider_slug": bd.model.provider,
+                        "slug": bd.model.slug,
+                        "provider_label": PROVIDER_LABELS.get(bd.model.provider, row.provider_name),
                         "channel_label": "Doğrudan API" if row.channel == "direct" else "Pazaryeri",
-                        "in_price": fa, "out_price": oa,
-                        "month_usd": cost, "month_try": cost * fx_rate if fx_rate else None,
-                        "diff_try": (cost - cheapest) * fx_rate if fx_rate else None,
-                        "bar_pct": max(4, min(100, cost / top * 100)),
-                        "best": abs(cost - cheapest) < 1e-9,
+                        "in_price": bd.model.input_per_1m,
+                        "out_price": bd.model.output_per_1m,
+                        "month_usd": bd.total_usd,
+                        "month_try": bd.total_usd * fx_rate if fx_rate else None,
+                        "diff_try": (bd.total_usd - cheapest) * fx_rate if fx_rate else None,
+                        "saving_pct": ((cheapest - bd.total_usd) / cheapest * 100) if cheapest else None,
+                        "bar_pct": max(4, min(100, bd.total_usd / top * 100)),
+                        "best": abs(bd.total_usd - cheapest) < 1e-9,
                         "observed": row.observed_at,
+                        "tier": bd.model.tier_label,
+                        "tr_mult": tr_mult,
                     })
                 cards.sort(key=lambda c: c["month_usd"])
 
     ctx = base_context(
         db, request, nav="karsilastir",
         options=options, selected=chosen, cards=cards, error=error,
-        f={"from": "", "to": "", "in": tokens_in, "out": tokens_out},
+        f={"from": "", "to": "", "in": tokens_in, "out": tokens_out,
+           "cache": "0", "dil": "tr"},
+        base_q={"models": chosen, "in": tokens_in, "out": tokens_out},
     )
     ctx["canonical"] = SITE_URL + "/karsilastir"
-    ctx["noindex"] = bool(chosen)
+    ctx["noindex"] = False   # varsayilan ornek her zaman ayni; indekslenebilir
     return TEMPLATES.TemplateResponse(request, "compare.html", ctx)
-
-
-
-
-@router.get("/hakkinda", response_class=HTMLResponse, include_in_schema=False)
-def about_page(request: Request, db: Session = Depends(get_session)):
-    from ..models import DataSource, PriceObservation
-    from sqlalchemy import func as sqlfunc, select as sselect
-    method_labels = {"http_json": "Resmî JSON API", "http_html": "Resmî fiyat sayfası (HTML)"}
-    src_rows = db.execute(
-        sselect(DataSource).where(DataSource.is_official.is_(True)).order_by(DataSource.provider_id)
-    ).scalars().all()
-    by_provider = {p.id: p for p in queries.providers(db)}
-
-    # Inceleme raporu: ayni saglayici iki satirda gorunuyordu (tekrar gibi).
-    # Cozum: saglayici basina TEK satir; kullanilan kaynak birincil, digeri "yedek".
-    used_urls = {cls.source_url.rstrip("/") for cls in COLLECTORS.values()}
-    grouped: dict[int, dict] = {}
-    for s in src_rows:
-        prov = by_provider.get(s.provider_id)
-        if prov is None:
-            continue
-        entry = grouped.setdefault(prov.id, {
-            "name": prov.name, "primary": None, "extra": [],
-        })
-        item = {
-            "url": s.source_url,
-            "method": method_labels.get(s.retrieval_method, s.retrieval_method),
-        }
-        is_used = s.source_url.rstrip("/") in used_urls
-        if is_used and entry["primary"] is None:
-            entry["primary"] = item
-        elif entry["primary"] is None:
-            entry["primary"] = item
-        else:
-            entry["extra"].append(item)
-    sources = [
-        {"name": e["name"], "pricing_url": e["primary"]["url"], "method": e["primary"]["method"],
-         "extra": e["extra"]}
-        for e in grouped.values()
-    ]
-    observation_count = db.scalar(
-        sselect(sqlfunc.count(PriceObservation.id)).where(PriceObservation.status == queries.APPROVED)
-    ) or 0
-    from ..models import GpuPrice
-    gpu_count = db.scalar(sselect(sqlfunc.count(GpuPrice.id)).where(GpuPrice.status == "approved")) or 0
-    ctx = base_context(db, request, nav="hakkinda", sources=sources,
-                       observation_count=observation_count, gpu_count=gpu_count,
-                       contact_email=CONTACT_EMAIL, stale_days=queries.STALE_DAYS)
-    ctx["canonical"] = SITE_URL + "/hakkinda"
-    return TEMPLATES.TemplateResponse(request, "about.html", ctx)
-
-
-
-
-@router.get("/rehber", response_class=HTMLResponse, include_in_schema=False)
-def guide_index(request: Request, db: Session = Depends(get_session)):
-    from .content.guides import GUIDES
-    ctx = base_context(db, request, nav="rehber", guides=GUIDES)
-    ctx["canonical"] = SITE_URL + "/rehber"
-    return TEMPLATES.TemplateResponse(request, "guide_index.html", ctx)
-
-
-@router.get("/rehber/{slug}", response_class=HTMLResponse, include_in_schema=False)
-def guide_page(slug: str, request: Request, db: Session = Depends(get_session)):
-    from .content.guides import GUIDES, by_slug
-    guide = by_slug(slug)
-    if guide is None:
-        return TEMPLATES.TemplateResponse(
-            request, "404.html",
-            base_context(db, request, nav="rehber", noindex=True,
-                         message="Bu rehber yazisi bulunamadi."),
-            status_code=404,
-        )
-    others = [g for g in GUIDES if g.slug != slug][:3]
-
-    # Ornek tablolar gercek veriden uretilir; elle yazilmis fiyat yok.
-    rows = queries.price_rows(db)
-    examples = []
-    for needle in ("claude-sonnet-4.5", "deepseek-v4-pro", "gpt-6-luna"):
-        row = next((r for r in rows if r.name == needle and r.has_tokens), None)
-        if row:
-            examples.append({
-                "name": row.name,
-                "input": price_value(row.dim("input"))[0],
-                "output": price_value(row.dim("output"))[0],
-            })
-
-    peak_examples = []
-    for r in rows:
-        if r.name.startswith("deepseek") and "input" in r.dims:
-            d = r.dims["input"]
-            if d.get("peak_period") in ("peak", "off_peak"):
-                peak_examples.append({
-                    "model": r.name,
-                    "dimension": "Girdi (input)",
-                    "period": "Yoğun saat" if d["peak_period"] == "peak" else "Yoğun olmayan saat",
-                    "price": price_value(d)[0],
-                })
-    peak_examples.sort(key=lambda x: (x["model"], x["period"]))
-
-    # GPU vs API rehberi icin ek veri (yalnizca o yazida kullanilir)
-    gpu_samples: list[dict] = []
-    api_equivalent = 0.0
-    cheapest = {"name": "-", "input": 0.0, "output": 0.0}
-    if slug == "api-mi-kendi-gpu-mu":
-        from ..models import GpuPrice, GpuProvider
-        gpu_rows = db.execute(
-            sselect(GpuPrice, GpuProvider)
-            .join(GpuProvider, GpuProvider.id == GpuPrice.provider_id)
-            .where(GpuPrice.status == "approved", GpuPrice.price_kind == "on_demand")
-            .order_by(GpuPrice.price_per_hour)
-        ).all()
-        seen_fam: set[str] = set()
-        for price, prov in gpu_rows:
-            if price.gpu_family in seen_fam:
-                continue
-            seen_fam.add(price.gpu_family)
-            gpu_samples.append({
-                "family": price.gpu_family,
-                "vram": price.vram_gb,
-                "price": float(price.price_per_hour),
-            })
-            if len(gpu_samples) >= 6:
-                break
-        direct = [r for r in rows if r.channel == "direct" and r.has_tokens]
-        if direct:
-            cheapest_row = sorted(
-                direct, key=lambda r: (price_value(r.dim("input"))[0] or 0)
-            )[0]
-            ci = price_value(cheapest_row.dim("input"))[0] or 0
-            co = price_value(cheapest_row.dim("output"))[0] or 0
-            cheapest = {"name": cheapest_row.name, "input": ci, "output": co}
-            if gpu_samples and ci > 0:
-                monthly_gpu = gpu_samples[0]["price"] * 730
-                # %75 girdi / %25 cikti karisimi varsayimi
-                blended = ci * 0.75 + co * 0.25
-                api_equivalent = round(monthly_gpu / blended, 1) if blended else 0.0
-
-    ctx = base_context(db, request, nav="rehber", guide=guide, other_guides=others,
-                       examples=examples, peak_examples=peak_examples,
-                       gpu_samples=gpu_samples, api_equivalent=api_equivalent,
-                       api_samples=[r for r in rows if r.channel == "direct"][:10],
-                       cheapest=cheapest)
-    ctx["canonical"] = f"{SITE_URL}/rehber/{slug}"
-    ctx["noindex"] = False
-    template = f"rehber/{slug}.html"
-    return TEMPLATES.TemplateResponse(request, template, ctx)
-
-
-
-
-@router.get("/api/v1/model-options", include_in_schema=False)
-def model_options_json(db: Session = Depends(get_session)) -> list[dict]:
-    """Hesaplayici/karistirma icin tam model listesi (kucuk JSON, onbelleklenebilir)."""
-    return _model_options(queries.price_rows(db))
 
 
 @router.get("/token-sayaci", response_class=HTMLResponse, include_in_schema=False)
@@ -749,18 +616,35 @@ def gpu_page(
 # Inceleme raporu (11.11.2026): yayimlanmis duzeltmeler kamuya acik olsun.
 CORRECTIONS: list[dict] = [
     {
+        "date": "12.11.2026",
+        "item": "gemini-embedding-2 (Gemini)",
+        "old": "girdi 0,200 USD/1M (tek kayıt)",
+        "new": "0,200 metin · 0,450 görsel · 6,50 ses · 12,00 video",
+        "reason": (
+            "Metin/görsel/ses/video girdi fiyatları aynı 'input' kalemine yazılıyordu; "
+            "artık ayrı boyutlarda. Aynı kalemde birden fazla fiyat yayınlanamaz kuralı eklendi."
+        ),
+    },
+    {
+        "date": "12.11.2026",
+        "item": "Anthropic bağlam dilimleri",
+        "old": "aynı kalemde 0,125 ve 0,625 (ikisi de 'standart')",
+        "new": "≤100K: 0,125 · >100K: 0,625",
+        "reason": "Bağlam dilimi etiketsiz kaldığı için iki fiyat tek kalemde görünüyordu.",
+    },
+    {
         "date": "11.11.2026",
         "item": "z-ai/glm-5.2, deepseek-v4.1-flash, kimi-k3 (OpenRouter)",
-        "old": "girdi 0,0000000070 USD/token",
+        "old": "girdi 0,007 USD/1M",
         "new": "yayından kaldırıldı",
-        "reason": "Çıktı/girdi oranı 971x — kaynakta birim hatası; doğrulanana kadar yayınlanmıyor",
+        "reason": "Çıktı/girdi oranı 971× — kaynakta birim hatası; doğrulanana kadar yayınlanmıyor.",
     },
     {
         "date": "11.11.2026",
         "item": "Tüm fiyat tablosu",
         "old": "13,860 USD",
         "new": "13,86 USD",
-        "reason": "Üç ondalık yazım on üç bin diye okunuyordu; basamak sayısı değere göre uyarlandı",
+        "reason": "Üç ondalık yazım on üç bin diye okunuyordu; basamak sayısı değere göre uyarlandı.",
     },
 ]
 
@@ -835,7 +719,10 @@ def changes_page(request: Request, days: int = 30, db: Session = Depends(get_ses
         .order_by(PriceObservation.observed_at.desc())
     ).all()
 
-    # Model + kalem + donem bazinda en eski ve en yeni gozlemi karsilastir
+    # Model + kalem + donem bazinda en eski ve en yeni gozlemi karsilastir.
+    # Rapor 3. tur bulgu 5: degerler 1M token birimine cevrilmeli (ham per-token degil).
+    # Rapor 3. tur bulgu 6: yuvarlanmis sifir farkindan yuzde uretilmemeli.
+    per_million = {"USD/1M_tokens": 1.0, "USD/1K_tokens": 1000.0, "USD/token": 1_000_000.0}
     grouped: dict[tuple, list] = {}
     for obs, model, prov in rows:
         k = (model.id, obs.price_dimension, obs.peak_period, obs.tier_label)
@@ -845,18 +732,30 @@ def changes_page(request: Request, days: int = 30, db: Session = Depends(get_ses
     for k, items in grouped.items():
         items.sort(key=lambda x: x[0].observed_at)
         first, last = items[0], items[-1]
-        old, new = float(first[0].amount), float(last[0].amount)
-        if abs(new - old) < 1e-12 or old <= 0:
+        factor = per_million.get(last[0].billing_unit, 1.0)
+        old = float(first[0].amount) * factor
+        new = float(last[0].amount) * factor
+        if old <= 0:
+            continue
+        # Anlamli basamak: gosterilen degerler esitse satir gizlenir.
+        if round(old, 4) == round(new, 4):
+            continue
+        pct = (new - old) / old * 100
+        if abs(pct) < 0.05:
             continue
         model = last[1]
         from .queries import split_variant, to_slug
         base, _variant = split_variant(model.canonical_id)
         changes.append({
-            "model": base, "slug": to_slug(base), "provider": last[2].slug,
-            "dimension": last[0].price_dimension,
-            "old": old, "new": new,
-            "pct": (new - old) / old * 100,
+            "model": base,
+            "slug": to_slug(base),
+            "provider": last[2].slug,
+            "dimension": DIMENSION_TR.get(last[0].price_dimension, last[0].price_dimension),
+            "old": old,
+            "new": new,
+            "pct": pct,
             "date": last[0].observed_at,
+            "needs_review": abs(pct) > 30,
         })
     changes.sort(key=lambda c: abs(c["pct"]), reverse=True)
 
@@ -966,6 +865,143 @@ def alert_page(request: Request, target: str = "", label: str = "", db: Session 
     return TEMPLATES.TemplateResponse(request, "uyari.html", ctx)
 
 
+
+
+@router.get("/rehber", response_class=HTMLResponse, include_in_schema=False)
+def guide_index(request: Request, db: Session = Depends(get_session)):
+    from .content.guides import GUIDES
+
+    ctx = base_context(db, request, nav="rehber", guides=GUIDES)
+    ctx["canonical"] = SITE_URL + "/rehber"
+    return TEMPLATES.TemplateResponse(request, "guide_index.html", ctx)
+
+
+@router.get("/rehber/{slug}", response_class=HTMLResponse, include_in_schema=False)
+def guide_page(slug: str, request: Request, db: Session = Depends(get_session)):
+    from .content.guides import GUIDES, by_slug
+
+    guide = by_slug(slug)
+    if guide is None:
+        return TEMPLATES.TemplateResponse(
+            request, "404.html",
+            base_context(db, request, nav="rehber", noindex=True,
+                         message="Bu rehber yazisi bulunamadi."),
+            status_code=404,
+        )
+    others = [g for g in GUIDES if g.slug != slug][:3]
+
+    # Ornek tablolar gercek veriden uretilir; elle yazilmis fiyat yok.
+    rows = queries.price_rows(db)
+    examples = []
+    for needle in ("claude-sonnet-4.5", "deepseek-v4-pro", "gpt-6-luna"):
+        row = next((r for r in rows if r.name == needle and r.has_tokens), None)
+        if row:
+            examples.append({
+                "name": row.name,
+                "input": price_value(row.dim("input"))[0],
+                "output": price_value(row.dim("output"))[0],
+            })
+
+    peak_examples = []
+    for r in rows:
+        if r.name.startswith("deepseek") and "input" in r.dims:
+            d = r.dims["input"]
+            if d.get("peak_period") in ("peak", "off_peak"):
+                peak_examples.append({
+                    "model": r.name,
+                    "dimension": "Girdi (input)",
+                    "period": "Yogun saat" if d["peak_period"] == "peak" else "Yogun olmayan saat",
+                    "price": price_value(d)[0],
+                })
+    peak_examples.sort(key=lambda x: (x["model"], x["period"]))
+
+    gpu_samples: list[dict] = []
+    api_equivalent = 0.0
+    cheapest = {"name": "-", "input": 0.0, "output": 0.0}
+    if slug == "api-mi-kendi-gpu-mu":
+        from ..models import GpuPrice, GpuProvider
+        gpu_rows = db.execute(
+            sselect(GpuPrice, GpuProvider)
+            .join(GpuProvider, GpuProvider.id == GpuPrice.provider_id)
+            .where(GpuPrice.status == "approved", GpuPrice.price_kind == "on_demand")
+            .order_by(GpuPrice.price_per_hour)
+        ).all()
+        seen_fam: set[str] = set()
+        for price, prov in gpu_rows:
+            if price.gpu_family in seen_fam:
+                continue
+            seen_fam.add(price.gpu_family)
+            gpu_samples.append({
+                "family": price.gpu_family,
+                "vram": price.vram_gb,
+                "price": float(price.price_per_hour),
+            })
+            if len(gpu_samples) >= 6:
+                break
+        direct = [r for r in rows if r.channel == "direct" and r.has_tokens]
+        if direct:
+            cheapest_row = sorted(direct, key=lambda r: (price_value(r.dim("input"))[0] or 0))[0]
+            ci = price_value(cheapest_row.dim("input"))[0] or 0
+            co = price_value(cheapest_row.dim("output"))[0] or 0
+            cheapest = {"name": cheapest_row.name, "input": ci, "output": co}
+            if gpu_samples and ci > 0:
+                monthly_gpu = gpu_samples[0]["price"] * 730
+                blended = ci * 0.75 + co * 0.25
+                api_equivalent = round(monthly_gpu / blended, 1) if blended else 0.0
+
+    ctx = base_context(db, request, nav="rehber", guide=guide, other_guides=others,
+                       examples=examples, peak_examples=peak_examples,
+                       gpu_samples=gpu_samples, api_equivalent=api_equivalent,
+                       api_samples=[r for r in rows if r.channel == "direct"][:10],
+                       cheapest=cheapest)
+    ctx["canonical"] = f"{SITE_URL}/rehber/{slug}"
+    ctx["noindex"] = False
+    return TEMPLATES.TemplateResponse(request, "rehber/" + slug + ".html", ctx)
+
+
+@router.get("/hakkinda", response_class=HTMLResponse, include_in_schema=False)
+def about_page(request: Request, db: Session = Depends(get_session)):
+    from sqlalchemy import func as sqlfunc
+    from ..models import DataSource, GpuPrice, PriceObservation, Provider
+
+    method_labels = {"http_json": "Resmî JSON API", "http_html": "Resmî fiyat sayfası (HTML)"}
+    src_rows = db.execute(
+        sselect(DataSource).where(DataSource.is_official.is_(True)).order_by(DataSource.provider_id)
+    ).scalars().all()
+    by_provider = {p.id: p for p in queries.providers(db)}
+    used_urls = {cls.source_url.rstrip("/") for cls in COLLECTORS.values()}
+    grouped: dict[int, dict] = {}
+    for s in src_rows:
+        prov = by_provider.get(s.provider_id)
+        if prov is None:
+            continue
+        entry = grouped.setdefault(prov.id, {"name": prov.name, "primary": None, "extra": []})
+        item = {"url": s.source_url, "method": method_labels.get(s.retrieval_method, s.retrieval_method)}
+        is_used = s.source_url.rstrip("/") in used_urls
+        if entry["primary"] is None or (is_used and entry["primary"]["url"] not in used_urls):
+            if entry["primary"] is not None:
+                entry["extra"].append(entry["primary"])
+            entry["primary"] = item
+        else:
+            entry["extra"].append(item)
+    sources = [
+        {"name": e["name"], "pricing_url": e["primary"]["url"], "method": e["primary"]["method"],
+         "extra": e["extra"]}
+        for e in grouped.values()
+    ]
+    observation_count = db.scalar(
+        sselect(sqlfunc.count(PriceObservation.id)).where(PriceObservation.status == queries.APPROVED)
+    ) or 0
+    gpu_count = db.scalar(
+        sselect(sqlfunc.count(GpuPrice.id)).where(GpuPrice.status == "approved")
+    ) or 0
+    ctx = base_context(db, request, nav="hakkinda", sources=sources,
+                       observation_count=observation_count, gpu_count=gpu_count,
+                       contact_email=CONTACT_EMAIL, stale_days=queries.STALE_DAYS)
+    ctx["canonical"] = SITE_URL + "/hakkinda"
+    return TEMPLATES.TemplateResponse(request, "about.html", ctx)
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
     return ("User-agent: *\n"
@@ -1012,3 +1048,9 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
         body.append(f"<url><loc>{SITE_URL}{path}</loc><changefreq>daily</changefreq></url>")
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")
+
+
+@router.get("/api/v1/model-options", include_in_schema=False)
+def model_options_json(db: Session = Depends(get_session)) -> list[dict]:
+    """Tam model listesi (kucuk JSON, onbelleklenebilir). Tarayici secimleri icin."""
+    return _model_options(queries.price_rows(db))

@@ -7,9 +7,9 @@
 <div class="container" style="max-width:1040px">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Türkçe token maliyeti</li></ol></nav>
-    <h1>Türkçe, aynı içerik için <span style="color:var(--primary)">{{ data.totals.ratio }} kat</span> daha fazla token harcıyor</h1>
-    <p class="lede">Bu, Türkiye'de AI maliyeti hesaplayan herkesin gözden kaçırdığı kalem. Aşağıdaki sayılar
-      tahmin değil: gerçek BPE tokenizer ile, aynı anlamdaki Türkçe ve İngilizce cümleler üzerinde ölçüldü.</p>
+    <h1>Türkçe metin, aynı içerik için yaklaşık <span style="color:var(--primary)">{{ data.totals.ratio|tl(2) }} kat</span> daha fazla token harcıyor</h1>
+    <p class="lede">Türkçe iş yüklerinde sık gözden kaçan bir kalem. Aşağıdaki sayılar
+      gerçek bir BPE tokenizer ile ölçüldü; ancak örneklem küçük ({{ data.samples|length }} cümle çifti) ve tek tokenizer kullanıldı. Bu yüzden sonuç <strong>medyan bir tahmindir</strong>, kesin bir oran değil.</p>
     <div class="meta">
       <span>Tokenizer: <strong>{{ data.encoding }}</strong></span>
       <span>Örnek: <strong>{{ data.samples|length }} cümle çifti</strong></span>

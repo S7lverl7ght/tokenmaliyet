@@ -13,16 +13,22 @@ DATE_PRICE = re.compile(
     r"\$\s?([0-9][0-9,]*\.?[0-9]*)\s*(through|starting)\s+([A-Z][a-z]+)\s+(\d{1,2}),\s*(\d{4})"
 )
 
+# Kural: EN SPESIFIK etiket once gelir. "input price" jenerik oldugu icin EN SONDA
+# olmali; aksi halde "Image input price" de 'input' boyutuna duser (gercek hata:
+# gemini-embedding-2 icin 0.20/0.45/6.50/12.00 ayni 'input' altinda birikmisti).
 DIM_LABELS = [
-    ("input price", "input", "USD/1M_tokens"),
-    ("output price", "output", "USD/1M_tokens"),
+    ("text input price", "input", "USD/1M_tokens"),
+    ("image input price", "image_input", "USD/1M_tokens"),
+    ("image output price", "image_output", "USD/1M_tokens"),
+    ("audio input price", "audio_input", "USD/1M_tokens"),
+    ("audio output price", "audio_output", "USD/1M_tokens"),
+    ("video input price", "video_input", "USD/1M_tokens"),
+    ("video output price", "video_output", "USD/1M_tokens"),
     ("context caching price", "cache_read", "USD/1M_tokens"),
     ("caching price", "cache_read", "USD/1M_tokens"),
     ("cache storage", "cache_storage", "USD/1M_tokens"),
-    ("audio input", "audio_input", "USD/1M_tokens"),
-    ("audio output", "audio_output", "USD/1M_tokens"),
-    ("image", "image_input", "USD/image"),
-    ("video", "video_input", "USD/second"),
+    ("output price", "output", "USD/1M_tokens"),
+    ("input price", "input", "USD/1M_tokens"),
     ("grounding", "request", "USD/1K_requests"),
 ]
 MONTHS = {m: i for i, m in enumerate(

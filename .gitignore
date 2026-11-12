@@ -10,3 +10,7 @@ data/backup/
 _*.py
 _*.txt
 _*.json
+
+dist/
+_*.py
+_*.txt

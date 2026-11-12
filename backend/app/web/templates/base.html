@@ -48,11 +48,22 @@
     </a>
     <nav class="nav" id="nav" aria-label="Ana menü" data-open="false">
       <a href="/fiyatlar" {% if nav == 'fiyatlar' %}aria-current="page"{% endif %}>{{ t('nav.prices') }}</a>
-      <a href="/karsilastir" {% if nav == 'karsilastir' %}aria-current="page"{% endif %}>{{ t('nav.compare') }}</a>
-      <a href="/hesaplayici" {% if nav == 'hesaplayici' %}aria-current="page"{% endif %}>{{ t('nav.calculator') }}</a>
-      <a href="/token-sayaci" {% if nav == 'token' and path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
-      <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>Türkçe farkı</a>
-      <a href="/gpu-maliyetleri" {% if nav == 'gpu' %}aria-current="page"{% endif %}>{{ t('nav.gpu') }}</a>
+      <a href="/gpu-maliyetleri" {% if nav == 'gpu' %}aria-current="page"{% endif %}>GPU</a>
+
+      {# Araclar tek baslik altinda toplanir (rapor 3. tur: 9 link menüyü sikistiriyordu). #}
+      <div class="nav-group" data-open="false">
+        <button type="button" class="nav-group-btn" aria-expanded="false" aria-haspopup="true"
+                {% if nav in ('hesaplayici', 'karsilastir', 'token') %}data-active="true"{% endif %}>
+          Araçlar <span aria-hidden="true" class="nav-caret">▾</span>
+        </button>
+        <div class="nav-menu" role="group" aria-label="Araçlar">
+          <a href="/hesaplayici" {% if nav == 'hesaplayici' %}aria-current="page"{% endif %}>{{ t('nav.calculator') }}</a>
+          <a href="/karsilastir" {% if nav == 'karsilastir' %}aria-current="page"{% endif %}>{{ t('nav.compare') }}</a>
+          <a href="/token-sayaci" {% if path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
+          <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>Türkçe token farkı</a>
+        </div>
+      </div>
+
       <a href="/degisiklikler" {% if nav == 'degisiklikler' %}aria-current="page"{% endif %}>Değişiklikler</a>
       <a href="/rehber" {% if nav == 'rehber' %}aria-current="page"{% endif %}>{{ t('nav.guides') }}</a>
       <a href="/hakkinda" {% if nav == 'hakkinda' %}aria-current="page"{% endif %}>{{ t('nav.about') }}</a>
@@ -150,6 +161,22 @@
   btn.addEventListener("click", function(){ apply(root.dataset.theme==="dark"?"light":"dark"); });
   // Kılavuz: açık tema varsayılan. Sistem tercihi yalnızca kullanıcı seçim yapmadıysa
   // ilk boyamada uygulanmaz; böylece sayfa beklendiği gibi açık gelir.
+  // "Araclar" acilir menusu: klavye ve disari tikla destegi
+  document.querySelectorAll(".nav-group").forEach(function(group){
+    var btn = group.querySelector(".nav-group-btn");
+    function close(){ group.dataset.open="false"; btn.setAttribute("aria-expanded","false"); }
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var open = group.dataset.open === "true";
+      document.querySelectorAll(".nav-group").forEach(function(g){ g.dataset.open="false"; var b=g.querySelector(".nav-group-btn"); if(b) b.setAttribute("aria-expanded","false"); });
+      if(!open){ group.dataset.open="true"; btn.setAttribute("aria-expanded","true"); }
+    });
+    group.addEventListener("keydown", function(e){ if(e.key === "Escape"){ close(); btn.focus(); } });
+  });
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".nav-group").forEach(function(g){ g.dataset.open="false"; var b=g.querySelector(".nav-group-btn"); if(b) b.setAttribute("aria-expanded","false"); });
+  });
+
   var menu=document.getElementById("menu-toggle"), nav=document.getElementById("nav");
   menu.addEventListener("click", function(){
     var open = nav.dataset.open==="true";

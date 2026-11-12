@@ -1,0 +1,85 @@
+name: Veri yenile ve yayinla
+
+on:
+  schedule:
+    # 06:10 ve 18:10 TR (UTC+3) -> 03:10 ve 15:10 UTC
+    - cron: "10 3,15 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ai_maliyet_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: ai_maliyet_merkezi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ai_maliyet_user"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://ai_maliyet_user:ci_password@localhost:5432/ai_maliyet_merkezi
+      PYTHONPATH: ${{ github.workspace }}/backend
+      SITE_URL: ${{ vars.SITE_URL || 'https://tokenmaliyet.com' }}
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+      CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL || 'iletisim@tokenmaliyet.com' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Bagimliliklari kur
+        run: pip install -r requirements.txt
+
+      - name: Semayi olustur
+        run: |
+          python -m alembic upgrade head
+          python -m app.seed
+
+      - name: Fiyatlari topla
+        run: |
+          python scripts/bot.py --max-change-pct 30
+
+      - name: Golden test (bilinen 20 fiyat degismedi mi?)
+        run: python scripts/check_golden.py
+
+      - name: Testler
+        run: pytest tests -q
+
+      - name: Statik site uret
+        run: python scripts/export_static.py
+
+      - name: Degisiklik varsa commit et
+        run: |
+          git config user.name "TokenMaliyet Bot"
+          git config user.email "bot@tokenmaliyet.local"
+          git add tests/golden_prices.json data/ 2>/dev/null || true
+          git diff --quiet --cached || git commit -m "veri: otomatik fiyat guncellemesi [skip ci]"
+          git push || true
+
+      - name: Cloudflare Pages'e yukle
+        if: ${{ vars.CF_DEPLOY == 'true' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=tokenmaliyet

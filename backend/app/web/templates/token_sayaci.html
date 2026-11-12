@@ -50,7 +50,7 @@
           </div>
         </details>
 
-        <div class="mt-4" style="border-top:1px solid var(--border);padding-top:var(--sp-4)">
+        <div class="mt-4" id="trEnBlock" hidden style="border-top:1px solid var(--border);padding-top:var(--sp-4)">
           <h3 style="font-size:var(--fs-h3)">Türkçe mi, İngilizce mi?</h3>
           <p class="help mt-2">Aynı içeriği İngilizce yazsaydınız token sayısı ve maliyeti ne olurdu?</p>
           <div class="kpis mt-3">
@@ -128,6 +128,8 @@
     var text = ta.value || '';
     var tokens = estimateTokens(text);
     elTok.textContent = tokens.toLocaleString('tr-TR');
+    var block = document.getElementById('trEnBlock');
+    if(block){ block.hidden = tokens === 0; }
     elW.textContent = (text.trim()? text.trim().split(/\s+/).length : 0).toLocaleString('tr-TR');
     elC.textContent = text.length.toLocaleString('tr-TR');
 

@@ -8,6 +8,7 @@ Kurallar:
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 from hashlib import sha256
 
@@ -24,12 +25,36 @@ from .render import SITE_URL, TEMPLATES, base_context, configure
 router = APIRouter(prefix="/admin", include_in_schema=False)
 configure()
 
+logger = logging.getLogger(__name__)
+
 COOKIE = "amm_admin"
+
+
+# Guvenlik kapisi (rapor 3. tur madde 1): varsayilan anahtar kabul edilmez.
+INSECURE_DEFAULTS = {
+    "YerelAdmin2026-degistir",
+    "change_me",
+    "changeme",
+    "admin",
+    "password",
+    "test",
+}
 
 
 def _token() -> str | None:
     value = os.getenv("ADMIN_TOKEN", "").strip()
-    return value or None
+    if not value:
+        return None
+    is_prod = os.getenv("APP_ENV", "dev") == "production"
+    if is_prod and (value in INSECURE_DEFAULTS or len(value) < 32):
+        # Uretimde zayif anahtar: yonetim paneli KAPALI kalir (guvenli varsayilan).
+        logger.error(
+            "ADMIN_TOKEN zayif/varsayilan (%d karakter). Uretimde en az 32 karakterlik "
+            "rastgele bir anahtar gerekir; yonetim paneli devre disi.",
+            len(value),
+        )
+        return None
+    return value
 
 
 def _cookie_value(token: str) -> str:

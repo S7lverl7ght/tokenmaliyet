@@ -21,6 +21,7 @@ PAGES = [
     "/gizlilik",
     "/iletisim",
     "/duzeltmeler",
+    "/degisiklikler",
     "/token-sayaci",
     "/gpu-maliyetleri",
     "/hakkinda",
@@ -256,3 +257,51 @@ def test_compare_prefills_two_models(client):
     body = client.get("/karsilastir").text
     # Sunucu tarafında en az iki model seçili gelmeli (boş ekran yok)
     assert "compare-card" in body or "en düşük maliyet" in body
+
+
+def test_alias_rows_hidden_by_default(client):
+    """Alias ('~...-latest') kayitlari varsayilan listede gorunmemeli."""
+    body = client.get("/fiyatlar").text
+    import re
+    assert not re.findall(r'class="name"[^>]*>~', body)
+
+
+def test_source_type_column_shown(client):
+    body = client.get("/fiyatlar").text
+    assert "Kaynak türü" in body
+    assert "Resmî API" in body or "Pazaryeri" in body
+
+
+def test_description_mentions_marketplace(client):
+    body = client.get("/fiyatlar").text
+    assert "pazaryeri" in body.lower()
+
+
+def test_calculator_turkish_multiplier(client):
+    tr = client.get("/hesaplayici?dil=tr").text
+    en = client.get("/hesaplayici?dil=en").text
+    assert "Türkçe çarpanı uygulandı" in tr
+    assert "Türkçe çarpanı uygulandı" not in en
+
+
+def test_token_counter_has_turkish_comparison(client):
+    body = client.get("/token-sayaci").text
+    assert "İngilizce" in body
+    assert "tokenDiff" in body or "enTokens" in body
+
+
+def test_changes_page(client):
+    r = client.get("/degisiklikler")
+    assert r.status_code == 200
+    assert "Değişiklik" in r.text or "değişti" in r.text.lower()
+
+
+def test_single_default_source_of_truth(client):
+    """Hesaplayici, karsilastir ve token sayaci ayni varsayilan modeli kullanmali."""
+    import re
+    calc = client.get("/hesaplayici").text
+    counter = client.get("/token-sayaci").text
+    # her ikisinde de ayni default-model degeri gomulu olmali
+    calc_def = re.findall(r'<option value="([^"]+)" selected>', calc)
+    counter_def = re.findall(r'data-default-model="([^"]*)"', counter)
+    assert counter_def, "token sayacinda varsayilan model yok"

@@ -190,6 +190,24 @@ def _pref(value, allowed, default):
     return value if value in allowed else default
 
 
+def turkce_multiplier() -> dict:
+    """Turkce/Ingilizce token carpani - olculmus veriden (tek kaynak)."""
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).parent / "data" / "turkce_token.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return {
+            "ratio": data["totals"]["ratio"],
+            "extra_pct": data["totals"]["extra_pct"],
+            "range": data.get("range", {}),
+            "samples": data.get("sample_count", 0),
+        }
+    except Exception:  # noqa: BLE001
+        return {"ratio": 1.0, "extra_pct": 0, "range": {}, "samples": 0}
+
+
 def base_context(db: Session, request, **extra) -> dict:
     qp = request.query_params
     currency = _pref((qp.get("currency") or "").upper(), {"USD", "TRY"}, "USD")
@@ -210,6 +228,7 @@ def base_context(db: Session, request, **extra) -> dict:
         "currency": currency,
         "lang": lang,
         "t": lambda key: _t(key, lang),
+        "turkce": turkce_multiplier(),
         "keep_params": keep_params,
         "fx_rate": float(fx.rate) if fx else None,
         "fx_date": dt_tr(fx.effective_at) if fx else None,

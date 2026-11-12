@@ -71,6 +71,8 @@ class PriceRow:
     observed_at: dt.datetime
     dims: dict[str, dict] = field(default_factory=dict)
     model_url: str = ""
+    is_alias: bool = False
+    alias_of: str | None = None
 
     def dim(self, key: str) -> dict | None:
         return self.dims.get(key)
@@ -168,8 +170,41 @@ def _collect(session: Session, *, provider_slug: str | None = None) -> list[Pric
     return list(rows.values())
 
 
+def _price_signature(row: PriceRow) -> tuple:
+    """Fiyat imzasi: ayni imza + ayni saglayici = buyuk olasilikla alias."""
+    inp = row.dim("input")
+    out = row.dim("output")
+    return (
+        round(inp["amount"] * 1_000_000, 6) if inp else None,
+        round(out["amount"] * 1_000_000, 6) if out else None,
+    )
+
+
+def mark_aliases(rows: list[PriceRow]) -> list[PriceRow]:
+    """'~' ile baslayan '...-latest' kayitlari takma addir; ana modele baglanir.
+
+    Inceleme raporu (11.11.2026) madde 4: alias kayit kendi satirini almamali.
+    Kural: id '~' ile basliyorsa ve ayni saglayici icinde AYNI fiyat imzasina sahip
+    baska bir kayit varsa -> alias kabul edilir, listede gosterilmez.
+    """
+    real: dict[tuple, PriceRow] = {}
+    for r in rows:
+        if not r.name.startswith("~"):
+            real.setdefault((r.provider_slug,) + _price_signature(r), r)
+
+    for r in rows:
+        r.is_alias = False
+        r.alias_of = None
+        if r.name.startswith("~"):
+            target = real.get((r.provider_slug,) + _price_signature(r))
+            if target is not None:
+                r.is_alias = True
+                r.alias_of = target.name
+    return rows
+
+
 def price_rows(session: Session, *, provider_slug: str | None = None) -> list[PriceRow]:
-    return _collect(session, provider_slug=provider_slug)
+    return mark_aliases(_collect(session, provider_slug=provider_slug))
 
 
 def variants_for(session: Session, provider_slug: str, slug: str) -> list[PriceRow]:

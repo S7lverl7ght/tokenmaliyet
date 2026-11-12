@@ -1,5 +1,166 @@
 {
-  "encoding": "cl100k_base (OpenAI GPT-4/5 ailesi ile uyumlu BPE)",
+  "encoding": "cl100k_base",
+  "label": "OpenAI GPT-4/5 ailesi",
+  "measured_at": "12.11.2026",
+  "sample_count": 20,
+  "total": {
+    "encoding": "cl100k_base",
+    "label": "OpenAI GPT-4/5 ailesi",
+    "samples": [
+      {
+        "tr": "Türkiye'de yapay zeka modellerinin maliyeti hızla değişiyor.",
+        "en": "The cost of artificial intelligence models is changing rapidly.",
+        "tr_tokens": 24,
+        "en_tokens": 10,
+        "ratio": 2.4
+      },
+      {
+        "tr": "Bu rapor, sağlayıcıların resmî fiyat sayfalarından toplanan verilere dayanır.",
+        "en": "This report is based on data collected from providers' official pricing pages.",
+        "tr_tokens": 27,
+        "en_tokens": 14,
+        "ratio": 1.93
+      },
+      {
+        "tr": "Önbellek kullanımı, uzun bağlamlı uygulamalarda maliyeti önemli ölçüde düşürür.",
+        "en": "Caching significantly reduces costs in applications with long contexts.",
+        "tr_tokens": 38,
+        "en_tokens": 11,
+        "ratio": 3.45
+      },
+      {
+        "tr": "Müşteri destek botları için günlük token hacmi belirleyici faktördür.",
+        "en": "Daily token volume is the determining factor for customer support bots.",
+        "tr_tokens": 25,
+        "en_tokens": 12,
+        "ratio": 2.08
+      },
+      {
+        "tr": "Fiyatlar resmî kaynaklardan toplanır ve yayın öncesi doğrulanır.",
+        "en": "Prices are collected from official sources and verified before publication.",
+        "tr_tokens": 26,
+        "en_tokens": 11,
+        "ratio": 2.36
+      },
+      {
+        "tr": "Model seçimi, aylık faturayı birkaç katına çıkarabilir.",
+        "en": "Model choice can multiply your monthly bill several times over.",
+        "tr_tokens": 22,
+        "en_tokens": 11,
+        "ratio": 2.0
+      },
+      {
+        "tr": "Türkçe metinler, aynı içerik için daha fazla token harcar.",
+        "en": "Turkish texts consume more tokens for the same content.",
+        "tr_tokens": 23,
+        "en_tokens": 11,
+        "ratio": 2.09
+      },
+      {
+        "tr": "Hesaplama, girdi ve çıktı tokenlarının ayrı fiyatlandırılmasına dayanır.",
+        "en": "The calculation relies on separate pricing for input and output tokens.",
+        "tr_tokens": 30,
+        "en_tokens": 12,
+        "ratio": 2.5
+      },
+      {
+        "tr": "Yapay zeka API fiyatları sağlayıcıdan sağlayıcıya büyük farklılık gösteriyor.",
+        "en": "AI API prices vary widely from provider to provider.",
+        "tr_tokens": 27,
+        "en_tokens": 10,
+        "ratio": 2.7
+      },
+      {
+        "tr": "Bir şirketin aylık bütçesini planlamak için token maliyetini bilmesi gerekir.",
+        "en": "A company needs to know its token costs to plan its monthly budget.",
+        "tr_tokens": 30,
+        "en_tokens": 14,
+        "ratio": 2.14
+      },
+      {
+        "tr": "Küçük bir ekip bile doğru modeli seçerek maliyetini yarıya indirebilir.",
+        "en": "Even a small team can halve its costs by choosing the right model.",
+        "tr_tokens": 27,
+        "en_tokens": 15,
+        "ratio": 1.8
+      },
+      {
+        "tr": "Sunucu tarafında çalışan uygulamalar, gecikme ve maliyet arasında denge kurmalıdır.",
+        "en": "Server-side applications must balance latency against cost.",
+        "tr_tokens": 32,
+        "en_tokens": 9,
+        "ratio": 3.56
+      },
+      {
+        "tr": "Bu ölçüm, gerçek bir tokenizer kullanılarak yapılmıştır.",
+        "en": "This measurement was made using a real tokenizer.",
+        "tr_tokens": 21,
+        "en_tokens": 9,
+        "ratio": 2.33
+      },
+      {
+        "tr": "Türkçe karakterler çoğu tokenizer'da birden fazla parçaya bölünür.",
+        "en": "Turkish characters are split into multiple pieces in most tokenizers.",
+        "tr_tokens": 26,
+        "en_tokens": 13,
+        "ratio": 2.0
+      },
+      {
+        "tr": "Fiyat geçmişi, bir modelin zam yapıp yapmadığını gösterir.",
+        "en": "Price history shows whether a model has raised its prices.",
+        "tr_tokens": 21,
+        "en_tokens": 11,
+        "ratio": 1.91
+      },
+      {
+        "tr": "Kaynak bağlantısı olmayan bir fiyat, güvenilir değildir.",
+        "en": "A price without a source link is not trustworthy.",
+        "tr_tokens": 22,
+        "en_tokens": 10,
+        "ratio": 2.2
+      },
+      {
+        "tr": "Grafik işlemci kiralamak, API kullanmaktan her zaman ucuz değildir.",
+        "en": "Renting a GPU is not always cheaper than using an API.",
+        "tr_tokens": 23,
+        "en_tokens": 13,
+        "ratio": 1.77
+      },
+      {
+        "tr": "Doğru veri, doğru kararın ön koşuludur.",
+        "en": "Correct data is a prerequisite for a correct decision.",
+        "tr_tokens": 18,
+        "en_tokens": 10,
+        "ratio": 1.8
+      },
+      {
+        "tr": "Önbelleğe alınmış istemler, faturayı sessizce küçültür.",
+        "en": "Cached prompts quietly shrink the bill.",
+        "tr_tokens": 25,
+        "en_tokens": 7,
+        "ratio": 3.57
+      },
+      {
+        "tr": "Toplu işlem indirimi, gecikmeye duyarlı olmayan işler için uygundur.",
+        "en": "Batch processing discounts suit latency-tolerant workloads.",
+        "tr_tokens": 27,
+        "en_tokens": 11,
+        "ratio": 2.45
+      }
+    ],
+    "totals": {
+      "tr_tokens": 514,
+      "en_tokens": 224,
+      "ratio": 2.29,
+      "extra_pct": 129
+    },
+    "efficiency": {
+      "tr_chars_per_token": 2.54,
+      "en_chars_per_token": 5.46
+    },
+    "min_ratio": 1.77,
+    "max_ratio": 3.57
+  },
   "samples": [
     {
       "tr": "Türkiye'de yapay zeka modellerinin maliyeti hızla değişiyor.",
@@ -56,16 +217,104 @@
       "tr_tokens": 30,
       "en_tokens": 12,
       "ratio": 2.5
+    },
+    {
+      "tr": "Yapay zeka API fiyatları sağlayıcıdan sağlayıcıya büyük farklılık gösteriyor.",
+      "en": "AI API prices vary widely from provider to provider.",
+      "tr_tokens": 27,
+      "en_tokens": 10,
+      "ratio": 2.7
+    },
+    {
+      "tr": "Bir şirketin aylık bütçesini planlamak için token maliyetini bilmesi gerekir.",
+      "en": "A company needs to know its token costs to plan its monthly budget.",
+      "tr_tokens": 30,
+      "en_tokens": 14,
+      "ratio": 2.14
+    },
+    {
+      "tr": "Küçük bir ekip bile doğru modeli seçerek maliyetini yarıya indirebilir.",
+      "en": "Even a small team can halve its costs by choosing the right model.",
+      "tr_tokens": 27,
+      "en_tokens": 15,
+      "ratio": 1.8
+    },
+    {
+      "tr": "Sunucu tarafında çalışan uygulamalar, gecikme ve maliyet arasında denge kurmalıdır.",
+      "en": "Server-side applications must balance latency against cost.",
+      "tr_tokens": 32,
+      "en_tokens": 9,
+      "ratio": 3.56
+    },
+    {
+      "tr": "Bu ölçüm, gerçek bir tokenizer kullanılarak yapılmıştır.",
+      "en": "This measurement was made using a real tokenizer.",
+      "tr_tokens": 21,
+      "en_tokens": 9,
+      "ratio": 2.33
+    },
+    {
+      "tr": "Türkçe karakterler çoğu tokenizer'da birden fazla parçaya bölünür.",
+      "en": "Turkish characters are split into multiple pieces in most tokenizers.",
+      "tr_tokens": 26,
+      "en_tokens": 13,
+      "ratio": 2.0
+    },
+    {
+      "tr": "Fiyat geçmişi, bir modelin zam yapıp yapmadığını gösterir.",
+      "en": "Price history shows whether a model has raised its prices.",
+      "tr_tokens": 21,
+      "en_tokens": 11,
+      "ratio": 1.91
+    },
+    {
+      "tr": "Kaynak bağlantısı olmayan bir fiyat, güvenilir değildir.",
+      "en": "A price without a source link is not trustworthy.",
+      "tr_tokens": 22,
+      "en_tokens": 10,
+      "ratio": 2.2
+    },
+    {
+      "tr": "Grafik işlemci kiralamak, API kullanmaktan her zaman ucuz değildir.",
+      "en": "Renting a GPU is not always cheaper than using an API.",
+      "tr_tokens": 23,
+      "en_tokens": 13,
+      "ratio": 1.77
+    },
+    {
+      "tr": "Doğru veri, doğru kararın ön koşuludur.",
+      "en": "Correct data is a prerequisite for a correct decision.",
+      "tr_tokens": 18,
+      "en_tokens": 10,
+      "ratio": 1.8
+    },
+    {
+      "tr": "Önbelleğe alınmış istemler, faturayı sessizce küçültür.",
+      "en": "Cached prompts quietly shrink the bill.",
+      "tr_tokens": 25,
+      "en_tokens": 7,
+      "ratio": 3.57
+    },
+    {
+      "tr": "Toplu işlem indirimi, gecikmeye duyarlı olmayan işler için uygundur.",
+      "en": "Batch processing discounts suit latency-tolerant workloads.",
+      "tr_tokens": 27,
+      "en_tokens": 11,
+      "ratio": 2.45
     }
   ],
   "totals": {
-    "tr_tokens": 215,
-    "en_tokens": 92,
-    "ratio": 2.34,
-    "extra_pct": 134
+    "tr_tokens": 514,
+    "en_tokens": 224,
+    "ratio": 2.29,
+    "extra_pct": 129
   },
   "efficiency": {
-    "tr_chars_per_token": 2.48,
-    "en_chars_per_token": 5.95
+    "tr_chars_per_token": 2.54,
+    "en_chars_per_token": 5.46
+  },
+  "range": {
+    "min": 1.77,
+    "max": 3.57
   }
 }

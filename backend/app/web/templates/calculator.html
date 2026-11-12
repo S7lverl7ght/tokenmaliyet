@@ -64,6 +64,17 @@
         </div>
       </div>
       <div class="field mt-4" style="max-width:320px">
+        <label for="dil">Metin dili</label>
+        <select id="dil" name="dil">
+          <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce (çarpan yok)</option>
+          <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio }}× token çarpanı</option>
+        </select>
+        <span class="help-text">
+          Aynı içerik Türkçe'de {{ turkce.ratio }}× daha fazla token harcar
+          ({{ turkce.samples }} cümle ile ölçüldü). <a href="/turkce-token-maliyeti">Ölçüm</a>
+        </span>
+      </div>
+      <div class="field mt-4" style="max-width:320px">
         <label for="cache">Önbellek (cache) okuma oranı — isteğe bağlı</label>
         <select id="cache" name="cache">
           <option value="0" {% if f.cache == '0' %}selected{% endif %}>Kullanmıyorum</option>
@@ -110,6 +121,15 @@
       <div class="result"><div class="k">Fark</div><div class="v">%0,0</div><div class="n">İki model aynı maliyette</div></div>
       {% endif %}
     </div>
+    {% if result.tr_mult and result.tr_mult > 1 %}
+    <div class="notice notice-info mt-3" role="note">
+      <div>
+        <strong>Türkçe çarpanı uygulandı: {{ result.tr_mult }}×</strong> —
+        alternatif modelin maliyeti, aynı içeriğin Türkçe'de {{ result.tr_mult }}× daha fazla token
+        harcaması hesaba katılarak hesaplandı. İngilizce karşılaştırması için yukarıdan dili değiştirin.
+      </div>
+    </div>
+    {% endif %}
 
     <figure class="mt-4" style="margin:0">
       <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">Aylık maliyet karşılaştırması (USD)</figcaption>

@@ -1,6 +1,7 @@
 """SSR rotalari: herkese acik sayfalar + sitemap/robots."""
 from __future__ import annotations
 
+import datetime as dt
 import math
 import os
 from urllib.parse import urlparse
@@ -10,9 +11,11 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from sqlalchemy.orm import Session
 
 from ..db import get_session
+from . import default_models as web_defaults
 from . import queries
 from ..collectors import COLLECTORS
-from .render import PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, configure, price_value
+from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, configure,
+                     price_value, turkce_multiplier)
 
 router = APIRouter()
 configure()
@@ -104,7 +107,9 @@ def prices_page(
 ):
     page_size = 50
     rows = queries.price_rows(db)
-    filtered = _filter_sort(rows, q, provider, channel, sort)
+    # Inceleme raporu madde 4: alias ('~...-latest') kayitlari varsayilan listede gorunmez.
+    visible_rows = [r for r in rows if not r.is_alias]
+    filtered = _filter_sort(visible_rows, q, provider, channel, sort)
     page_count = max(1, math.ceil(len(filtered) / page_size))
     requested_page = page
     page = max(1, min(page, page_count))
@@ -124,7 +129,8 @@ def prices_page(
         db, request,
         nav="fiyatlar",
         rows=visible,
-        total=len(rows),
+        total=len(visible_rows),
+        alias_count=len(rows) - len(visible_rows),
         total_filtered=len(filtered),
         provider_count=len({r.provider_slug for r in rows}),
         approved_count=sum(1 for r in rows for _ in r.dims),
@@ -263,6 +269,7 @@ def calculator_page(
     tokens_in: str = Query("100000000", alias="in"),
     tokens_out: str = Query("25000000", alias="out"),
     cache: str = Query("0"),
+    dil: str = Query("tr"),
     db: Session = Depends(get_session),
 ):
     rows = queries.price_rows(db)
@@ -272,8 +279,11 @@ def calculator_page(
             base_context(db, request, nav="hesaplayici", noindex=True,
                          message="Henuz hesaplanabilir model fiyati yok."), status_code=404)
 
-    default_from = next((o["value"] for o in options if "claude-sonnet-4.5" in o["label"]), options[0]["value"])
-    default_to = next((o["value"] for o in options if "deepseek-v4-pro" in o["label"]), options[min(1, len(options)-1)]["value"])
+    # Varsayilanlar tek kaynaktan (defaults.py) - inceleme raporu madde 7.
+    _primary = web_defaults.pick(rows, web_defaults.PREFERRED_PRIMARY)
+    _alt = web_defaults.pick(rows, web_defaults.PREFERRED_ALTERNATIVE)
+    default_from = web_defaults.key(_primary) if _primary else options[0]["value"]
+    default_to = web_defaults.key(_alt) if _alt else options[min(1, len(options) - 1)]["value"]
     source = source or default_from
     target = target or default_to
 
@@ -293,7 +303,13 @@ def calculator_page(
     except ValueError:
         cache_share = 0.0
 
-    def _cost(row, fa: float, oa: float) -> float:
+    # Turkce token carpani: ayni icerik Turkce'de daha fazla token harcar.
+    # Inceleme raporu: bu carpan hesaplayiciya girsin (olculmus: ~2,3x).
+    tr_mult = 1.0
+    if (dil or "").lower() == "tr":
+        tr_mult = float(turkce_multiplier().get("ratio") or 1.0)
+
+    def _cost(row, fa: float, oa: float, mult: float = 1.0) -> float:
         """Girdi maliyeti; cache orani verildiyse o kisim onbellek fiyatindan hesaplanir."""
         cached_price = price_value(row.dim("cache_read"))[0]
         if cache_share > 0 and cached_price is not None:
@@ -301,7 +317,7 @@ def calculator_page(
             per_m_input = fa * direct_share + cached_price * cache_share
         else:
             per_m_input = fa
-        return (n_in / 1_000_000) * per_m_input + (n_out / 1_000_000) * oa
+        return ((n_in * mult) / 1_000_000) * per_m_input + ((n_out * mult) / 1_000_000) * oa
 
     if not errors and a is not None and b is not None:
         fa = price_value(a.dim("input"))
@@ -310,8 +326,8 @@ def calculator_page(
         ob = price_value(b.dim("output"))
         if None not in (fa[0], oa[0], fb[0], ob[0]) and n_in is not None and n_out is not None:
             fx = float(queries.get_fx(db).rate) if queries.get_fx(db) else None
-            cost_a = _cost(a, fa[0], oa[0])
-            cost_b = _cost(b, fb[0], ob[0])
+            cost_a = _cost(a, fa[0], oa[0], 1.0)
+            cost_b = _cost(b, fb[0], ob[0], tr_mult)
             diff = cost_a - cost_b
             pct = (diff / cost_a * 100) if cost_a else None
             result = {
@@ -325,19 +341,23 @@ def calculator_page(
                 "from_in": fa[0], "from_out": oa[0], "to_in": fb[0], "to_out": ob[0],
                 "to_bar": round(min(100.0, (cost_b / cost_a * 100) if cost_a else 100), 1),
                 "cache_share": round(cache_share * 100),
+                "tr_mult": tr_mult,
+                "dil": dil,
                 "cache_used": cache_share > 0 and price_value(a.dim("cache_read"))[0] is not None,
             }
 
     ctx = base_context(
         db, request, nav="hesaplayici",
         options=options,
-        f={"from": source, "to": target, "in": tokens_in, "out": tokens_out, "cache": cache},
+        f={"from": source, "to": target, "in": tokens_in, "out": tokens_out,
+           "cache": cache, "dil": dil},
         errors=errors,
         result=result,
         scenarios=SCENARIOS,
     )
     ctx["canonical"] = SITE_URL + "/hesaplayici"
-    ctx["noindex"] = bool(source or target or tokens_in != "100000000" or tokens_out != "25000000" or cache != "0")
+    ctx["noindex"] = bool(source or target or tokens_in != "100000000" or tokens_out != "25000000"
+                          or cache != "0" or dil != "tr")
     return TEMPLATES.TemplateResponse(request, "calculator.html", ctx)
 
 
@@ -362,15 +382,13 @@ def compare_page(
     if not chosen:
         # Iki farkli, bilinen model varsayilan secilir: sayfa bos acilmasin.
         # Once taninmis modeller denenir; yoksa en ucuz iki dogrudan model kullanilir.
-        preferred = ("claude-sonnet-4.5", "deepseek-v4-pro", "gpt-6-luna", "gemini-2.5-flash")
         defaults: list[str] = []
-        for needle in preferred:
-            for r in rows:
-                if r.name == needle and r.has_tokens and r.channel == "direct":
-                    defaults.append(f"{r.provider_slug}|{r.slug}|{r.variant or ''}")
-                    break
-            if len(defaults) >= 2:
-                break
+        for needle_set in (web_defaults.PREFERRED_PRIMARY, web_defaults.PREFERRED_ALTERNATIVE):
+            row = web_defaults.pick(rows, needle_set)
+            if row is not None:
+                k = web_defaults.key(row)
+                if k not in defaults:
+                    defaults.append(k)
         if len(defaults) < 2:
             # Yedek secim: once farkli saglayicilardan, yetmezse ayni saglayicidan devam et.
             candidates = sorted(
@@ -567,7 +585,9 @@ def model_options_json(db: Session = Depends(get_session)) -> list[dict]:
 def token_counter(request: Request, db: Session = Depends(get_session)):
     rows = queries.price_rows(db)
     options = _model_options(rows, direct_only=True)
-    ctx = base_context(db, request, nav="token", options=options)
+    _counter = web_defaults.pick(rows, web_defaults.PREFERRED_COUNTER)
+    ctx = base_context(db, request, nav="token", options=options,
+                       default_model=web_defaults.key(_counter) if _counter else "")
     ctx["canonical"] = SITE_URL + "/token-sayaci"
     return TEMPLATES.TemplateResponse(request, "token_sayaci.html", ctx)
 
@@ -623,13 +643,17 @@ def gpu_page(request: Request, db: Session = Depends(get_session)):
         offers = sorted(entry["offers"], key=lambda o: o["price"])
         on_demand = [o for o in offers if o["kind"] == "on_demand"]
         best = entry["best"] or (on_demand[0] if on_demand else offers[0])
+        shown = offers[:6]
+        # Inceleme raporu madde 1: aralik GOSTERILEN satirlardan hesaplanir.
+        # Once 13,260 gibi listede olmayan bir ust deger gorunuyordu (tutarsizlik).
+        shown_prices = [o["price"] for o in shown] + [best["price"]]
         families.append({
             "family": entry["family"],
             "vram": entry["vram"],
             "best": best,
-            "offers": offers[:6],
+            "offers": shown,
             "count": len(offers),
-            "max": offers[-1]["price"],
+            "max": max(shown_prices),
             "cheapest_any": offers[0],
             "has_discount": bool(on_demand) and offers[0]["kind"] != "on_demand",
         })
@@ -721,6 +745,56 @@ def turkce_token_page(request: Request, db: Session = Depends(get_session)):
     return TEMPLATES.TemplateResponse(request, "turkce_token.html", ctx)
 
 
+
+
+@router.get("/degisiklikler", response_class=HTMLResponse, include_in_schema=False)
+def changes_page(request: Request, days: int = 30, db: Session = Depends(get_session)):
+    """Son N gunde fiyati degisen modeller + yayimlanmis duzeltmeler."""
+    from sqlalchemy import func as sqlfunc, select as sselect
+    from ..models import Model, PriceObservation, Provider
+
+    days = max(1, min(365, days))
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)
+
+    rows = db.execute(
+        sselect(PriceObservation, Model, Provider)
+        .join(Model, Model.id == PriceObservation.model_id)
+        .join(Provider, Provider.id == Model.provider_id)
+        .where(PriceObservation.status == "approved", PriceObservation.observed_at >= cutoff)
+        .order_by(PriceObservation.observed_at.desc())
+    ).all()
+
+    # Model + kalem + donem bazinda en eski ve en yeni gozlemi karsilastir
+    grouped: dict[tuple, list] = {}
+    for obs, model, prov in rows:
+        k = (model.id, obs.price_dimension, obs.peak_period, obs.tier_label)
+        grouped.setdefault(k, []).append((obs, model, prov))
+
+    changes = []
+    for k, items in grouped.items():
+        items.sort(key=lambda x: x[0].observed_at)
+        first, last = items[0], items[-1]
+        old, new = float(first[0].amount), float(last[0].amount)
+        if abs(new - old) < 1e-12 or old <= 0:
+            continue
+        model = last[1]
+        from .queries import split_variant, to_slug
+        base, _variant = split_variant(model.canonical_id)
+        changes.append({
+            "model": base, "slug": to_slug(base), "provider": last[2].slug,
+            "dimension": last[0].price_dimension,
+            "old": old, "new": new,
+            "pct": (new - old) / old * 100,
+            "date": last[0].observed_at,
+        })
+    changes.sort(key=lambda c: abs(c["pct"]), reverse=True)
+
+    ctx = base_context(db, request, nav="degisiklikler",
+                       changes=changes[:60], corrections=CORRECTIONS, days=days)
+    ctx["canonical"] = SITE_URL + "/degisiklikler"
+    return TEMPLATES.TemplateResponse(request, "degisiklikler.html", ctx)
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
     return ("User-agent: *\n"
@@ -743,7 +817,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     urls = ["/fiyatlar", "/karsilastir", "/hesaplayici", "/token-sayaci",
             "/gpu-maliyetleri", "/rehber", "/hakkinda",
             "/gizlilik", "/iletisim", "/duzeltmeler",
-            "/turkce-token-maliyeti"]
+            "/turkce-token-maliyeti", "/degisiklikler"]
     urls += [f"/rehber/{g.slug}" for g in GUIDES]
     seen: set[str] = set()
     for row in queries.price_rows(db):

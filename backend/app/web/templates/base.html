@@ -53,6 +53,7 @@
       <a href="/token-sayaci" {% if nav == 'token' and path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
       <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>Türkçe farkı</a>
       <a href="/gpu-maliyetleri" {% if nav == 'gpu' %}aria-current="page"{% endif %}>{{ t('nav.gpu') }}</a>
+      <a href="/degisiklikler" {% if nav == 'degisiklikler' %}aria-current="page"{% endif %}>Değişiklikler</a>
       <a href="/rehber" {% if nav == 'rehber' %}aria-current="page"{% endif %}>{{ t('nav.guides') }}</a>
       <a href="/hakkinda" {% if nav == 'hakkinda' %}aria-current="page"{% endif %}>{{ t('nav.about') }}</a>
     </nav>
@@ -159,33 +160,37 @@
 })();
 </script>
 <script>
-/* Ilerlemeli iyilestirme: hesaplayici/karistirma secimlerinde tam model listesi.
+/* Ilerlemeli iyilestirme: model secimlerinde tam liste.
    Sunucu yalnizca dogrudan saglayici modellerini gomer; bu betik tam listeyi ekler.
    JS kapaliysa sayfa dogrudan API modelleriyle calismaya devam eder. */
 (function(){
-  var selects = document.querySelectorAll('select[data-model-options]');
-  if(!selects.length || !window.fetch) return;
-  fetch('/api/v1/model-options').then(function(r){ return r.ok ? r.json() : null; }).then(function(list){
-    if(!list || !list.length) return;
-    selects.forEach(function(sel){
-      var current = sel.value;
-      var groups = {direct:null, marketplace:null};
-      var base = document.createElement('optgroup'); base.label='Doğrudan API';
-      var market = document.createElement('optgroup'); market.label='Pazaryeri';
-      list.forEach(function(o){
-        var opt = document.createElement('option');
-        opt.value = o.value; opt.textContent = o.label;
-        (o.group === 'marketplace' ? market : base).appendChild(opt);
-      });
-      sel.innerHTML='';
-      sel.appendChild(base); sel.appendChild(market);
-      if(current){
-        var found=false;
-        for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===current){ found=true; break; } }
-        if(!found){ var keep=document.createElement('option'); keep.value=current; keep.textContent=current; keep.hidden=true; sel.appendChild(keep); }
-        sel.value = current;
-      }
+  var selects = document.querySelectorAll("select[data-model-options]");
+  if (!selects.length || !window.fetch) return;
+  function apply(sel, list){
+    var current = sel.value;
+    var direct = document.createElement("optgroup"); direct.label = "Doğrudan API";
+    var market = document.createElement("optgroup"); market.label = "Pazaryeri";
+    list.forEach(function(o){
+      var opt = document.createElement("option");
+      opt.value = o.value; opt.textContent = o.label;
+      (o.group === "marketplace" ? market : direct).appendChild(opt);
     });
+    sel.innerHTML = "";
+    sel.appendChild(direct); sel.appendChild(market);
+    var wanted = current || sel.dataset.defaultModel || "";
+    if (wanted) {
+      var found = false;
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === wanted) { found = true; break; }
+      }
+      if (found) { sel.value = wanted; }
+      else { var keep = document.createElement("option"); keep.value = wanted; keep.textContent = wanted; keep.hidden = true; sel.appendChild(keep); sel.value = wanted; }
+    }
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  fetch("/api/v1/model-options").then(function(r){ return r.ok ? r.json() : null; }).then(function(list){
+    if (!list || !list.length) return;
+    selects.forEach(function(sel){ apply(sel, list); });
   }).catch(function(){ /* sessiz: sunucudan gelen liste yeterli */ });
 })();
 </script>

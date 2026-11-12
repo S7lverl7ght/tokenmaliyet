@@ -1,0 +1,202 @@
+[
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-sol",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "0.1000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-sol",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "2.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-sol",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "10.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-terra",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "0.0500000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-terra",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "1.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-1-terra",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "5.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "1.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "10.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "50.0000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-luna",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "0.0100000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-luna",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "0.1000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-6-luna",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": null,
+    "amount": "0.5000000000",
+    "observed_at": "2026-11-11T15:01:39.127081+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "1.0000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5",
+    "dimension": "cache_write",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "12.5000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "10.0000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "50.0000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5.1",
+    "dimension": "cache_read",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "0.2500000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5.1",
+    "dimension": "cache_write",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "12.5000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5.1",
+    "dimension": "input",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "10.0000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-fable-5.1",
+    "dimension": "output",
+    "peak_period": null,
+    "billing_unit": "USD/1M_tokens",
+    "tier_label": "standard",
+    "amount": "50.0000000000",
+    "observed_at": "2026-11-12T08:22:32.501603+03:00"
+  }
+]

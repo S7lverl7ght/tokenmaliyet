@@ -35,17 +35,30 @@
           <div class="kpi"><div class="k">Karakter</div><div class="v" id="chars">0</div><div class="n">boşluklar dahil</div></div>
         </div>
         <details class="disclosure mt-4">
-          <summary>Nasıl hesaplanıyor? (tahmin yöntemi)</summary>
+          <summary>Nasıl hesaplanıyor? (ölçülmüş yöntem)</summary>
           <div class="body">
-            <p>Gerçek tokenizasyon modele özeldir (her sağlayıcının kendi BPE tablosu vardır).
-              Bu sayaç, yaygın kullanılan yaklaşımı uygular:
-              <strong>≈ karakter / 4</strong> (Latin dilleri) ve kelime sınırlarında düzeltme.</p>
-            <p>Türkçe metinlerde tokenizer'lar daha parçalı davranır; gerçek token sayısı
-              tahminden <strong>%15–40 daha yüksek</strong> olabilir. Kesin sayı için sağlayıcının
-              tokenizer'ını kullanın. Bu araç büyüklük mertebesini görmek içindir.</p>
-            <p>Formül (ekranda gösterilen): <code data-estimate-formula></code></p>
+            <p>Bu sayaç tarayıcıda, <strong>karakter tabanlı bir tahmin</strong> kullanır:
+               <code data-estimate-formula></code></p>
+            <p><strong>Beklenen sapma:</strong> gerçek tokenizer'lara göre Latin dilleri için
+               yaklaşık <strong>±%15</strong>, Türkçe için <strong>−%10 ile −%30</strong> arasında
+               (yani gerçek token sayısı genellikle tahminden <em>yüksek</em> çıkar).</p>
+            <p>Türkçe ölçümü: {{ turkce.samples }} cümle çiftiyle gerçek tokenizer kullanılarak
+               yapıldı — Türkçe, aynı içerik için İngilizce'nin
+               <strong>{{ turkce.ratio }}×</strong> token'ını harcıyor
+               (aralık {{ turkce.range.min }}–{{ turkce.range.max }}×).
+               <a href="/turkce-token-maliyeti">Ölçümün tamamı</a></p>
           </div>
         </details>
+
+        <div class="mt-4" style="border-top:1px solid var(--border);padding-top:var(--sp-4)">
+          <h3 style="font-size:var(--fs-h3)">Türkçe mi, İngilizce mi?</h3>
+          <p class="help mt-2">Aynı içeriği İngilizce yazsaydınız token sayısı ve maliyeti ne olurdu?</p>
+          <div class="kpis mt-3">
+            <div class="kpi"><div class="k">Tahmini İngilizce token</div><div class="v" id="enTokens">—</div><div class="n">{{ turkce.ratio }}× daha az</div></div>
+            <div class="kpi"><div class="k">Fark</div><div class="v" id="tokenDiff">—</div><div class="n">Türkçe fazladan</div></div>
+            <div class="kpi"><div class="k">Maliyet farkı</div><div class="v" id="costDiff">—</div><div class="n">aynı model, aylık değil</div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -54,7 +67,7 @@
         <h2 style="font-size:var(--fs-h3)">Bu metnin maliyeti</h2>
         <div class="field mt-3">
           <label for="model">Model</label>
-          <select id="model" data-model-options>
+          <select id="model" name="model" data-model-options data-default-model="{{ default_model }}">
             {% for o in options %}<option value="{{ o.value }}" {% if o.dim_in is defined %}data-in="{{ o.dim_in }}" data-out="{{ o.dim_out }}"{% endif %}>{{ o.label }}</option>{% endfor %}
           </select>
         </div>
@@ -126,16 +139,33 @@
       return;
     }
     var unit = which==='input' ? p.in : p.out;
-    if(unit==null){ elCost.textContent='—'; elNote.textContent='Bu model için fiyat yok'; return; }
+    if(unit==null){ elCost.textContent='—'; elNote.textContent='Bu model için fiyat yok'; updateCompare(tokens, null); return; }
     var usd = tokens/1e6*unit;
     elLabel.textContent = (which==='input'?'Girdi':'Çıktı') + ' maliyeti';
+    lastUsd = usd;
+    lastUsd = usd;
     elCost.textContent = usd.toLocaleString('tr-TR',{minimumFractionDigits:6, maximumFractionDigits:6}) + ' USD';
+    updateCompare(tokens, usd);
     elNote.textContent = fx ? ('≈ ' + (usd*fx).toLocaleString('tr-TR',{minimumFractionDigits:4,maximumFractionDigits:4}) + ' ₺ · ' + tokens.toLocaleString('tr-TR') + ' token × ' + unit + ' USD/1M')
                             : (tokens.toLocaleString('tr-TR') + ' token × ' + unit + ' USD/1M');
   }
 
+  var RATIO = {{ turkce.ratio|tojson }};
+  var elEnTok = document.getElementById('enTokens'),
+      elDiff = document.getElementById('tokenDiff'),
+      elCostDiff = document.getElementById('costDiff');
+
+  function updateCompare(tokens, usd){
+    if(!tokens){ elEnTok.textContent='—'; elDiff.textContent='—'; elCostDiff.textContent='—'; return; }
+    var en = Math.max(1, Math.round(tokens / RATIO));
+    elEnTok.textContent = en.toLocaleString('tr-TR');
+    elDiff.textContent = '+' + (tokens - en).toLocaleString('tr-TR');
+    elCostDiff.textContent = usd != null ? ('+' + (usd - usd / RATIO).toLocaleString('tr-TR',{minimumFractionDigits:6, maximumFractionDigits:6}) + ' USD') : '—';
+  }
+
   var f = document.querySelector('[data-estimate-formula]');
   if(f) f.textContent = 'token ≈ (karakter / 4) + (Türkçe karakter × 0,35) + (noktalama × 0,15)';
+  var lastUsd = null;
   ta.addEventListener('input', recalc);
   modelSel.addEventListener('change', recalc);
   kind.addEventListener('change', recalc);

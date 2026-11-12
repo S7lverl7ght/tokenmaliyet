@@ -180,6 +180,31 @@ def validate_observation(db: Session, obs: PriceObservation) -> bool:
                  "note": "Cikti/girdi orani aykiri; birim veya kaynak hatasi olabilir" if not ok else "normal aralikta"},
             )
 
+    # --- Ayni model+kalem+donem icin tek fiyat olmali ------------------------
+    # Golden testin yakaladigi hata: ayni kalem iki farkli fiyatla yayinlaniyordu
+    # (baglam dilimi etiketsiz kaldigi icin). Bu kural tekrari engeller.
+    if obs.status in ("pending", "approved"):
+        twins = db.scalars(
+            select(PriceObservation).where(
+                PriceObservation.model_id == obs.model_id,
+                PriceObservation.price_dimension == obs.price_dimension,
+                PriceObservation.peak_period.is_(obs.peak_period) if obs.peak_period is None
+                else PriceObservation.peak_period == obs.peak_period,
+                PriceObservation.tier_label.is_(obs.tier_label) if obs.tier_label is None
+                else PriceObservation.tier_label == obs.tier_label,
+                PriceObservation.id != obs.id,
+                PriceObservation.status.in_(["pending", "approved"]),
+            )
+        ).all()
+        conflicting = [x for x in twins if Decimal(x.amount) != Decimal(obs.amount)]
+        add(
+            "no_duplicate_dimension",
+            not conflicting,
+            {"duplicates": len(conflicting),
+             "amounts": sorted({float(x.amount) for x in conflicting})[:5],
+             "note": "Ayni kalem icin birden fazla farkli fiyat" if conflicting else "tek fiyat"},
+        )
+
     # --- Batch varyanti normalden pahali olamaz ------------------------------
     if obs.tier_label and "batch" in str(obs.tier_label).lower() and obs.price_dimension in ("input", "output"):
         base = db.scalars(

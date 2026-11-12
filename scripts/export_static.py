@@ -188,69 +188,63 @@ def main() -> int:
     if (ROOT / "functions").exists():
         shutil.copytree(ROOT / "functions", DIST / "functions", dirs_exist_ok=True)
 
-    # --- TRY VARYANTI (/try/fiyatlar/) ---
-    # Ayni sebep: statik sitede ?currency=TRY sunucuda islenmiyor.
-    # Fiyatlar TRY'ye cevrilmis ayri yol uretiliyor.
-    TRY_PAGES = [
-        ("/fiyatlar", "fiyatlar"),
-        ("/gpu-maliyetleri", "gpu-maliyetleri"),
+    # --- DIL VE PARA BIRIMI VARYANTLARI ---
+    # Statik sitede query string sunucuda islenmiyor. Bu yuzden her kombinasyon
+    # AYRI YOL olarak uretiliyor ve dil/para birimi BAGIMSIZ secilebiliyor:
+    #   /fiyatlar           /en/fiyatlar           /try/fiyatlar      /en/try/fiyatlar
+    #   /gpu-maliyetleri    /en/gpu-maliyetleri    /try/gpu-maliyetleri
+    # Kullanici TRY secince dil DEGISMEZ; EN secince para birimi DEGISMEZ.
+    VARIANTS = [
+        # (temel yol, slug, dil, para birimi)
+        ("/fiyatlar", "fiyatlar", "en", "USD"),
+        ("/karsilastir", "karsilastir", "en", "USD"),
+        ("/hesaplayici", "hesaplayici", "en", "USD"),
+        ("/token-sayaci", "token-sayaci", "en", "USD"),
+        ("/gpu-maliyetleri", "gpu-maliyetleri", "en", "USD"),
+        ("/uyari", "uyari", "en", "USD"),
+        ("/hakkinda", "hakkinda", "en", "USD"),
+        ("/fiyatlar", "fiyatlar", "tr", "TRY"),
+        ("/gpu-maliyetleri", "gpu-maliyetleri", "tr", "TRY"),
+        ("/fiyatlar", "fiyatlar", "en", "TRY"),
+        ("/gpu-maliyetleri", "gpu-maliyetleri", "en", "TRY"),
     ]
-    try_written = 0
-    for path, slug in TRY_PAGES:
-        resp = client.get(path + "?currency=TRY")
-        if resp.status_code != 200:
-            continue
-        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
-        html = html.replace(
-            f'<link rel="canonical" href="https://tokenmaliyet.com{path}">',
-            f'<link rel="canonical" href="https://tokenmaliyet.com/try{path}">',
-            1,
-        )
-        target = DIST / "try" / slug / "index.html"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(html, encoding="utf-8")
-        try_written += 1
-        print(f"[try] /try{path}")
-    print(f"  -> {try_written} TRY sayfasi uretildi")
 
-    # --- INGILIZCE VARYANTLAR (/en/...) ---
-    # Statik sitede ?lang=en sunucuda islenmiyor (Cloudflare Pages query string'i
-    # uygulamaya vermez). Bu yuzden EN sayfalari ayri yol olarak uretiliyor:
-    #   /en/fiyatlar/  /en/hesaplayici/ ...
-    # Boylece URL paylasilabilir, SEO'da ayri sayfa olur ve hreflang verilebilir.
-    EN_PAGES = [
-        ("/fiyatlar", "fiyatlar"),
-        ("/karsilastir", "karsilastir"),
-        ("/hesaplayici", "hesaplayici"),
-        ("/token-sayaci", "token-sayaci"),
-        ("/gpu-maliyetleri", "gpu-maliyetleri"),
-        ("/uyari", "uyari"),
-        ("/hakkinda", "hakkinda"),
-    ]
-    en_written = 0
-    for path, slug in EN_PAGES:
-        resp = client.get(path + "?lang=en")
+    def _variant_dir(lang, cur, slug):
+        parts = []
+        if lang == "en":
+            parts.append("en")
+        if cur == "TRY":
+            parts.append("try")
+        return DIST.joinpath(*parts) / slug if parts else DIST / slug
+
+    variant_written = 0
+    for path, slug, lang, cur in VARIANTS:
+        query = {"lang": lang, "currency": cur}
+        resp = client.get(path, params=query)
         if resp.status_code != 200:
+            print(f"[skip] {path} {lang}/{cur} -> {resp.status_code}")
             continue
+        out_dir = _variant_dir(lang, cur, slug)
+        prefix = out_dir.relative_to(DIST).as_posix()
         html = resp.text
-        # EN sayfasi: canonical + hreflang kendine isaret etmeli
+
+        # canonical: bu varyantin kendi adresi
         html = html.replace(
             f'<link rel="canonical" href="https://tokenmaliyet.com{path}">',
-            f'<link rel="canonical" href="https://tokenmaliyet.com/en{path}">',
+            f'<link rel="canonical" href="https://tokenmaliyet.com/{prefix}">',
             1,
         )
         html = html.replace(
-            '<head>',
+            "<head>",
             '<head>\n<script>window.__STATIC__=true;</script>',
             1,
         )
-        target = DIST / "en" / slug / "index.html"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(html, encoding="utf-8")
-        en_written += 1
-        print(f"[en] /en{path}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "index.html").write_text(html, encoding="utf-8")
+        variant_written += 1
+        print(f"[{lang}/{cur}] /{prefix}")
 
-    print(f"  -> {en_written} Ingilizce sayfa uretildi")
+    print(f"  -> {variant_written} varyant sayfasi uretildi")
 
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)

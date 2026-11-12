@@ -53,14 +53,56 @@ def test_csp_allows_cloudflare_analytics():
     assert "connect-src 'self' https://cloudflareinsights.com" in src
 
 
-def test_export_creates_english_and_try_variants():
-    src = (ROOT / "scripts" / "export_static.py").read_text(encoding="utf-8")
-    assert "EN_PAGES" in src, "Ingilizce varyant uretimi yok"
-    assert "TRY_PAGES" in src, "TRY varyant uretimi yok"
-    assert 'DIST / "en"' in src and 'DIST / "try"' in src
-
-
 def test_hreflang_pairs_defined():
     src = (ROOT / "backend" / "app" / "web" / "render.py").read_text(encoding="utf-8")
     assert "_hreflang_pairs" in src
     assert "x-default" in src, "x-default hreflang eksik"
+
+
+def test_lang_and_currency_are_independent():
+    """Dil ve para birimi BAGIMSIZ secilmeli.
+
+    Gercek hata (12.11.2026): TRY secince dil TR'ye, USD secince dil EN'ye
+    zorla donuyordu; kullanici istedigi kombinasyonu secemiyordu.
+    """
+    from app.web.render import _build_path, _parse_path
+
+    # Okuma
+    assert _parse_path("/fiyatlar") == ("tr", "USD", "/fiyatlar")
+    assert _parse_path("/en/fiyatlar") == ("en", "USD", "/fiyatlar")
+    assert _parse_path("/try/fiyatlar") == ("tr", "TRY", "/fiyatlar")
+    assert _parse_path("/en/try/fiyatlar") == ("en", "TRY", "/fiyatlar")
+
+    # Yazma: dort kombinasyon da ayri yol uretmeli
+    assert _build_path("tr", "USD", "/fiyatlar") == "/fiyatlar"
+    assert _build_path("en", "USD", "/fiyatlar") == "/en/fiyatlar"
+    assert _build_path("tr", "TRY", "/fiyatlar") == "/try/fiyatlar"
+    assert _build_path("en", "TRY", "/fiyatlar") == "/en/try/fiyatlar"
+
+
+def test_switching_language_keeps_currency():
+    from app.web.render import _build_path, _parse_path
+
+    # TR/TRY sayfasinda dil degistir -> TRY korunmali
+    lang, cur, base = _parse_path("/try/fiyatlar")
+    assert _build_path("en", cur, base) == "/en/try/fiyatlar"
+    # EN/TRY sayfasinda dil degistir -> TRY korunmali
+    lang, cur, base = _parse_path("/en/try/fiyatlar")
+    assert _build_path("tr", cur, base) == "/try/fiyatlar"
+
+
+def test_switching_currency_keeps_language():
+    from app.web.render import _build_path, _parse_path
+
+    lang, cur, base = _parse_path("/en/fiyatlar")
+    assert _build_path(lang, "TRY", base) == "/en/try/fiyatlar"
+    lang, cur, base = _parse_path("/en/try/fiyatlar")
+    assert _build_path(lang, "USD", base) == "/en/fiyatlar"
+
+
+def test_export_creates_all_four_combinations():
+    src = (ROOT / "scripts" / "export_static.py").read_text(encoding="utf-8")
+    assert "VARIANTS" in src
+    assert '"/fiyatlar", "fiyatlar", "en", "TRY"' in src, "EN/TRY varyanti yok"
+    assert '"en", "USD"' in src and '"tr", "TRY"' in src
+    assert '"/gpu-maliyetleri", "gpu-maliyetleri", "en", "TRY"' in src, "EN/TRY GPU varyanti yok"

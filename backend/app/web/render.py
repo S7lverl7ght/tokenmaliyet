@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Statik varlik surumu: tarayici onbellegini guvenle gecersiz kilmak icin.
-ASSET_VERSION = "20261112d"
+ASSET_VERSION = "20261112e"
 
 SITE_NAME = "TokenMaliyet"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
@@ -213,36 +213,73 @@ _EN_PATHS = {"/fiyatlar", "/karsilastir", "/hesaplayici", "/token-sayaci",
 _TRY_PATHS = {"/fiyatlar", "/gpu-maliyetleri"}
 
 
-def _cur_url(request, target: str) -> str:
-    """Para birimi baglantisi. Statik sitede /try/ oneki kullanilir."""
-    path = request.url.path
-    base = path[5:] if path.startswith("/try/") else path
+def _parse_path(path: str) -> tuple[str, str, str]:
+    """URL yolunu (dil, para birimi, temel yol) olarak ayirir.
+
+    Ornekler:
+      /fiyatlar            -> ("tr", "USD", "/fiyatlar")
+      /en/fiyatlar         -> ("en", "USD", "/fiyatlar")
+      /try/fiyatlar        -> ("tr", "TRY", "/fiyatlar")
+      /en/try/fiyatlar     -> ("en", "TRY", "/fiyatlar")
+    """
+    p = path or "/"
+    lang, cur = "tr", "USD"
+    changed = True
+    while changed:
+        changed = False
+        if p.startswith("/en/"):
+            lang, p = "en", p[3:]
+            changed = True
+        elif p.startswith("/try/"):
+            cur, p = "TRY", p[4:]
+            changed = True
+    return lang, cur, (p.rstrip("/") or "/fiyatlar")
+
+
+def _build_path(lang: str, cur: str, base: str) -> str:
+    """(dil, para birimi, temel yol) -> URL yolu.
+
+    Dil ve para birimi BAGIMSIZDIR: /en/try/fiyatlar gibi kombinasyonlar gecerlidir.
+    Yalnizca gercekten uretilmis varyant yoksa ana yola duser.
+    """
     base = base.rstrip("/") or "/fiyatlar"
-    if target == "TRY" and base in _TRY_PATHS:
-        return "/try" + base
-    return base
+    want_en = lang == "en" and base in _EN_PATHS
+    want_try = cur == "TRY" and base in _TRY_PATHS
+    out = ""
+    if want_en:
+        out += "/en"
+    if want_try:
+        out += "/try"
+    return (out + base) if out else base
 
 
-def _lang_url(request, target: str) -> str:
-    """Dil degistirme baglantisi. Statik sitede /en/ oneki kullanilir."""
-    path = request.url.path
-    base = path[3:] if path.startswith("/en/") else path
-    if target == "en":
-        return "/en" + (base if base != "/" else "/fiyatlar")
-    return base if base != "/" else "/fiyatlar"
+def _lang_url(request, target: str, cur: str = "", base: str = "") -> str:
+    """Dil degistirme baglantisi. Para birimi KORUNUR.
+
+    Dikkat: cozulmus degerler verilmezse render isteginin yolundan turetilir;
+    statik varyant uretiminde ise cagiran taraf cur/base'i acikca gecirir.
+    """
+    if not base:
+        _, cur, base = _parse_path(request.url.path)
+    return _build_path(target, cur or "USD", base)
+
+
+def _cur_url(request, target: str, lang: str = "", base: str = "") -> str:
+    """Para birimi baglantisi. Dil KORUNUR."""
+    if not base:
+        lang, _, base = _parse_path(request.url.path)
+    return _build_path(lang or "tr", target, base)
 
 
 def _hreflang_pairs(path: str, lang: str) -> list[dict]:
-    """TR <-> EN eslesme ciftleri. Yalnizca cevirisi olan sayfalar icin."""
-    p = path.rstrip("/") or "/"
-    if p.startswith("/en/"):
-        p = p[3:]
-    if p not in _EN_PATHS:
+    """TR <-> EN eslesme ciftleri (para birimi korunarak)."""
+    _, cur, base = _parse_path(path)
+    if base not in _EN_PATHS:
         return []
     return [
-        {"lang": "tr", "url": SITE_URL + p},
-        {"lang": "en", "url": SITE_URL + "/en" + p},
-        {"lang": "x-default", "url": SITE_URL + p},
+        {"lang": "tr", "url": SITE_URL + _build_path("tr", cur, base)},
+        {"lang": "en", "url": SITE_URL + _build_path("en", cur, base)},
+        {"lang": "x-default", "url": SITE_URL + _build_path("tr", cur, base)},
     ]
 
 
@@ -270,8 +307,12 @@ def turkce_multiplier() -> dict:
 
 def base_context(db: Session, request, **extra) -> dict:
     qp = request.query_params
-    currency = _pref((qp.get("currency") or "").upper(), {"USD", "TRY"}, "USD")
-    lang = _pref((qp.get("lang") or "").lower(), {"tr", "en"}, "tr")
+    # Dil/para birimi ONCE URL yolundan (/en/try/...), sonra query string.
+    # Boylece statik varyantlar kendi dilini bilir ve dil degistirme baglantisi
+    # para birimini KORUR (ve tersi).
+    path_lang, path_cur, _path_base = _parse_path(request.url.path)
+    currency = _pref((qp.get("currency") or "").upper() or path_cur, {"USD", "TRY"}, "USD")
+    lang = _pref((qp.get("lang") or "").lower() or path_lang, {"tr", "en"}, "tr")
     # Tercih degistirirken mevcut filtreleri koru (currency/lang haric).
     keep_params = {k: v for k, v in qp.items() if k not in ("currency", "lang")}
     fx = queries.get_fx(db)
@@ -300,10 +341,10 @@ def base_context(db: Session, request, **extra) -> dict:
         "request": request,
         "noindex": False,
         "hreflang_pairs": _hreflang_pairs(request.url.path, lang),
-        "cur_usd_url": _cur_url(request, "USD"),
-        "cur_try_url": _cur_url(request, "TRY"),
-        "lang_tr_url": _lang_url(request, "tr"),
-        "lang_en_url": _lang_url(request, "en"),
+        "cur_usd_url": _cur_url(request, "USD", lang, _path_base),
+        "cur_try_url": _cur_url(request, "TRY", lang, _path_base),
+        "lang_tr_url": _lang_url(request, "tr", currency, _path_base),
+        "lang_en_url": _lang_url(request, "en", currency, _path_base),
         "canonical": SITE_URL + request.url.path,
     }
     ctx.update(extra)

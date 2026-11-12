@@ -4,10 +4,12 @@ from __future__ import annotations
 import datetime as dt
 import math
 import os
+from decimal import Decimal
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from sqlalchemy import select as sselect
 from sqlalchemy.orm import Session
 
 from ..db import get_session
@@ -191,6 +193,8 @@ def model_page(provider_slug: str, slug: str, request: Request, db: Session = De
         similar=similar,
     )
     ctx["canonical"] = f"{SITE_URL}/modeller/{primary.provider_slug}/{primary.slug}"
+    # Indekslenmeyen model sayfalari: kullaniciya acik, arama motoruna kapali.
+    ctx["noindex"] = not web_defaults.is_indexable(primary)
     return TEMPLATES.TemplateResponse(request, "model.html", ctx)
 
 
@@ -593,17 +597,29 @@ def token_counter(request: Request, db: Session = Depends(get_session)):
 
 
 @router.get("/gpu-maliyetleri", response_class=HTMLResponse, include_in_schema=False)
-def gpu_page(request: Request, db: Session = Depends(get_session)):
+def gpu_page(
+    request: Request,
+    provider: str = "",
+    kind: str = "",
+    sort: str = "vram",
+    db: Session = Depends(get_session),
+):
     from sqlalchemy import func as sqlfunc, select as sselect
     from ..models import GpuPrice, GpuProvider
 
     # Saglayici + GPU ailesi bazinda en iyi (en dusuk on-demand) fiyat
-    rows = db.execute(
+    stmt = (
         sselect(GpuPrice, GpuProvider)
         .join(GpuProvider, GpuProvider.id == GpuPrice.provider_id)
         .where(GpuPrice.status == "approved")
         .order_by(GpuPrice.price_per_hour)
-    ).all()
+    )
+    # Inceleme raporu: GPU tablosunda filtre/siralama yoktu.
+    if provider:
+        stmt = stmt.where(GpuProvider.slug == provider)
+    if kind:
+        stmt = stmt.where(GpuPrice.price_kind == kind)
+    rows = db.execute(stmt).all()
 
     fam_map: dict[str, dict] = {}
     prov_map: dict[str, dict] = {}
@@ -658,7 +674,18 @@ def gpu_page(request: Request, db: Session = Depends(get_session)):
             "has_discount": bool(on_demand) and offers[0]["kind"] != "on_demand",
         })
     # VRAM buyukten kucuge, sonra fiyat
-    families.sort(key=lambda f: (-(f["vram"] or 0), f["best"]["price"]))
+    # Siralama: vram (buyuk->kucuk), price (ucuz->pahali), gb (TL/GB VRAM)
+    if sort == "price":
+        families.sort(key=lambda f: f["best"]["price"])
+    elif sort == "vram":
+        families.sort(key=lambda f: (-(f["vram"] or 0), f["best"]["price"]))
+    else:
+        families.sort(key=lambda f: (-(f["vram"] or 0), f["best"]["price"]))
+
+    # $/GB VRAM: karsilastirilabilir birim maliyet
+    for f in families:
+        vram = f["vram"] or 0
+        f["per_gb"] = round(f["best"]["price"] / vram, 4) if vram else None
 
     providers = sorted(prov_map.values(), key=lambda p: p["name"])
     total = sum(p["count"] for p in providers)
@@ -668,8 +695,11 @@ def gpu_page(request: Request, db: Session = Depends(get_session)):
         providers=providers,
         gpu_count=total,
         has_gpu=bool(families),
+        f={"provider": provider, "kind": kind, "sort": sort},
+        provider_options=sorted({p["slug"]: p["name"] for p in providers}.items()),
     )
     ctx["canonical"] = SITE_URL + "/gpu-maliyetleri"
+    ctx["noindex"] = bool(provider or kind or sort != "vram")
     return TEMPLATES.TemplateResponse(request, "gpu.html", ctx)
 
 
@@ -795,6 +825,106 @@ def changes_page(request: Request, days: int = 30, db: Session = Depends(get_ses
     return TEMPLATES.TemplateResponse(request, "degisiklikler.html", ctx)
 
 
+
+
+CONSENT_VERSION = "2026-11-12"
+
+
+def _valid_email(value: str) -> bool:
+    import re
+
+    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}", (value or "").strip()))
+
+
+@router.post("/uyari", response_class=HTMLResponse, include_in_schema=False)
+def subscribe_alert(
+    request: Request,
+    email: str = Form(""),
+    target: str = Form(""),
+    target_label: str = Form(""),
+    direction: str = Form("any"),
+    threshold_pct: str = Form("10"),
+    consent: str = Form(""),
+    db: Session = Depends(get_session),
+):
+    """Fiyat uyarisi kaydi. Cift onay: onaylanmadan e-posta gonderilmez."""
+    import secrets
+
+    from ..models import PriceAlert
+
+    errors: dict[str, str] = {}
+    email = (email or "").strip().lower()
+    if not _valid_email(email):
+        errors["email"] = "Gecerli bir e-posta adresi girin."
+    if consent not in ("on", "1", "true", "yes"):
+        errors["consent"] = "Devam etmek icin aydinlatma metnini onaylamaniz gerekir."
+    try:
+        threshold = float(threshold_pct or 10)
+    except ValueError:
+        threshold = 10.0
+    threshold = max(1.0, min(90.0, threshold))
+
+    created = None
+    duplicate = False
+    if not errors:
+        existing = db.scalars(
+            sselect(PriceAlert).where(
+                PriceAlert.email == email,
+                PriceAlert.target == target,
+                PriceAlert.unsubscribed_at.is_(None),
+            )
+        ).first()
+        if existing is not None:
+            duplicate = True
+        else:
+            created = PriceAlert(
+                email=email,
+                target=(target or "all")[:200],
+                target_label=(target_label or "Tum modeller")[:200],
+                direction=direction if direction in ("up", "down", "any") else "any",
+                threshold_pct=Decimal(str(threshold)),
+                confirmed=False,
+                confirm_token=secrets.token_urlsafe(32),
+                consent_at=dt.datetime.now(dt.timezone.utc),
+                consent_text_version=CONSENT_VERSION,
+            )
+            db.add(created)
+            db.commit()
+
+    ctx = base_context(
+        db, request,
+        page_title="Fiyat uyarisi",
+        page_desc="Bir modelin veya GPU ailesinin fiyati degistiginde e-posta ile haber veriyoruz.",
+        contact_email=CONTACT_EMAIL,
+        errors=errors,
+        submitted=not errors,
+        duplicate=duplicate,
+        form={"email": email, "target": target, "target_label": target_label,
+              "direction": direction, "threshold_pct": threshold_pct},
+    )
+    ctx["canonical"] = SITE_URL + "/uyari"
+    ctx["noindex"] = True
+    return TEMPLATES.TemplateResponse(request, "uyari.html", ctx)
+
+
+@router.get("/uyari", response_class=HTMLResponse, include_in_schema=False)
+def alert_page(request: Request, target: str = "", label: str = "", db: Session = Depends(get_session)):
+    ctx = base_context(
+        db, request,
+        page_title="Fiyat uyarisi",
+        page_desc="Bir modelin veya GPU ailesinin fiyati degistiginde e-posta ile haber veriyoruz. Ucretsiz.",
+        contact_email=CONTACT_EMAIL,
+        errors={},
+        submitted=False,
+        duplicate=False,
+        form={"email": "", "target": target, "target_label": label,
+              "direction": "down", "threshold_pct": "10"},
+    )
+    ctx["canonical"] = SITE_URL + "/uyari"
+    ctx["noindex"] = True
+    return TEMPLATES.TemplateResponse(request, "uyari.html", ctx)
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
     return ("User-agent: *\n"
@@ -819,15 +949,21 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
             "/gizlilik", "/iletisim", "/duzeltmeler",
             "/turkce-token-maliyeti", "/degisiklikler"]
     urls += [f"/rehber/{g.slug}" for g in GUIDES]
+    # Inceleme raporu: sitemap YALNIZCA indekslenmesini istedigimiz adresleri icerir.
+    # 400+ ince model sayfasi yerine ~40 derin sayfa (thin content riskini onler).
     seen: set[str] = set()
+    indexed = 0
     for row in queries.price_rows(db):
-        if not row.has_tokens:
+        if not web_defaults.is_indexable(row):
             continue
         path = f"/modeller/{row.provider_slug}/{row.slug}"
         if path in seen:
             continue
         seen.add(path)
         urls.append(path)
+        indexed += 1
+        if indexed >= 60:
+            break
 
     body = ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
             "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">"]

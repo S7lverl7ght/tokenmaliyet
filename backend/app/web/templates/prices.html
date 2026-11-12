@@ -201,6 +201,25 @@
 <script type="application/ld+json">
 {
   "@context":"https://schema.org",
+  "@type":"Dataset",
+  "name":"AI API fiyatları — {{ total }} model",
+  "description":"OpenAI, Anthropic, Google Gemini, DeepSeek resmî API fiyatları ve OpenRouter pazaryeri fiyatları; girdi/çıktı 1M token başına USD, tarihli TRY karşılığı ve son doğrulama zamanı.",
+  "url":{{ (site_url ~ '/fiyatlar')|tojson }},
+  "isAccessibleForFree":true,
+  "creator":{"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}},
+  "license":"https://creativecommons.org/licenses/by/4.0/",
+  "dateModified":{{ (last_checked_raw.isoformat() if last_checked_raw else '')|tojson }},
+  "temporalCoverage":{{ (last_checked_raw.date().isoformat() if last_checked_raw else '')|tojson }},
+  "keywords":["AI API fiyatları","LLM maliyet","token fiyatı","GPU kiralama","Türkiye"],
+  "variableMeasured":[
+    {"@type":"PropertyValue","name":"Girdi fiyatı","unitText":"USD / 1M token"},
+    {"@type":"PropertyValue","name":"Çıktı fiyatı","unitText":"USD / 1M token"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
   "@type":"BreadcrumbList",
   "itemListElement":[
     {"@type":"ListItem","position":1,"name":"Fiyatlar","item":{{ (site_url ~ '/fiyatlar')|tojson }}}

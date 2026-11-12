@@ -23,6 +23,36 @@
   </div>
   {% else %}
 
+  <form class="toolbar" method="get" action="/gpu-maliyetleri" role="search" aria-label="GPU filtreleri">
+    <div class="field field-xs">
+      <label for="provider">Sağlayıcı</label>
+      <select id="provider" name="provider">
+        <option value="">Tümü</option>
+        {% for slug, name in provider_options %}
+        <option value="{{ slug }}" {% if f.provider == slug %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field field-xs">
+      <label for="kind">Fiyat türü</label>
+      <select id="kind" name="kind">
+        <option value="">Tümü</option>
+        <option value="on_demand" {% if f.kind == 'on_demand' %}selected{% endif %}>On-demand</option>
+        <option value="spot" {% if f.kind == 'spot' %}selected{% endif %}>Spot</option>
+        <option value="reserved" {% if f.kind == 'reserved' %}selected{% endif %}>Rezerve</option>
+        <option value="community" {% if f.kind == 'community' %}selected{% endif %}>Topluluk</option>
+      </select>
+    </div>
+    <div class="field field-xs">
+      <label for="sort">Sıralama</label>
+      <select id="sort" name="sort">
+        <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>VRAM (büyük → küçük)</option>
+        <option value="price" {% if f.sort == 'price' %}selected{% endif %}>Fiyat (ucuz → pahalı)</option>
+      </select>
+    </div>
+    <div class="field"><button class="btn" type="submit">Uygula</button></div>
+  </form>
+
   <section class="surface" aria-labelledby="gpu-tablo">
     <h2 id="gpu-tablo" class="sr-only">GPU fiyat tablosu</h2>
     <div class="table-wrap">
@@ -34,6 +64,7 @@
             <th scope="col" style="width:22%">GPU</th>
             <th scope="col" style="width:10%">VRAM</th>
             <th scope="col" style="width:20%">En düşük fiyat</th>
+            <th scope="col" style="width:12%">$/GB VRAM</th>
             <th scope="col" style="width:16%">Sağlayıcı</th>
             <th scope="col" style="width:14%">Tip</th>
             <th scope="col" style="width:18%">Fiyat aralığı</th>
@@ -56,6 +87,7 @@
               </details>
             </td>
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
+            <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl_dyn }} ${% else %}—{% endif %}</td>
             <td data-label="En düşük" class="cell-price">
               <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
               <span class="pu">≈ {{ (f.best.price * fx_rate)|tl(2) }} ₺ / saat</span>
@@ -121,4 +153,20 @@
   </section>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Dataset",
+  "name":"GPU kiralama fiyatlari",
+  "description":"Runpod, Vast.ai, DataCrunch, Lambda ve Hyperstack icin GPU-saat fiyatlari; GPU modeli, VRAM, fiyat turu ve kaynak.",
+  "url":{{ (site_url ~ '/gpu-maliyetleri')|tojson }},
+  "isAccessibleForFree":true,
+  "creator":{"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}},
+  "dateModified":{{ (last_checked_raw.isoformat() if last_checked_raw else '')|tojson }},
+  "keywords":["GPU kiralama","H100 fiyat","B200","saatlik GPU ucreti"]
+}
+</script>
 {% endblock %}

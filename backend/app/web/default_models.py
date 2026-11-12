@@ -31,3 +31,32 @@ def pick(rows, needles: tuple[str, ...], *, channel: str | None = "direct", requ
 
 def key(row) -> str:
     return f"{row.provider_slug}|{row.slug}|{row.variant or ''}"
+
+
+# Inceleme raporu (12.11.2026): "498 model sayfasi 'thin content' riski.
+# Ilk fazda yalnizca en cok aranan 30-50 model indekslensin."
+# Bu liste dogrudan saglayicilarin bilinen modelleridir; digerleri noindex + sitemap disi.
+INDEXABLE_PROVIDERS = ("openai", "anthropic", "gemini", "deepseek")
+
+INDEXABLE_FAMILIES = (
+    "gpt-6", "gpt-5", "o3", "o4",
+    "claude-opus", "claude-sonnet", "claude-haiku", "claude-fable",
+    "gemini-2.5", "gemini-3", "gemini-4",
+    "deepseek-flash", "deepseek-v4",
+)
+
+
+def is_indexable(row) -> bool:
+    """Model sayfasi indekslenmeli mi?
+
+    Kural: dogrudan saglayici + bilinen aile + alias degil + token fiyati var.
+    Boylece 400+ ince sayfa yerine ~40 derin sayfa indekslenir.
+    """
+    if row.channel != "direct" or row.is_alias:
+        return False
+    if row.provider_slug not in INDEXABLE_PROVIDERS:
+        return False
+    if not row.has_tokens:
+        return False
+    name = row.name.lower()
+    return any(name.startswith(fam) or fam in name for fam in INDEXABLE_FAMILIES)

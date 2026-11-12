@@ -46,3 +46,21 @@
   </div>
 </div>
 {% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Article",
+  "headline":{{ guide.title|tojson }},
+  "description":{{ guide.description|tojson }},
+  "url":{{ (site_url ~ '/rehber/' ~ guide.slug)|tojson }},
+  "datePublished":{{ guide.published|tojson }},
+  "dateModified":{{ guide.updated|tojson }},
+  "inLanguage":"tr-TR",
+  "author":{"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}},
+  "publisher":{"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}},
+  "isAccessibleForFree":true
+}
+</script>
+{% endblock %}

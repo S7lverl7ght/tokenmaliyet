@@ -197,3 +197,30 @@ class GpuPrice(Base):
     __table_args__ = (
         Index("ix_gpu_lookup", "provider_id", "gpu_family", "status"),
     )
+
+class PriceAlert(Base):
+    """Fiyat uyarisi aboneligi (rapor: e-posta listesi + ucretli katmanin ilk urunu).
+
+    KVKK: acik riza metni ve onay zamani saklanir. Cift onay (double opt-in)
+    icin token uretilir; onaylanmadan uyari gonderilmez.
+    """
+
+    __tablename__ = "price_alerts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    # Takip edilen hedef: provider|model|cikan ya da 'gpu|<family>'
+    target: Mapped[str] = mapped_column(String(200), nullable=False)
+    target_label: Mapped[str] = mapped_column(String(200), nullable=False)
+    direction: Mapped[str] = mapped_column(String(8), default="any", nullable=False)  # up|down|any
+    threshold_pct: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=Decimal("10"), nullable=False)
+
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    confirm_token: Mapped[str | None] = mapped_column(String(64), unique=True)
+    consent_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_text_version: Mapped[str | None] = mapped_column(String(16))
+
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    unsubscribed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_alert_target", "target", "confirmed"),)

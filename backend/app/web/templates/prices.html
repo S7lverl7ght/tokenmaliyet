@@ -110,7 +110,7 @@
             <td data-label="Girdi fiyatı" class="cell-price">
               {% if ip[0] is not none %}
                 {% if currency == 'TRY' and fx_rate %}
-                <span class="pv">{{ (ip[0] * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
+                <span class="pv">{% if fx_rate %}{{ (ip[0] * fx_rate)|tl(2) }}{% else %}—{% endif %} <span class="cur">TRY</span></span>
                 <span class="pu">{{ ip[1]|replace('USD','TRY') }} · {{ ip[0]|tl_dyn }} USD</span>
                 {% else %}
                 <span class="pv">{{ ip[0]|tl_dyn }} <span class="cur">USD</span></span>
@@ -122,7 +122,7 @@
             <td data-label="Çıktı fiyatı" class="cell-price">
               {% if op[0] is not none %}
                 {% if currency == 'TRY' and fx_rate %}
-                <span class="pv">{{ (op[0] * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
+                <span class="pv">{% if fx_rate %}{{ (op[0] * fx_rate)|tl(2) }}{% else %}—{% endif %} <span class="cur">TRY</span></span>
                 <span class="pu">{{ op[1]|replace('USD','TRY') }} · {{ op[0]|tl_dyn }} USD</span>
                 {% else %}
                 <span class="pv">{{ op[0]|tl_dyn }} <span class="cur">USD</span></span>

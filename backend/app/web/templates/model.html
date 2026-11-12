@@ -59,7 +59,7 @@
                 </td>
                 <td class="cell-price">
                   {% if fx_rate and pv[0] is not none %}
-                  <span class="pv">{{ (pv[0] * fx_rate)|tl(2) }} ₺</span>
+                  <span class="pv">{% if fx_rate %}{{ (pv[0] * fx_rate)|tl(2) }}{% else %}—{% endif %} ₺</span>
                   <span class="pu">{{ pv[1]|replace('USD', 'TRY') }}</span>
                   {% else %}<span class="text-muted">Kur yok</span>{% endif %}
                 </td>

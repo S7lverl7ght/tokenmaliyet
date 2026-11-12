@@ -89,8 +89,8 @@
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
             <td data-label="En düşük" class="cell-price">
               <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
-              <span class="pu">≈ {{ (f.best.price * fx_rate)|tl(2) }} ₺ / saat</span>
-              <span class="pu">≈ {{ (f.best.price * 730 * fx_rate)|tl(0) }} ₺ / ay (730 saat)</span>
+              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * fx_rate)|tl(2) }}{% else %}—{% endif %} ₺ / saat</span>
+              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * 730 * fx_rate)|tl(0) }}{% else %}—{% endif %} ₺ / ay (730 saat)</span>
             </td>
             <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
             <td data-label="Sağlayıcı" class="text-sm">{{ f.best.provider }}</td>

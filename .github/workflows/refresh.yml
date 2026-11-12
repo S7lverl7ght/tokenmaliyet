@@ -61,6 +61,12 @@ jobs:
         run: |
           python scripts/bot.py --max-change-pct 30
 
+      - name: Doviz kuru (TCMB)
+        # TRY karsiliklari icin gerekli. Basarisiz olsa da site kur olmadan calisir.
+        continue-on-error: true
+        run: |
+          python scripts/collect_fx.py
+
       - name: Golden test (bilinen 20 fiyat degismedi mi?)
         run: python scripts/check_golden.py
 

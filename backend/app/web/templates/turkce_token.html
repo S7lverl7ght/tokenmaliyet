@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% set nav = 'token' %}
+{% block title %}Türkçe token maliyeti — aynı içerik %{{ data.totals.extra_pct }} daha pahalı | {{ site_name }}{% endblock %}
+{% block description %}Türkçe metin, aynı içerik için İngilizceye göre {{ data.totals.ratio }} kat daha fazla token harcıyor. Gerçek tokenizer ile ölçülmüş veriler ve TL maliyet farkı.{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1040px">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Türkçe token maliyeti</li></ol></nav>
+    <h1>Türkçe, aynı içerik için <span style="color:var(--primary)">{{ data.totals.ratio }} kat</span> daha fazla token harcıyor</h1>
+    <p class="lede">Bu, Türkiye'de AI maliyeti hesaplayan herkesin gözden kaçırdığı kalem. Aşağıdaki sayılar
+      tahmin değil: gerçek BPE tokenizer ile, aynı anlamdaki Türkçe ve İngilizce cümleler üzerinde ölçüldü.</p>
+    <div class="meta">
+      <span>Tokenizer: <strong>{{ data.encoding }}</strong></span>
+      <span>Örnek: <strong>{{ data.samples|length }} cümle çifti</strong></span>
+      <span>Ölçüm: <strong>11.11.2026</strong></span>
+    </div>
+  </header>
+
+  <section class="result-grid" aria-label="Özet">
+    <div class="result">
+      <div class="k">Türkçe token</div>
+      <div class="v">{{ data.totals.tr_tokens }}</div>
+      <div class="n">{{ data.samples|length }} cümle için</div>
+    </div>
+    <div class="result">
+      <div class="k">İngilizce token</div>
+      <div class="v">{{ data.totals.en_tokens }}</div>
+      <div class="n">aynı anlam</div>
+    </div>
+    <div class="result result-cost">
+      <div class="k">Fazla token</div>
+      <div class="v">%{{ data.totals.extra_pct }}</div>
+      <div class="n">Türkçe lehine maliyet</div>
+    </div>
+    <div class="result">
+      <div class="k">Karakter / token</div>
+      <div class="v">{{ data.efficiency.tr_chars_per_token }}</div>
+      <div class="n">İngilizce: {{ data.efficiency.en_chars_per_token }}</div>
+    </div>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Ölçüm</h2>
+    <p class="help mt-2">Her satır aynı anlamı taşıyan bir Türkçe ve İngilizce cümle çiftidir.
+      Token sayıları <code>tiktoken</code> kütüphanesiyle, <code>{{ data.encoding }}</code> kodlamasıyla alındı.</p>
+    <div class="table-wrap mt-3">
+      <table class="prices" style="table-layout:auto">
+        <caption class="sr-only">Türkçe ve İngilizce cümlelerin token sayıları</caption>
+        <thead><tr>
+          <th scope="col">Türkçe</th>
+          <th scope="col" class="is-num">TR token</th>
+          <th scope="col">İngilizce</th>
+          <th scope="col" class="is-num">EN token</th>
+          <th scope="col" class="is-num">Oran</th>
+        </tr></thead>
+        <tbody>
+        {% for s in data.samples %}
+          <tr>
+            <td data-label="Türkçe" style="white-space:normal">{{ s.tr }}</td>
+            <td data-label="TR token" class="num">{{ s.tr_tokens }}</td>
+            <td data-label="İngilizce" style="white-space:normal" class="text-muted">{{ s.en }}</td>
+            <td data-label="EN token" class="num">{{ s.en_tokens }}</td>
+            <td data-label="Oran" class="num"><strong>{{ s.ratio }}×</strong></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Bu ne kadar para demek?</h2>
+    <p class="text-sm text-muted mt-2">Aynı uygulamayı Türkçe ve İngilizce sunsanız, aylık fatura şöyle değişir.
+      Hesaplama seçtiğiniz modelin güncel fiyatıyla yapılır.</p>
+    <div class="form-grid mt-4">
+      <div class="field">
+        <label for="tt-model">Model</label>
+        <select id="tt-model" data-model-options>
+          {% for o in options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="tt-tokens">Aylık token (İngilizce varsayımı)</label>
+        <input id="tt-tokens" type="text" inputmode="numeric" value="100000000">
+      </div>
+    </div>
+    <div class="result-grid mt-4">
+      <div class="result"><div class="k">İngilizce aylık</div><div class="v" id="tt-en">—</div><div class="n" id="tt-en-note">hesaplanıyor</div></div>
+      <div class="result result-cost"><div class="k">Türkçe aylık</div><div class="v" id="tt-tr">—</div><div class="n" id="tt-tr-note">hesaplanıyor</div></div>
+      <div class="result"><div class="k">Yıllık fark</div><div class="v" id="tt-diff">—</div><div class="n">Türkçe için fazladan</div></div>
+    </div>
+    <p class="help mt-3">Not: oran dile göre değişir. Teknik terim ve özel isim yoğun metinlerde fark daralır,
+      günlük konuşma dilinde açılır. Ölçüm bu sayfadaki {{ data.samples|length }} cümleye dayanır.</p>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Neden oluyor?</h2>
+    <ul class="text-sm text-muted mt-3" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
+      <li>Tokenizer'lar ağırlıklı olarak İngilizce metinle eğitilir; sık İngilizce kelimeler tek token olur.</li>
+      <li>Türkçe eklemeli bir dil: "hesapla", "hesaplıyor", "hesapladığımızda" ayrı ayrı parçalanır.</li>
+      <li>Türkçe karakterler (ç, ğ, ı, ö, ş, ü) çoğu tokenizer'da birden fazla byte'a bölünür.</li>
+      <li>Sonuç: aynı bilgi, daha fazla token, daha yüksek fatura.</li>
+    </ul>
+    <p class="help mt-4">Bu yüzden Türkçe bir ürün geliştiriyorsanız, yabancı bir blogda gördüğünüz
+      "1 token ≈ 4 karakter" kuralı sizi yanıltır. Türkçe için gerçek oran
+      <strong>{{ data.efficiency.tr_chars_per_token }} karakter/token</strong> civarındadır.</p>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Kendi metninizi ölçün</h2>
+    <p class="text-sm text-muted mt-2">Token sayacı metninizi tarayıcınızda sayar; sunucuya gönderilmez.</p>
+    <p class="mt-3"><a class="btn" href="/token-sayaci">Token sayacını aç</a></p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var sel=document.getElementById('tt-model'), inp=document.getElementById('tt-tokens');
+  var elEn=document.getElementById('tt-en'), elTr=document.getElementById('tt-tr'),
+      elDiff=document.getElementById('tt-diff'), noteEn=document.getElementById('tt-en-note'),
+      noteTr=document.getElementById('tt-tr-note');
+  var RATIO = {{ data.totals.ratio|tojson }};
+  var fx = {{ (fx_rate or 0)|tojson }};
+  var prices = {};
+  function fmt(v){ return v.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function calc(){
+    var p = prices[sel.value];
+    var n = parseFloat((inp.value||'').replace(/./g,'').replace(',','.')) || 0;
+    if(!p || !p.input_price || !n){ elEn.textContent='—'; elTr.textContent='—'; elDiff.textContent='—'; return; }
+    var enCost = n/1e6*p.input_price;
+    var trCost = enCost*RATIO;
+    elEn.textContent = fmt(enCost) + ' USD';
+    elTr.textContent = fmt(trCost) + ' USD';
+    elDiff.textContent = fmt((trCost-enCost)*12) + ' USD';
+    noteEn.textContent = fx ? ('≈ ' + (enCost*fx).toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺/ay') : 'aylık';
+    noteTr.textContent = fx ? ('≈ ' + (trCost*fx).toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺/ay') : 'aylık';
+  }
+  fetch('/api/v1/model-options').then(function(r){return r.ok?r.json():null;}).then(function(l){
+    if(!l) return;
+    l.forEach(function(o){ prices[o.value]={input_price:o.input_price}; });
+    calc();
+  }).catch(function(){});
+  sel.addEventListener('change', calc);
+  inp.addEventListener('input', calc);
+})();
+</script>
+{% endblock %}

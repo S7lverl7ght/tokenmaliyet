@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% set nav = 'fiyatlar' %}
+{% block title %}{{ primary.name }} fiyatları — {{ provider_label }} | {{ site_name }}{% endblock %}
+{% block description %}{{ primary.name }} API fiyatı: girdi, çıktı ve önbellek fiyatları 1M token başına. Kaynak bağlantısı, son doğrulama tarihi ve TRY karşılığıyla.{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu">
+      <ol class="breadcrumb">
+        <li><a href="/fiyatlar">Fiyatlar</a></li>
+        <li><a href="/fiyatlar?provider={{ primary.provider_slug }}">{{ provider_label }}</a></li>
+        <li aria-current="page">{{ primary.name }}</li>
+      </ol>
+    </nav>
+    <h1>{{ primary.name }} <span class="text-muted" style="font-weight:400">fiyatları</span></h1>
+    <p class="lede">{{ provider_label }} modeli{% if primary.channel == 'marketplace' %}, pazaryeri (OpenRouter) kanalı{% endif %}.
+      Fiyatlar {{ primary.source_url }} adresinden okunur; son doğrulama {{ primary.observed_at|dt_tr }}.</p>
+    <div class="meta">
+      <span>Sağlayıcı: <strong>{{ provider_label }}</strong></span>
+      <span>Kanal: <strong>{{ channel_labels.get(primary.channel, primary.channel) }}</strong></span>
+      <span>Son doğrulama: <strong>{{ primary.observed_at|dt_tr }}</strong></span>
+      {% if fx_rate %}<span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong> ({{ fx_date }})</span>{% endif %}
+    </div>
+  </header>
+
+  <section class="grid12" aria-labelledby="fiyatlar-baslik">
+    <div style="grid-column:span 8">
+      <div class="surface surface-pad">
+        <h2 id="fiyatlar-baslik" style="font-size:var(--fs-h3)">Fiyat kalemleri</h2>
+        <div class="table-wrap mt-4">
+          <table class="prices" style="table-layout:auto">
+            <caption class="sr-only">{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı</caption>
+            <thead>
+              <tr>
+                <th scope="col">Kalem</th>
+                <th scope="col">Dönem / dilim</th>
+                <th scope="col" class="is-num">Kaynak fiyat</th>
+                <th scope="col" class="is-num">TRY karşılığı</th>
+                <th scope="col">Geçerlilik</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for key, d in dims %}
+              {% set pv = price_value(d) %}
+              {% if pv[0] is not none %}
+              <tr>
+                <td>{{ key|dim_label }}</td>
+                <td class="text-sm">
+                  {% if d.peak_period == 'peak' %}<span class="badge badge-warn">Yoğun saat</span>
+                  {% elif d.peak_period == 'off_peak' %}<span class="badge badge-ok">Yoğun olmayan saat</span>
+                  {% elif d.tier_label %}<span class="badge badge-neutral">{{ d.tier_label }}</span>
+                  {% else %}<span class="text-muted">Standart</span>{% endif %}
+                </td>
+                <td class="cell-price">
+                  <span class="pv">{{ pv[0]|tl_dyn }} {{ d.currency }}</span>
+                  <span class="pu">{{ pv[1] }}</span>
+                </td>
+                <td class="cell-price">
+                  {% if fx_rate and pv[0] is not none %}
+                  <span class="pv">{{ (pv[0] * fx_rate)|tl(2) }} ₺</span>
+                  <span class="pu">{{ pv[1]|replace('USD', 'TRY') }}</span>
+                  {% else %}<span class="text-muted">Kur yok</span>{% endif %}
+                </td>
+                <td class="text-sm">
+                  {% if d.effective_from %}{{ d.effective_from|dt_tr }}{% else %}<span class="text-muted">Kaynakta belirtilmedi</span>{% endif %}
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="help mt-4">
+          Fiyatlar liste fiyatıdır; vergi, bölge ve sözleşme indirimleri dahil değildir.
+          Kaynak fiyatı ile TRY karşılığı yan yana verilir — <strong>kaynak fiyatı USD'dir</strong>,
+          TRY yalnızca {{ fx_date }} tarihli kurla yapılan çeviridir.
+          <a href="{{ primary.source_url }}" target="_blank" rel="noopener nofollow">Kaynağı görüntüle ↗</a>
+        </p>
+      </div>
+
+      {% if variants|length > 1 %}
+      <div class="surface surface-pad mt-5">
+        <h2 style="font-size:var(--fs-h3)">Varyantlar</h2>
+        <p class="help mt-2">Aynı modelin farklı satış/işleme biçimleri ayrı satırlardadır; fiyatları karıştırmayın.</p>
+        <ul class="mt-3" style="list-style:none;padding:0;display:grid;gap:var(--sp-2)">
+          {% for v in variants %}
+          <li class="flex items-center gap-3 wrap" style="border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-3)">
+            <span class="badge badge-info">{{ v.variant or 'standart' }}</span>
+            <span class="text-sm">
+              {% if v.dim('input') %}Girdi {{ price_value(v.dim('input'))[0]|tl_dyn }} USD{% endif %}
+              {% if v.dim('output') %} · Çıktı {{ price_value(v.dim('output'))[0]|tl_dyn }} USD{% endif %}
+            </span>
+            <span class="ml-auto text-xs text-muted">{{ v.observed_at|dt_tr }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <aside style="grid-column:span 4" class="stack-4">
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Bu modeli karşılaştır</h2>
+        <p class="help mt-2">Aylık token hacminizi girip başka bir modelle maliyet farkını görün.</p>
+        <p class="mt-4">
+          <a class="btn" href="/hesaplayici?from={{ primary.provider_slug }}%7C{{ primary.slug }}">Hesaplayıcıya ekle</a>
+        </p>
+        <p class="mt-3"><a href="/karsilastir?models={{ primary.provider_slug }}%7C{{ primary.slug }}" class="text-sm">Karşılaştırma sayfasında aç</a></p>
+      </div>
+
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Kaynak ve güven</h2>
+        <dl style="display:grid;grid-template-columns:auto 1fr;gap:8px var(--sp-3);margin:var(--sp-3) 0 0;font-size:var(--fs-sm)">
+          <dt class="text-muted">Kaynak</dt>
+          <dd style="margin:0;text-align:right"><a href="{{ primary.source_url }}" target="_blank" rel="noopener nofollow">Bağlantı ↗</a></dd>
+          <dt class="text-muted">Gözlem</dt>
+          <dd style="margin:0;text-align:right">{{ primary.observed_at|dt_tr }}</dd>
+          <dt class="text-muted">Para birimi</dt>
+          <dd style="margin:0;text-align:right">{{ primary.dim('input').currency if primary.dim('input') else 'USD' }}</dd>
+          <dt class="text-muted">Durum</dt>
+          <dd style="margin:0;text-align:right">
+            {% set st = freshness(primary.observed_at) %}
+            <span class="badge {{ st[1] }}">{{ 'Doğrulandı' if st[1] != 'badge-warn' else 'Güncelliği geçmiş' }}</span>
+          </dd>
+        </dl>
+      </div>
+
+      {% if history_rows %}
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Fiyat geçmişi</h2>
+        <ul style="list-style:none;padding:0;margin:var(--sp-3) 0 0;display:grid;gap:var(--sp-2);font-size:var(--fs-sm)">
+          {% for h in history_rows %}
+          <li class="flex items-center gap-2" style="justify-content:space-between">
+            <span class="text-muted">{{ h.observed_at|dt_tr }}</span>
+            <span class="num">{{ h.amount|tl_dyn }} {{ h.currency }} · {{ h.price_dimension }}{% if h.peak_period == 'peak' %} (peak){% endif %}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="help mt-3">Geçmiş kayıtlar değiştirilmez; her yeni gözlem ayrı satır olarak eklenir.</p>
+      </div>
+      {% endif %}
+
+      {% if similar %}
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Benzer modeller</h2>
+        <ul style="list-style:none;padding:0;margin:var(--sp-3) 0 0;display:grid;gap:var(--sp-2);font-size:var(--fs-sm)">
+          {% for s in similar %}
+          <li class="flex" style="justify-content:space-between;gap:var(--sp-2)">
+            <a href="/modeller/{{ s.provider_slug }}/{{ s.slug }}" class="truncate">{{ s.name }}</a>
+            <span class="num text-muted nowrap">{{ price_value(s.dim('input'))[0]|tl_dyn }} USD</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </aside>
+  </section>
+</div>
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"BreadcrumbList",
+  "itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Fiyatlar","item":{{ (site_url ~ '/fiyatlar')|tojson }}},
+    {"@type":"ListItem","position":2,"name":{{ provider_label|tojson }},"item":{{ (site_url ~ '/fiyatlar?provider=' ~ primary.provider_slug)|tojson }}},
+    {"@type":"ListItem","position":3,"name":{{ primary.name|tojson }},"item":{{ (site_url ~ '/modeller/' ~ primary.provider_slug ~ '/' ~ primary.slug)|tojson }}}
+  ]
+}
+</script>
+{% endblock %}

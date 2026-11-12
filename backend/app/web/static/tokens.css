@@ -1,0 +1,61 @@
+/* AI Maliyet Merkezi — design tokens
+   Açık tema varsayılan; koyu tema [data-theme="dark"] veya sistem tercihi ile. */
+:root{
+  color-scheme: light;
+
+  /* renk — yüzey */
+  --canvas:#F8FAFC; --surface:#FFFFFF; --surface-2:#F1F5F9; --elevated:#FFFFFF;
+  --border:#E2E8F0; --border-strong:#CBD5E1;
+
+  /* renk — metin */
+  --ink:#111827; --ink-soft:#334155;
+  /* muted: #64748B -> #5A677C (AA 4.5:1 on both #FFF and #F1F5F9) */
+  --muted:#5A677C; --muted-2:#8892A6;
+
+  /* renk — anlam */
+  --primary:#4F46E5; --primary-hover:#4338CA; --primary-soft:#EEF2FF; --primary-ink:#3730A3;
+  --success:#15803D; --success-soft:#F0FDF4;
+  --warn:#B45309; --warn-soft:#FFFBEB;
+  --danger:#B91C1C; --danger-soft:#FEF2F2;
+  --info:#0369A1; --info-soft:#F0F9FF;
+
+  /* tipografi */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: "SF Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace;
+  --fs-h1: 2rem;    --lh-h1: 2.5rem;
+  --fs-h2: 1.5rem;  --lh-h2: 2rem;
+  --fs-h3: 1.125rem;--lh-h3: 1.625rem;
+  --fs-body: .9375rem; --lh-body: 1.5rem;
+  --fs-sm: .8125rem; --lh-sm: 1.25rem;
+  --fs-xs: .75rem;  --lh-xs: 1rem;
+
+  /* boşluk */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
+
+  /* yarıçap */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-full:999px;
+
+  /* gölge */
+  --shadow-1: 0 1px 2px rgba(15,23,42,.05);
+  --shadow-2: 0 4px 12px rgba(15,23,42,.08);
+
+  /* yerleşim */
+  --container: 1400px;
+  --header-h: 68px;
+  --focus: 0 0 0 3px rgba(79,70,229,.35);
+}
+
+[data-theme="dark"]{
+  color-scheme: dark;
+  --canvas:#0B1220; --surface:#111B2E; --surface-2:#17243B; --elevated:#17243B;
+  --border:#26354D; --border-strong:#334765;
+  --ink:#F8FAFC; --ink-soft:#DCE4F0; --muted:#A7B4C8; --muted-2:#7C8CA6;
+  --primary:#818CF8; --primary-hover:#A5B4FC; --primary-soft:#1E2A4A; --primary-ink:#C7D2FE;
+  --success:#4ADE80; --success-soft:#0F2A1D;
+  --warn:#FBBF24; --warn-soft:#2A1F0A;
+  --danger:#F87171; --danger-soft:#2A1113;
+  --info:#38BDF8; --info-soft:#08283B;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 6px 18px rgba(0,0,0,.45);
+  --focus: 0 0 0 3px rgba(129,140,248,.45);
+}

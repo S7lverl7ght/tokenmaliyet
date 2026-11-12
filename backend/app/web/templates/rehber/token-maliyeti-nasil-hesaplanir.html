@@ -1,0 +1,57 @@
+{% extends "guide_base.html" %}
+{% set nav = 'rehber' %}
+{% block title %}Token maliyeti nasıl hesaplanır? | {{ site_name }}{% endblock %}
+{% block description %}Girdi ve çıktı token fiyatlarından aylık API maliyeti hesaplama; cache ve batch indirimlerinin etkisi, sık yapılan hesap hataları.{% endblock %}
+{% block article %}
+<h1>Token maliyeti nasıl hesaplanır?</h1>
+<p class="lede">Bir AI API faturasının neredeyse tamamı iki sayıdan çıkar: kaç token gönderdiğiniz ve
+kaç token ürettiğiniz. Bu yazı, o iki sayıyı fiyata çevirmenin doğru yolunu ve en sık yapılan hataları anlatır.</p>
+
+<h2>Temel formül</h2>
+<p>Maliyet, girdi ve çıktı tokenlarının ayrı ayrı fiyatlandırılmasıyla hesaplanır:</p>
+<p class="formula">maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)</p>
+<p>Fiyatlar genellikle "1 milyon token başına USD" olarak yayınlanır. Bu yüzden token sayısını
+1.000.000'a bölüp fiyatla çarpıyorsunuz. Bugünkü verimizdeki iki örnek:</p>
+<table>
+  <thead><tr><th>Model</th><th>Girdi (USD/1M)</th><th>Çıktı (USD/1M)</th></tr></thead>
+  <tbody>
+  {% for m in examples %}
+    <tr><td>{{ m.name }}</td><td class="num">{{ m.input|tl_dyn }}</td><td class="num">{{ m.output|tl_dyn }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-sm text-muted">Bu fiyatlar {{ last_checked }} tarihli son doğrulamadan gelir; güncel listeye
+<a href="/fiyatlar">fiyat tablosundan</a> bakın.</p>
+
+<h2>Çıktı neden daha pahalı?</h2>
+<p>Çıktı tokenları üretim sırasında tek tek hesaplanır ve genellikle girdiden birkaç kat pahalıdır.
+Bu yüzden uzun cevaplar üreten bir uygulamada maliyeti belirleyen şey çoğu zaman <em>çıktı</em> uzunluğudur.
+Girdi uzun, çıktı kısa bir "özetleme" işi ile girdi kısa, çıktı uzun bir "içerik üretme" işi
+aynı token sayısında bile çok farklı fatura üretir.</p>
+
+<h2>Sık yapılan üç hata</h2>
+<h3>1. Kur ile USD fiyatı karıştırmak</h3>
+<p>Sağlayıcı USD faturalar. TL bütçe planlıyorsanız çeviriyi <strong>belirli bir tarihin kuruyla</strong> yapın
+ve o tarihi yazın. Kur değişince USD maliyeti değişmez; yalnızca TL karşılığı değişir. Bu sitede her fiyatın
+yanında kullanılan kur ve tarihi görünür.</p>
+
+<h3>2. Cache (önbellek) fiyatını görmezden gelmek</h3>
+<p>Aynı uzun sistem istemini her istekte tekrar gönderiyorsanız, sağlayıcının önbellek okuma fiyatı
+normal girdi fiyatının çok altındadır. Aynı bağlamı tekrar tekrar göndermek, faturanın en sessiz şekilde
+büyüyen kalemidir. Önbellek fiyatı varsa model detay sayfasında ayrı satır olarak listelenir.</p>
+
+<h3>3. Batch indirimini unutmak</h3>
+<p>Gecikmeye duyarlı olmayan işler (gece çalışan toplu özetleme, sınıflandırma) için sağlayıcılar
+genellikle indirimli toplu işlem fiyatı sunar. Bu fiyatlar bu sitede ayrı "varyant" olarak etiketlenir;
+normal fiyatla aynı satıra yazılmaz.</p>
+
+<h2>Aylık bütçeye çevirmek</h2>
+<p>Tek istek maliyeti küçük görünür; asıl sayı aylık hacimdir. Örneğin günde 2.000 sohbet, sohbet başına
+ortalama 750 girdi + 200 çıktı token demekse aylık yaklaşık 45 milyon girdi ve 12 milyon çıktı token olur.
+<a href="/hesaplayici">Hesaplayıcı</a> bu çarpımı sizin yerinize yapar ve iki modeli yan yana koyar.</p>
+
+<div class="notice notice-warn mt-5">
+  <div><strong>Not:</strong> Hesaplayıcı yalnızca token fiyatını karşılaştırır. Kalite, gecikme ve bağlam
+  penceresi ölçülmez. Daha ucuz model, işiniz için yeterli olduğu <em>varsayımıyla</em> ucuzdur.</div>
+</div>
+{% endblock %}

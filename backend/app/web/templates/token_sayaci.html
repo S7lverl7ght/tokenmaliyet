@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% set nav = 'token' %}
+{% block title %}Token sayacı — metnin kaç token olduğunu hesapla | {{ site_name }}{% endblock %}
+{% block description %}Metninizi yapıştırın, token sayısını görün; seçtiğiniz modelin o token sayısındaki girdi/çıktı maliyetini hesaplayın.{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1080px">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Token sayacı</li></ol></nav>
+    <h1>Token sayacı</h1>
+    <p class="lede">Metninizi yapıştırın; token sayısını ve seçtiğiniz modeldeki maliyetini görün.
+      Sayaç tarayıcınızda çalışır — metniniz sunucuya <strong>gönderilmez</strong>.</p>
+  </header>
+
+  <div class="grid12">
+    <div style="grid-column:span 7">
+      <div class="surface surface-pad">
+        <div class="field">
+          <label for="text">Metin</label>
+          <textarea id="text" rows="12" style="width:100%;font:inherit;padding:12px;border-radius:var(--r-sm);border:1px solid var(--border-strong);resize:vertical"
+            placeholder="Buraya metninizi yapıştırın…" aria-describedby="text-help"></textarea>
+          <span class="help-text" id="text-help">Yapıştırınca sayım otomatik güncellenir. Metin cihazınızdan çıkmaz.</span>
+        </div>
+        <div class="flex gap-2 mt-3 wrap">
+          <button type="button" class="btn btn-secondary" id="clear">Temizle</button>
+          <button type="button" class="btn btn-secondary" id="sample">Örnek metin</button>
+        </div>
+      </div>
+
+      <div class="surface surface-pad mt-4">
+        <h2 style="font-size:var(--fs-h3)">Sayım sonucu</h2>
+        <div class="kpis mt-3">
+          <div class="kpi"><div class="k">Yaklaşık token</div><div class="v" id="tokEstimate">0</div><div class="n">BPE tabanlı tahmin</div></div>
+          <div class="kpi"><div class="k">Kelime</div><div class="v" id="words">0</div><div class="n">boşlukla ayrılmış</div></div>
+          <div class="kpi"><div class="k">Karakter</div><div class="v" id="chars">0</div><div class="n">boşluklar dahil</div></div>
+        </div>
+        <details class="disclosure mt-4">
+          <summary>Nasıl hesaplanıyor? (tahmin yöntemi)</summary>
+          <div class="body">
+            <p>Gerçek tokenizasyon modele özeldir (her sağlayıcının kendi BPE tablosu vardır).
+              Bu sayaç, yaygın kullanılan yaklaşımı uygular:
+              <strong>≈ karakter / 4</strong> (Latin dilleri) ve kelime sınırlarında düzeltme.</p>
+            <p>Türkçe metinlerde tokenizer'lar daha parçalı davranır; gerçek token sayısı
+              tahminden <strong>%15–40 daha yüksek</strong> olabilir. Kesin sayı için sağlayıcının
+              tokenizer'ını kullanın. Bu araç büyüklük mertebesini görmek içindir.</p>
+            <p>Formül (ekranda gösterilen): <code data-estimate-formula></code></p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <aside style="grid-column:span 5">
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Bu metnin maliyeti</h2>
+        <div class="field mt-3">
+          <label for="model">Model</label>
+          <select id="model" data-model-options>
+            {% for o in options %}<option value="{{ o.value }}" {% if o.dim_in is defined %}data-in="{{ o.dim_in }}" data-out="{{ o.dim_out }}"{% endif %}>{{ o.label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field mt-3">
+          <label for="kind">Metin ne olarak kullanılacak?</label>
+          <select id="kind">
+            <option value="input">Girdi (prompt) olarak gönderilecek</option>
+            <option value="output">Çıktı (üretilecek cevap) olarak</option>
+          </select>
+        </div>
+        <div class="result-grid mt-4" style="grid-template-columns:1fr">
+          <div class="result" id="costBox">
+            <div class="k" id="costLabel">Maliyet</div>
+            <div class="v" id="cost">—</div>
+            <div class="n" id="costNote">Metin girildiğinde hesaplanır</div>
+          </div>
+        </div>
+        <p class="help mt-3">Fiyatlar onaylı kaynaklardan gelir; liste fiyatıdır, vergi dahil değildir.</p>
+        <p class="mt-3"><a class="btn btn-secondary" href="/hesaplayici">Aylık maliyet hesaplayıcı</a></p>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var ta=document.getElementById('text'), modelSel=document.getElementById('model'), kind=document.getElementById('kind');
+  var elTok=document.getElementById('tokEstimate'), elW=document.getElementById('words'),
+      elC=document.getElementById('chars'), elCost=document.getElementById('cost'),
+      elNote=document.getElementById('costNote'), elLabel=document.getElementById('costLabel');
+  var prices = {};    // value -> {in, out, label}
+  var fx = {{ (fx_rate or 0)|tojson }};
+
+  // Fiyat verisi: sunucudan gelen title/option verisi yerine JSON endpoint'ten tam liste
+  function loadPrices(){
+    fetch('/api/v1/model-options').then(function(r){return r.ok?r.json():null;}).then(function(list){
+      if(!list) return;
+      list.forEach(function(o){ prices[o.value]={in:o.input_price, out:o.output_price, label:o.label}; });
+      // Sunucudan gelen secenekleri de fiyatla eslestir (JS kapaliysa zaten calismaz)
+      recalc();
+    }).catch(function(){});
+  }
+
+  function estimateTokens(text){
+    if(!text) return 0;
+    // Yaygin yaklasim: ~4 karakter/token; Turkce ve noktalama icin hafif duzeltme.
+    var base = text.length/4;
+    var words = (text.match(/\S+/g)||[]).length;
+    var trChars = (text.match(/[çğıöşüÇĞİÖŞÜ]/g)||[]).length;
+    var punct = (text.match(/[.,;:!?()\[\]"'—–]/g)||[]).length;
+    var est = base + trChars*0.35 + punct*0.15;
+    return Math.max(words, Math.round(est));
+  }
+
+  function recalc(){
+    var text = ta.value || '';
+    var tokens = estimateTokens(text);
+    elTok.textContent = tokens.toLocaleString('tr-TR');
+    elW.textContent = (text.trim()? text.trim().split(/\s+/).length : 0).toLocaleString('tr-TR');
+    elC.textContent = text.length.toLocaleString('tr-TR');
+
+    var v = modelSel.value, p = prices[v];
+    var which = kind.value;
+    if(!p || !tokens){ 
+      elCost.textContent='—'; 
+      elNote.textContent = tokens ? 'Fiyat bilgisi yükleniyor…' : 'Metin girildiğinde hesaplanır';
+      return;
+    }
+    var unit = which==='input' ? p.in : p.out;
+    if(unit==null){ elCost.textContent='—'; elNote.textContent='Bu model için fiyat yok'; return; }
+    var usd = tokens/1e6*unit;
+    elLabel.textContent = (which==='input'?'Girdi':'Çıktı') + ' maliyeti';
+    elCost.textContent = usd.toLocaleString('tr-TR',{minimumFractionDigits:6, maximumFractionDigits:6}) + ' USD';
+    elNote.textContent = fx ? ('≈ ' + (usd*fx).toLocaleString('tr-TR',{minimumFractionDigits:4,maximumFractionDigits:4}) + ' ₺ · ' + tokens.toLocaleString('tr-TR') + ' token × ' + unit + ' USD/1M')
+                            : (tokens.toLocaleString('tr-TR') + ' token × ' + unit + ' USD/1M');
+  }
+
+  var f = document.querySelector('[data-estimate-formula]');
+  if(f) f.textContent = 'token ≈ (karakter / 4) + (Türkçe karakter × 0,35) + (noktalama × 0,15)';
+  ta.addEventListener('input', recalc);
+  modelSel.addEventListener('change', recalc);
+  kind.addEventListener('change', recalc);
+  document.getElementById('clear').addEventListener('click', function(){ ta.value=''; recalc(); ta.focus(); });
+  document.getElementById('sample').addEventListener('click', function(){
+    ta.value = 'Merhaba, yapay zeka modellerinin fiyatları sağlayıcıdan sağlayıcıya değişiyor. '
+      + 'Bu metin, token sayacının nasıl çalıştığını göstermek için hazırlanmış örnek bir paragraftır. '
+      + 'Türkçe karakterler içerdiği için token tahmini biraz daha yüksek çıkacaktır.';
+    recalc(); ta.focus();
+  });
+  loadPrices(); recalc();
+})();
+</script>
+{% endblock %}

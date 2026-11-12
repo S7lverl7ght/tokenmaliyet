@@ -1,0 +1,38 @@
+{% extends "guide_base.html" %}
+{% set nav = 'rehber' %}
+{% block title %}Peak / off-peak fiyatlandırma bütçeyi nasıl değiştirir? | {{ site_name }}{% endblock %}
+{% block description %}Yoğun saat ve yoğun olmayan saat fiyat farkı, hangi işlerin kaydırılabileceği ve aylık maliyete etkisi.{% endblock %}
+{% block article %}
+<h1>Yoğun saat (peak) fiyatlandırması bütçeyi nasıl değiştirir?</h1>
+<p class="lede">Bazı sağlayıcılar günün belirli saatlerinde daha yüksek fiyat uygular. Aynı işi birkaç saat
+öteye kaydırmak, faturayı ciddi biçimde düşürebilir.</p>
+
+<h2>Fiyat iki dilime ayrılır</h2>
+<p>Örneğin DeepSeek, yoğun saatlerde daha yüksek, yoğun olmayan saatlerde daha düşük fiyat uygular.
+Bugünkü verimizde aynı modelin iki dilimi şöyle görünüyor:</p>
+<table>
+  <thead><tr><th>Model</th><th>Kalem</th><th>Dönem</th><th>USD/1M token</th></tr></thead>
+  <tbody>
+  {% for r in peak_examples %}
+    <tr><td>{{ r.model }}</td><td>{{ r.dimension }}</td><td>{{ r.period }}</td><td class="num">{{ r.price|tl_dyn }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-sm text-muted">Bu satırlar {{ last_checked }} tarihli veriden gelir; iki dilim ayrı fiyat
+olarak saklanır ve karıştırılmaz.</p>
+
+<h2>Hangi işler kaydırılabilir?</h2>
+<ul>
+  <li><strong>Kaydırılabilir:</strong> gece çalışan toplu özetleme, sınıflandırma, embedding üretimi,
+      rapor oluşturma, test/benchmark koşuları.</li>
+  <li><strong>Kaydırılamaz:</strong> kullanıcıya anında cevap veren sohbet, canlı ajanlar, gerçek zamanlı çeviri.</li>
+</ul>
+<p>Kaydırılabilir işler genellikle toplam token hacminin büyük kısmını oluşturur; bu yüzden asıl tasarruf
+orada çıkar.</p>
+
+<h2>Hesaba nasıl yansıtılır?</h2>
+<p>Bu sitede iki dilim ayrı satır olarak tutulur; tabloda varsayılan olarak standart/yoğun olmayan dilim
+gösterilir, yoğun saat fiyatı model detayında "Yoğun saat" etiketiyle ayrıca listelenir. Hesaplayıcı
+standart dilimi kullanır; yoğun saatte çalışan bir iş yükünüz varsa gerçek faturanız hesaplayıcının
+gösterdiğinden yüksek olur.</p>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% set nav = 'hesaplayici' %}
+{% block title %}Aylık API maliyeti hesaplayıcı | {{ site_name }}{% endblock %}
+{% block description %}İki AI modelini aylık girdi ve çıktı token hacminizle karşılaştırın; aylık maliyet, fark ve tasarruf yüzdesini görün. Formül ve varsayımlar açıktır.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Hesaplayıcı</li></ol></nav>
+    <h1>Aylık API maliyetini karşılaştır</h1>
+    <p class="lede">Mevcut modelinizi ve alternatifi seçin, aylık token hacminizi girin.
+      Sonuç yalnızca <strong>token fiyatı karşılaştırmasıdır</strong>; kalite, gecikme veya bağlam penceresi bu hesaba dahil değildir.</p>
+  </header>
+
+  <div class="chip-row" style="margin-bottom:var(--sp-4)" role="group" aria-label="Hazır senaryolar">
+    <span class="text-xs text-muted">Hazır senaryo:</span>
+    {% for s in scenarios %}
+    <a class="chip" href="/hesaplayici?in={{ s.inp }}&out={{ s.out }}&from={{ f['from'] }}&to={{ f['to'] }}"
+       title="{{ s.note }}">{{ s.label }}</a>
+    {% endfor %}
+  </div>
+
+  <form class="surface surface-pad" method="get" action="/hesaplayici" id="calc-form" novalidate>
+    <fieldset class="fieldset">
+      <legend>Modeller</legend>
+      <div class="form-grid">
+        <div class="field">
+          <label for="from">Mevcut model</label>
+          <select id="from" name="from" data-model-options>
+            {% for opt in options %}
+            <option value="{{ opt.value }}" {% if opt.value == f['from'] %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="to">Alternatif model</label>
+          <select id="to" name="to" data-model-options>
+            {% for opt in options %}
+            <option value="{{ opt.value }}" {% if opt.value == f['to'] %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset mt-4">
+      <legend>Aylık kullanım</legend>
+      <div class="form-grid">
+        <div class="field">
+          <label for="inTok">Aylık girdi (input) token</label>
+          <input id="inTok" name="in" type="text" inputmode="numeric" value="{{ f['in'] }}" autocomplete="off"
+                 aria-describedby="in-help{% if errors.get('in') %} in-err{% endif %}"
+                 {% if errors.get('in') %}aria-invalid="true"{% endif %}>
+          <span class="help-text" id="in-help">Örnek: 100.000.000 (yüz milyon token)</span>
+          {% if errors.get('in') %}<span class="error-text" id="in-err">{{ errors['in'] }}</span>{% endif %}
+        </div>
+        <div class="field">
+          <label for="outTok">Aylık çıktı (output) token</label>
+          <input id="outTok" name="out" type="text" inputmode="numeric" value="{{ f['out'] }}" autocomplete="off"
+                 aria-describedby="out-help{% if errors.get('out') %} out-err{% endif %}"
+                 {% if errors.get('out') %}aria-invalid="true"{% endif %}>
+          <span class="help-text" id="out-help">Örnek: 25.000.000 (yirmi beş milyon token)</span>
+          {% if errors.get('out') %}<span class="error-text" id="out-err">{{ errors['out'] }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="field mt-4" style="max-width:320px">
+        <label for="cache">Önbellek (cache) okuma oranı — isteğe bağlı</label>
+        <select id="cache" name="cache">
+          <option value="0" {% if f.cache == '0' %}selected{% endif %}>Kullanmıyorum</option>
+          <option value="25" {% if f.cache == '25' %}selected{% endif %}>Girdinin %25'i önbellekten</option>
+          <option value="50" {% if f.cache == '50' %}selected{% endif %}>Girdinin %50'si önbellekten</option>
+          <option value="75" {% if f.cache == '75' %}selected{% endif %}>Girdinin %75'i önbellekten</option>
+        </select>
+        <span class="help-text">Önbellek fiyatı modelde varsa hesaba katılır; yoksa yok sayılır.</span>
+      </div>
+      <p class="mt-4"><button class="btn" type="submit">Hesapla</button>
+        <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">Alanları sıfırla</a></p>
+    </fieldset>
+  </form>
+
+  {% if result %}
+  <section class="mt-5" aria-labelledby="sonuc">
+    <h2 id="sonuc" style="font-size:var(--fs-h3)">Sonuç</h2>
+    <div class="result-grid mt-3" role="status" aria-live="polite">
+      <div class="result">
+        <div class="k">Mevcut · {{ result.from_name }}</div>
+        <div class="v">{{ result.from_usd|tl(2) }} USD</div>
+        <div class="n">≈ {{ result.from_try|tl(0) }} ₺ / ay</div>
+      </div>
+      <div class="result">
+        <div class="k">Alternatif · {{ result.to_name }}</div>
+        <div class="v">{{ result.to_usd|tl(2) }} USD</div>
+        <div class="n">≈ {{ result.to_try|tl(0) }} ₺ / ay</div>
+      </div>
+      <div class="result"><div class="k">Aylık fark</div><div class="v">{{ result.diff_usd|tl(2) }} USD</div><div class="n">≈ {{ result.diff_try|tl(0) }} ₺</div></div>
+      <div class="result"><div class="k">Yıllık fark</div><div class="v">{{ result.year_diff_try|tl(0) }} ₺</div><div class="n">12 ay üzerinden</div></div>
+      {% if result.saving %}
+      <div class="result result-save">
+        <div class="k">Tasarruf</div>
+        <div class="v">%{{ result.pct|tl(1) }}</div>
+        <div class="n">Alternatif daha ucuz</div>
+      </div>
+      {% elif result.pct is not none and result.pct < 0 %}
+      <div class="result result-cost">
+        <div class="k">Maliyet artışı</div>
+        <div class="v">%{{ (-result.pct)|tl(1) }}</div>
+        <div class="n">Alternatif daha pahalı — bu bir tasarruf değildir</div>
+      </div>
+      {% else %}
+      <div class="result"><div class="k">Fark</div><div class="v">%0,0</div><div class="n">İki model aynı maliyette</div></div>
+      {% endif %}
+    </div>
+
+    <figure class="mt-4" style="margin:0">
+      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">Aylık maliyet karşılaştırması (USD)</figcaption>
+      <div style="display:grid;gap:var(--sp-2)">
+        <div>
+          <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">
+            <span>{{ result.from_name }}</span><span class="num">{{ result.from_usd|tl_dyn }} USD</span>
+          </div>
+          <div class="bar" style="height:14px"><span style="width:100%;background:var(--danger)"></span></div>
+        </div>
+        <div>
+          <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">
+            <span>{{ result.to_name }}</span><span class="num">{{ result.to_usd|tl_dyn }} USD</span>
+          </div>
+          <div class="bar" style="height:14px"><span style="width:{{ result.to_bar }}%;background:var(--success)"></span></div>
+        </div>
+      </div>
+    </figure>
+
+    <details class="disclosure mt-4">
+      <summary>Hesaplama formülü ve varsayımlar</summary>
+      <div class="body">
+        <p>Formül:</p>
+        <p class="formula">maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)</p>
+        <ul>
+          <li>Fiyatlar sağlayıcının resmî sayfasından alınan liste fiyatlarıdır; vergi ve indirimler dahil değildir.</li>
+          <li>Girdi fiyatı: {{ result.from_in|tl_dyn }} USD / 1M token ({{ result.from_name }})</li>
+          <li>Çıktı fiyatı: {{ result.from_out|tl_dyn }} USD / 1M token ({{ result.from_name }})</li>
+          <li>Girdi fiyatı: {{ result.to_in|tl_dyn }} USD / 1M token ({{ result.to_name }})</li>
+          <li>Çıktı fiyatı: {{ result.to_out|tl_dyn }} USD / 1M token ({{ result.to_name }})</li>
+          <li>Kur: 1 USD = {{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }} tarihli){% endif %}; kur değişimi USD maliyetini değiştirmez.</li>
+          <li>Önbellek (cache) ve toplu (batch) indirimleri hesaba katılmamıştır.</li>
+          <li>Kalite, gecikme ve bağlam penceresi karşılaştırılmamıştır; aynı kalite varsayımı yapılmamaktadır.</li>
+        </ul>
+      </div>
+    </details>
+
+    <p class="help mt-4">
+      Bağlantıyı paylaşabilirsiniz: bu sayfanın adresi seçimlerinizi ve token hacminizi taşır.
+      Hassas veri içermez.
+    </p>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

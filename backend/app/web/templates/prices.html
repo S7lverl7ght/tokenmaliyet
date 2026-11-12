@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% set nav = 'fiyatlar' %}
+{% block title %}AI API Fiyatları — {{ total }} model, {{ provider_count }} sağlayıcı | {{ site_name }}{% endblock %}
+{% block description %}OpenAI, Anthropic, Gemini, DeepSeek ve OpenRouter API fiyatları. Girdi/çıktı 1M token başına USD ve tarihli TRY karşılığı, kaynak bağlantısı ve son doğrulama tarihiyle.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu">
+      <ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li></ol>
+    </nav>
+    <h1>AI API fiyatları</h1>
+    <p class="lede">{{ provider_count }} sağlayıcıdan {{ total }} model. Fiyatlar resmî sayfalardan toplanır,
+    yayın öncesi doğrulama kontrolünden geçer. TRY karşılığı {{ fx_date }} tarihli kurla hesaplanır.</p>
+    <div class="meta">
+      <span>Son veri kontrolü: <strong>{{ last_checked }}</strong></span>
+      <span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong>{% if fx_date %} ({{ fx_date }}){% endif %}</span>
+      <span class="text-muted">{{ approved_count }} onaylı fiyat kaydı</span>
+    </div>
+  </header>
+
+  <section class="surface" aria-labelledby="tablo-baslik">
+    <h2 id="tablo-baslik" class="sr-only">Model fiyat tablosu</h2>
+
+    <form class="toolbar" method="get" action="/fiyatlar" id="filtreler" role="search" aria-label="Fiyat filtreleri">
+      <div class="field field-search">
+        <label for="q">Model ara</label>
+        <input id="q" name="q" type="search" value="{{ f.q }}" placeholder="örn. deepseek, gemini-4, gpt-6" autocomplete="off">
+      </div>
+      <div class="field field-xs">
+        <label for="provider">Sağlayıcı</label>
+        <select id="provider" name="provider">
+          <option value="">Tümü</option>
+          {% for p in provider_options %}
+          <option value="{{ p.slug }}" {% if f.provider == p.slug %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field field-xs">
+        <label for="channel">Kanal</label>
+        <select id="channel" name="channel">
+          <option value="">Tümü</option>
+          <option value="direct" {% if f.channel == 'direct' %}selected{% endif %}>Doğrudan API</option>
+          <option value="marketplace" {% if f.channel == 'marketplace' %}selected{% endif %}>Pazaryeri</option>
+        </select>
+      </div>
+      <div class="field field-xs">
+        <label for="sort">Sıralama</label>
+        <select id="sort" name="sort">
+          <option value="popular" {% if f.sort == 'popular' %}selected{% endif %}>Önerilen (bilinen sağlayıcılar önce)</option>
+          <option value="input_asc" {% if f.sort == 'input_asc' %}selected{% endif %}>Girdi fiyatı (artan)</option>
+          <option value="input_desc" {% if f.sort == 'input_desc' %}selected{% endif %}>Girdi fiyatı (azalan)</option>
+          <option value="output_asc" {% if f.sort == 'output_asc' %}selected{% endif %}>Çıktı fiyatı (artan)</option>
+          <option value="output_desc" {% if f.sort == 'output_desc' %}selected{% endif %}>Çıktı fiyatı (azalan)</option>
+          <option value="name_asc" {% if f.sort == 'name_asc' %}selected{% endif %}>Model adı (A–Z)</option>
+          <option value="recent" {% if f.sort == 'recent' %}selected{% endif %}>Son doğrulama (yeni)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="sr-only" for="submit-sort">Uygula</label>
+        <button class="btn" id="submit-sort" type="submit">Uygula</button>
+      </div>
+    </form>
+
+    {% if active_filters %}
+    <div class="chip-row" style="padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--border)">
+      <span class="text-xs text-muted">Etkin filtreler:</span>
+      {% for label in active_filters %}
+      <span class="chip">{{ label }}</span>
+      {% endfor %}
+      <a class="btn btn-ghost" href="/fiyatlar">Filtreleri temizle</a>
+    </div>
+    {% endif %}
+
+    {% if rows %}
+    <p class="sr-only" role="status">{{ rows|length }} sonuçtan {{ ((page-1)*page_size)+1 }}–{{ ((page-1)*page_size)+rows|length }} arası gösteriliyor.</p>
+    <div class="table-wrap">
+      <table class="prices">
+        <caption>{{ total_filtered }} model listeleniyor; sayfa başına {{ page_size }} satır.
+          Fiyatlar 1 milyon token başınadır. Model adına tıklayarak detay ve fiyat geçmişini görebilirsiniz.</caption>
+        <thead>
+          <tr>
+            <th scope="col" style="width:26%">{{ t('col.model') }}</th>
+            <th scope="col" style="width:11%">{{ t('col.provider') }}</th>
+            <th scope="col" style="width:10%">{{ t('col.channel') }}</th>
+            <th scope="col" class="is-num" style="width:17%">{{ t('col.input') }}</th>
+            <th scope="col" class="is-num" style="width:17%">{{ t('col.output') }}</th>
+            <th scope="col" style="width:11%">{{ t('col.updated') }}</th>
+            <th scope="col" style="width:8%">{{ t('col.source') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+          <tr id="m-{{ row.provider_slug }}-{{ loop.index }}">
+            <td data-label="Model">
+              <div class="cell-model">
+                <a class="name" href="/modeller/{{ row.provider_slug }}/{{ row.slug }}">{{ row.name }}</a>
+                {% if row.variant %}<span class="variant">varyant: {{ row.variant }}</span>{% endif %}
+                {% if row.dim('input') and row.dim('input').peak_period == 'peak' %}
+                <span class="variant">peak (yoğun saat) fiyatı</span>
+                {% endif %}
+              </div>
+            </td>
+            <td data-label="Sağlayıcı" class="text-sm">{{ provider_labels.get(row.provider_slug, row.provider_name) }}</td>
+            <td data-label="Kanal">
+              <span class="badge {{ 'badge-info' if row.channel=='direct' else 'badge-neutral' }}">
+                {{ channel_labels.get(row.channel, row.channel) }}
+              </span>
+            </td>
+            {% set ip = price_value(row.dim('input')) %}
+            <td data-label="Girdi fiyatı" class="cell-price">
+              {% if ip[0] is not none %}
+                {% if currency == 'TRY' and fx_rate %}
+                <span class="pv">{{ (ip[0] * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
+                <span class="pu">{{ ip[1]|replace('USD','TRY') }} · {{ ip[0]|tl_dyn }} USD</span>
+                {% else %}
+                <span class="pv">{{ ip[0]|tl_dyn }} <span class="cur">USD</span></span>
+                <span class="pu">{{ ip[1] }}{% if fx_rate %} · ≈{{ (ip[0] * fx_rate)|tl(2) }} ₺{% endif %}</span>
+                {% endif %}
+              {% else %}<span class="text-muted">Belirtilmemiş</span>{% endif %}
+            </td>
+            {% set op = price_value(row.dim('output')) %}
+            <td data-label="Çıktı fiyatı" class="cell-price">
+              {% if op[0] is not none %}
+                {% if currency == 'TRY' and fx_rate %}
+                <span class="pv">{{ (op[0] * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
+                <span class="pu">{{ op[1]|replace('USD','TRY') }} · {{ op[0]|tl_dyn }} USD</span>
+                {% else %}
+                <span class="pv">{{ op[0]|tl_dyn }} <span class="cur">USD</span></span>
+                <span class="pu">{{ op[1] }}{% if fx_rate %} · ≈{{ (op[0] * fx_rate)|tl(2) }} ₺{% endif %}</span>
+                {% endif %}
+              {% else %}<span class="text-muted">Belirtilmemiş</span>{% endif %}
+            </td>
+            <td data-label="Güncelleme" class="cell-date">
+              <time datetime="{{ row.observed_at.isoformat() }}">{{ row.observed_at|dt_tr }}</time>
+              {% set st = freshness(row.observed_at) %}
+              {% if st[1] == 'badge-warn' %}<span class="text-xs stale">güncelliği geçmiş</span>{% endif %}
+            </td>
+            <td data-label="Kaynak">
+              <div class="row-actions">
+                <a class="link-ext" href="{{ row.model_url }}" target="_blank" rel="noopener nofollow"
+                   aria-label="{{ row.name }} sayfasını sağlayıcıda aç">{{ row.provider_name }} ↗</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="pager" aria-label="Sayfalama">
+      <span>{{ ((page-1)*page_size)+1 }}–{{ ((page-1)*page_size)+rows|length }} / {{ total_filtered }}</span>
+      <div class="pages">
+        {% if page > 1 %}
+        <a href="{{ qs(base_q, page=page-1) }}#filtreler" rel="prev">‹ Önceki</a>
+        {% endif %}
+        {% for p in page_links %}
+          {% if p == '…' %}<span aria-hidden="true">…</span>
+          {% elif p == page %}<span aria-current="page">{{ p }}</span>
+          {% else %}<a href="{{ qs(base_q, page=p) }}#filtreler">{{ p }}</a>{% endif %}
+        {% endfor %}
+        {% if page < page_count %}
+        <a href="{{ qs(base_q, page=page+1) }}#filtreler" rel="next">Sonraki ›</a>
+        {% endif %}
+      </div>
+    </nav>
+    {% else %}
+    <div class="empty">
+      <h3>Bu filtrelerle model bulunamadı</h3>
+      <p>Arama terimini kısaltmayı veya sağlayıcı filtresini kaldırmayı deneyin.</p>
+      <p class="mt-4"><a class="btn btn-secondary" href="/fiyatlar">Filtreleri temizle</a></p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="grid12 mt-5" aria-labelledby="metodoloji">
+    <div class="col-main surface surface-pad" style="grid-column:span 8">
+      <h2 id="metodoloji" style="font-size:var(--fs-h3)">Veri nasıl toplanıyor?</h2>
+      <p class="text-sm text-muted mt-3">
+        Her fiyat, sağlayıcının resmî fiyat sayfasından veya resmî API'sinden okunur. Ham yanıt saklanır,
+        normalize edilir, ardından zorunlu alan (kaynak, gözlem zamanı, para birimi, fatura birimi) ve
+        tutarlılık kontrollerinden geçer. Yalnızca bu kontrolleri geçen kayıtlar bu sayfada görünür.
+        Doğrudan sağlayıcı fiyatı ile pazaryeri (OpenRouter) fiyatı ayrı kanal etiketiyle sunulur.
+      </p>
+      <p class="text-sm text-muted mt-3">
+        Fiyatlar vergi ve ek ücretler hariç liste fiyatlarıdır. Gerçek fatura; kullanım dilimi, cache/batch
+        oranı, bölge ve sözleşmeye göre değişebilir.
+        <a href="/hakkinda">Metodolojinin tamamı</a>.
+      </p>
+    </div>
+    <aside class="surface surface-pad" style="grid-column:span 4" aria-labelledby="hesap-cta">
+      <h2 id="hesap-cta" style="font-size:var(--fs-h3)">Aylık maliyetinizi hesaplayın</h2>
+      <p class="text-sm text-muted mt-2">İki modeli aylık token hacminizle karşılaştırın; farkı ve tasarruf yüzdesini görün.</p>
+      <p class="mt-4"><a class="btn" href="/hesaplayici">Hesaplayıcıyı aç</a></p>
+    </aside>
+  </section>
+</div>
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"BreadcrumbList",
+  "itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Fiyatlar","item":{{ (site_url ~ '/fiyatlar')|tojson }}}
+  ]
+}
+</script>
+{% endblock %}

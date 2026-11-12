@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block og_type %}article{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="grid12">
+    <div style="grid-column:span 8">
+      <nav aria-label="Sayfa yolu" style="padding-top:var(--sp-6)">
+        <ol class="breadcrumb">
+          <li><a href="/fiyatlar">Fiyatlar</a></li>
+          <li><a href="/rehber">Rehber</a></li>
+          <li aria-current="page">{{ guide.title }}</li>
+        </ol>
+      </nav>
+      <article class="prose" style="padding-bottom:var(--sp-7)">
+        {% block article %}{% endblock %}
+        <aside class="notice notice-info mt-5" style="display:block">
+          <strong>Bunu hesapla:</strong>
+          <a href="/hesaplayici">aylık maliyet hesaplayıcı</a> ·
+          <a href="/token-sayaci">token sayacı</a> ·
+          <a href="/turkce-token-maliyeti">Türkçe token farkı</a>
+        </aside>
+
+        <p class="text-sm text-muted mt-6" style="border-top:1px solid var(--border);padding-top:var(--sp-4)">
+          Yazar: <strong>TokenMaliyet veri ekibi</strong> ·
+          Yayın: {{ guide.published }} · Güncelleme: {{ guide.updated }} · Tahmini okuma {{ guide.reading_min }} dk ·
+          Kaynak: bu sitedeki doğrulanmış fiyat verisi ve sağlayıcıların resmî fiyat sayfaları.
+        </p>
+      </article>
+    </div>
+    <aside style="grid-column:span 4;padding-top:var(--sp-7)">
+      <div class="surface surface-pad">
+        <h2 style="font-size:var(--fs-h3)">Diğer rehberler</h2>
+        <ul style="list-style:none;padding:0;margin:var(--sp-3) 0 0;display:grid;gap:var(--sp-3);font-size:var(--fs-sm)">
+          {% for g in other_guides %}
+          <li><a href="/rehber/{{ g.slug }}">{{ g.title }}</a>
+            <div class="text-xs text-muted mt-2">{{ g.reading_min }} dk okuma</div></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="surface surface-pad mt-4">
+        <h2 style="font-size:var(--fs-h3)">Kendi maliyetinizi görün</h2>
+        <p class="text-sm text-muted mt-2">İki modeli aylık hacminizle karşılaştırın.</p>
+        <p class="mt-3"><a class="btn" href="/hesaplayici">Hesaplayıcı</a></p>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

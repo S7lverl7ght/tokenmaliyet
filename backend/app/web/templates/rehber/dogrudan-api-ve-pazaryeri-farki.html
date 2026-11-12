@@ -1,0 +1,44 @@
+{% extends "guide_base.html" %}
+{% set nav = 'rehber' %}
+{% block title %}Doğrudan API ve pazaryeri fiyatı farkı | {{ site_name }}{% endblock %}
+{% block description %}OpenRouter gibi pazaryerleri ile sağlayıcının kendi API fiyatı neden farklıdır, hangi durumda hangisi doğru karşılaştırmadır.{% endblock %}
+{% block article %}
+<h1>Doğrudan API ile pazaryeri fiyatı neden aynı değil?</h1>
+<p class="lede">Aynı model iki farklı yerden, iki farklı fiyatla satılabilir. Bu iki fiyatı aynı tabloda
+aynı satıra yazmak, karşılaştırmayı bozar. Bu yazı farkın nereden geldiğini anlatır.</p>
+
+<h2>İki farklı satış kanalı</h2>
+<p><strong>Doğrudan API:</strong> Modelin sahibi (OpenAI, Anthropic, Google, DeepSeek) kendi API'sinden satar.
+Fiyat, sağlayıcının resmî fiyat sayfasında ilan edilir.</p>
+<p><strong>Pazaryeri:</strong> OpenRouter gibi aracı platformlar birçok modeli tek API altında sunar.
+Fiyat, platformun kendi kataloğunda yayınlanır; model sahibinin liste fiyatıyla birebir aynı olmak zorunda değildir.</p>
+<p>Bu sitede her satırda <span class="badge badge-info">Doğrudan API</span> veya
+<span class="badge badge-neutral">Pazaryeri</span> etiketi bulunur. Varsayılan sıralama ikisini karıştırmaz;
+sağlayıcı filtresiyle ayırabilirsiniz.</p>
+
+<h2>Fark nereden gelir?</h2>
+<ul>
+  <li><strong>Platform marjı:</strong> Pazaryeri, aracılık hizmeti için fark koyabilir.</li>
+  <li><strong>Varyantlar:</strong> <code>:batch</code>, <code>:free</code> gibi ekler farklı işleme biçimini
+      (toplu işlem, ücretsiz kota) gösterir; bunlar ayrı fiyattır.</li>
+  <li><strong>Yönlendirme:</strong> Pazaryeri bir isteği birden fazla sağlayıcı arasında yönlendirebilir;
+      fiyat seçilen sağlayıcıya göre değişir.</li>
+  <li><strong>Güncelleme zamanı:</strong> Platform kataloğu, sağlayıcının zamını birkaç gün gecikmeyle yansıtabilir.</li>
+</ul>
+
+<h2>Hangi durumda hangisi?</h2>
+<table>
+  <thead><tr><th>Durum</th><th>Doğru karşılaştırma</th></tr></thead>
+  <tbody>
+    <tr><td>Sağlayıcıyla doğrudan sözleşme yapacaksanız</td><td>Doğrudan API fiyatı</td></tr>
+    <tr><td>Tek API ile çok model deneyecekseniz</td><td>Pazaryeri fiyatı (kendi kanalınız için)</td></tr>
+    <tr><td>Model seçimini yeni yapıyorsanız</td><td>İkisini ayrı ayrı görün; aynı tabloda tek "fiyat" varmış gibi okumayın</td></tr>
+    <tr><td>Üretim bütçesi çıkarıyorsanız</td><td>Faturayı kesecek olan kanalın fiyatı</td></tr>
+  </tbody>
+</table>
+
+<h2>Bizim kuralımız</h2>
+<p>Pazaryeri fiyatını "modelin fiyatı" diye sunmuyoruz. Fiyat tablosunda kanal sütunu, model detayında
+kanal bilgisi ve kaynak bağlantısı her zaman görünür. Böylece bir sayıyı görünce hangi kanaldan geldiğini
+bilirsiniz.</p>
+{% endblock %}

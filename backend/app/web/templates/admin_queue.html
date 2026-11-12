@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Doğrulama kuyruğu (yönetim) | {{ site_name }}{% endblock %}
+{% block description %}Korumalı yönetim alanı.{% endblock %}
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <p class="eyebrow">Yönetim · indekslenmez</p>
+    <h1 style="font-size:var(--fs-h2)">Doğrulama kuyruğu</h1>
+    <p class="lede">Yayın bekleyen fiyat gözlemleri. Onaylanmadan hiçbir kayıt herkese açık sayfalarda görünmez.</p>
+    <div class="meta">
+      <span>Bekleyen: <strong>{{ pending|length }}</strong></span>
+      <span>Onaylı: <strong>{{ approved_count }}</strong></span>
+      <span>Reddedilen: <strong>{{ rejected_count }}</strong></span>
+    </div>
+  </header>
+
+  {% if message %}<div class="notice notice-info" role="status">{{ message }}</div>{% endif %}
+
+  <section class="surface" aria-labelledby="kuyruk">
+    <h2 id="kuyruk" class="sr-only">Bekleyen gözlemler</h2>
+    {% if pending %}
+    <div class="table-wrap">
+      <table class="prices" style="table-layout:auto">
+        <caption class="sr-only">Onay bekleyen fiyat gözlemleri</caption>
+        <thead><tr>
+          <th scope="col">#</th><th scope="col">Sağlayıcı</th><th scope="col">Model</th>
+          <th scope="col">Kalem</th><th scope="col" class="is-num">Fiyat</th>
+          <th scope="col">Gözlem</th><th scope="col">Kontroller</th><th scope="col">İşlem</th>
+        </tr></thead>
+        <tbody>
+        {% for r in pending %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.provider }}</td>
+            <td class="truncate" title="{{ r.model }}">{{ r.model }}</td>
+            <td>{{ r.dimension }}</td>
+            <td class="cell-price"><span class="pv">{{ r.amount|tl_dyn }} {{ r.currency }}</span>
+              <span class="pu">{{ r.billing_unit }}</span></td>
+            <td>{{ r.observed_at|dt_tr }}</td>
+            <td>
+              {% if r.fails %}<span class="badge badge-danger">{{ r.fails }} hata</span>
+              {% else %}<span class="badge badge-ok">temiz</span>{% endif %}
+            </td>
+            <td>
+              <form method="post" action="/admin/approve" style="display:inline">
+                <input type="hidden" name="id" value="{{ r.id }}">
+                <button class="btn" style="min-height:32px;padding:0 10px" type="submit"
+                  {% if r.fails %}disabled title="Hata varken onaylanamaz"{% endif %}>Onayla</button>
+              </form>
+              <form method="post" action="/admin/reject" style="display:inline">
+                <input type="hidden" name="id" value="{{ r.id }}">
+                <button class="btn btn-secondary" style="min-height:32px;padding:0 10px" type="submit">Reddet</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><h3>Kuyruk boş</h3><p>Bekleyen gözlem yok. Toplama çalıştıktan sonra burada görünür.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Kaynak sağlığı</h2>
+    <div class="table-wrap mt-3">
+      <table class="prices" style="table-layout:auto">
+        <thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Son çalışma</th><th scope="col">Durum</th>
+          <th scope="col" class="is-num">Görülen</th><th scope="col">Not</th></tr></thead>
+        <tbody>
+        {% for run in runs %}
+        <tr>
+          <td>{{ run.provider }}</td>
+          <td>{{ run.started_at|dt_tr }}</td>
+          <td>
+            {% if run.status == 'success' %}<span class="badge badge-ok">başarılı</span>
+            {% elif run.status == 'partial' %}<span class="badge badge-warn">kısmi</span>
+            {% else %}<span class="badge badge-danger">{{ run.status }}</span>{% endif %}
+          </td>
+          <td class="num">{{ run.items_seen }}</td>
+          <td class="text-sm truncate" title="{{ run.error_summary or '' }}">{{ run.error_summary or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

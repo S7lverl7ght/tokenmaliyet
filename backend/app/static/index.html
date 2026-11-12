@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Maliyet Merkezi</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#131a2e; --panel2:#182140; --line:#243055;
+    --txt:#e8ecf7; --mut:#8e9ab8; --acc:#4d8dff; --ok:#26c281; --warn:#f5a524; --bad:#ef5350;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+  header{padding:18px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--panel)}
+  h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+  .tag{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:2px 9px}
+  .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);margin-left:auto}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  main{padding:22px 26px;display:grid;gap:20px;grid-template-columns:1fr;max-width:1500px}
+  @media(min-width:1250px){ main{grid-template-columns:minmax(0,1.75fr) minmax(330px,1fr)} }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--mut);margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600}
+  .pad{padding:16px 18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input,select,button{font:inherit;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  input:focus,select:focus{outline:2px solid #2a4a86;border-color:var(--acc)}
+  button{cursor:pointer;background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+  button.ghost{background:transparent;color:var(--txt);border-color:var(--line);font-weight:500}
+  button:hover{filter:brightness(1.1)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #1d2742;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  th{position:sticky;top:0;background:var(--panel2);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;z-index:2}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#16203a}
+  .tblwrap{max-height:560px;overflow-y:auto;overflow-x:hidden}
+  .pill{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .pill.direct{color:#7fd1ff;border-color:#2a4a86;background:#10203c}
+  .pill.market{color:#c7a7ff;border-color:#4b3a80;background:#1e1633}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:6px}
+  .kpi div{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+  .kpi span{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+  .out{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .out div{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+  .out small{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+  .big{font-size:19px;font-weight:650;font-variant-numeric:tabular-nums}
+  .save{grid-column:1/-1;background:linear-gradient(90deg,#123a2c,#102a3d);border-color:#1d5b48}
+  .save .big{color:#5fe0a8;font-size:24px}
+  .muted{color:var(--mut);font-size:12px}
+  footer{padding:16px 26px;color:var(--mut);font-size:12px;border-top:1px solid var(--line)}
+  a{color:#7fb0ff}
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Maliyet Merkezi <span class="tag">V0.1</span></h1>
+  <span class="tag">kaynaklı · QA onaylı · TRY</span>
+  <div class="live"><span id="hdot" class="dot"></span><span id="htxt">bağlanıyor…</span></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Onaylı fiyatlar</h2>
+    <div class="pad">
+      <div class="kpi">
+        <div><b id="kModels">–</b><span>model</span></div>
+        <div><b id="kDirect">–</b><span>doğrudan API</span></div>
+        <div><b id="kMarket">–</b><span>pazaryeri</span></div>
+        <div><b id="kFx">–</b><span>USD/TRY</span></div>
+      </div>
+      <div class="row" style="margin:12px 0">
+        <input id="q" placeholder="Model ara… (örn. deepseek, gpt-6, claude)" style="flex:1;min-width:220px" />
+        <select id="prov"><option value="">Tüm sağlayıcılar</option></select>
+        <button class="ghost" id="onlyDirect" style="white-space:nowrap">Sadece doğrudan</button>
+      </div>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th style="width:34%">Model</th><th style="width:13%">Sağlayıcı</th><th style="width:13%">Kanal</th>
+          <th style="width:10%;text-align:right">Girdi $</th><th style="width:10%;text-align:right">Çıktı $</th>
+          <th style="width:10%;text-align:right">Girdi ₺</th><th style="width:10%;text-align:right">Çıktı ₺</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Tasarruf hesaplayıcı</h2>
+    <div class="pad">
+      <div class="row" style="margin-bottom:10px">
+        <select id="from" style="flex:1"></select>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <select id="to" style="flex:1"></select>
+      </div>
+      <div class="row">
+        <label class="muted" style="flex:1">Girdi token/ay
+          <input id="inTok" type="number" value="100000000" style="width:100%;margin-top:4px" />
+        </label>
+        <label class="muted" style="flex:1">Çıktı token/ay
+          <input id="outTok" type="number" value="25000000" style="width:100%;margin-top:4px" />
+        </label>
+      </div>
+      <div class="out">
+        <div><small id="lblFrom">Mevcut</small><span class="big" id="costFrom">–</span></div>
+        <div><small id="lblTo">Alternatif</small><span class="big" id="costTo">–</span></div>
+        <div class="save"><small>Aylık / yıllık tasarruf</small><span class="big" id="save">–</span></div>
+      </div>
+      <p class="muted" style="margin:12px 0 0">
+        Fiyatlar resmî sağlayıcı sayfalarından toplanır, QA onayından geçer.
+        Kalite/gecikme farkı ölçülmez; bu bir tasarruf fırsatı hesabıdır.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  API: <a href="/docs">/docs</a> · <a href="/api/v1/prices">/api/v1/prices</a> ·
+  sağlık: <a href="/health/db">/health/db</a> · veri: resmî fiyat sayfaları (OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter)
+</footer>
+
+<script>
+const state = { rows: [], refs: [], onlyDirect: false, q: "", prov: "" };
+const $ = id => document.getElementById(id);
+const fmt = (n, d=2) => n==null ? "–" : n.toLocaleString("tr-TR",{minimumFractionDigits:d, maximumFractionDigits:d});
+const money = n => n==null ? "–" : n.toLocaleString("tr-TR",{maximumFractionDigits:0}) + " ₺";
+
+async function boot(){
+  try{
+    const health = await fetch("/health/db").then(r=>r.json());
+    $("hdot").className = "dot";
+    $("htxt").textContent = "veritabanı bağlı";
+  }catch(e){
+    $("hdot").className = "dot bad";
+    $("htxt").textContent = "bağlantı yok";
+  }
+
+  let fx = 0;
+  try{ fx = (await fetch("/api/v1/fx?quote=TRY").then(r=>r.json())).rate; }catch(e){}
+  $("kFx").textContent = fx ? fmt(fx,3) : "–";
+
+  const prices = await fetch("/api/v1/prices").then(r=>r.json());
+  const models = {};
+  for(const p of prices){
+    const key = p.provider + "|" + p.model_id;
+    const m = models[key] ||= { model:p.model_id, provider:p.provider, channel:p.sales_channel, dims:{} };
+    if(!(p.price_dimension in m.dims)) m.dims[p.price_dimension] = p;
+  }
+  const list = Object.values(models).filter(m => m.dims.input && m.dims.output);
+  list.sort((a,b)=> a.dims.input.amount - b.dims.input.amount);
+
+  state.rows = list.map(m => ({
+    model: m.model, provider: m.provider, channel: m.channel,
+    inUsd: m.dims.input.usd_per_1m_tokens,
+    outUsd: m.dims.output.usd_per_1m_tokens,
+  }));
+
+  $("kModels").textContent = state.rows.length;
+  $("kDirect").textContent = state.rows.filter(r=>r.channel==="direct").length;
+  $("kMarket").textContent = state.rows.filter(r=>r.channel!=="direct").length;
+
+  // sağlayıcı filtresi
+  const provs = [...new Set(state.rows.map(r=>r.provider))].sort();
+  for(const p of provs){
+    const o = document.createElement("option"); o.value = p; o.textContent = p; $("prov").appendChild(o);
+  }
+
+  // hesaplayıcı: sadece doğrudan sağlayıcı + güvenilir fiyatlar
+  const calc = state.rows.filter(r=>r.channel==="direct" && r.inUsd>0 && r.outUsd>0);
+  const opts = calc.map(r=>{ const o=document.createElement("option"); o.value=r.provider+"|"+r.model;
+    o.textContent = r.provider + " / " + r.model; return o; });
+  opts.forEach(o=>{ $("from").appendChild(o.cloneNode(true)); $("to").appendChild(o.cloneNode(true)); });
+  $("from").value = (calc.find(r=>r.model==="claude-sonnet-4.5")||calc[calc.length-1]) ? 
+      (calc.find(r=>r.model==="claude-sonnet-4.5")?.provider+"|claude-sonnet-4.5" || opts[opts.length-1].value) : opts[0].value;
+  $("to").value = calc.find(r=>r.model==="deepseek-v4-pro") ? "deepseek|deepseek-v4-pro" : opts[0].value;
+
+  render(); calcSavings();
+}
+
+function render(){
+  const body = $("rows"); body.innerHTML = "";
+  const fx = parseFloat($("kFx").textContent.replace(".","").replace(",",".")) || 0;
+  const q = state.q.toLowerCase();
+  const rows = state.rows.filter(r =>
+    (!state.prov || r.provider === state.prov) &&
+    (!state.onlyDirect || r.channel === "direct") &&
+    (!q || r.model.toLowerCase().includes(q))
+  ).slice(0, 300);
+
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.model}</td><td>${r.provider}</td>
+      <td><span class="pill ${r.channel==="direct"?"direct":"market"}">${r.channel==="direct"?"doğrudan":"pazaryeri"}</span></td>
+      <td class="num">${fmt(r.inUsd,3)}</td><td class="num">${fmt(r.outUsd,3)}</td>
+      <td class="num">${fmt(r.inUsd*fx,2)}</td><td class="num">${fmt(r.outUsd*fx,2)}</td>`;
+    body.appendChild(tr);
+  }
+  if(!rows.length){
+    body.innerHTML = `<tr><td colspan="7" class="muted" style="padding:18px">Sonuç yok.</td></tr>`;
+  }
+}
+
+function calcSavings(){
+  const fx = parseFloat($("kFx").textContent.replace(".","").replace(",",".")) || 0;
+  const inTok = +$("inTok").value || 0, outTok = +$("outTok").value || 0;
+  const pick = v => state.rows.find(r => r.provider + "|" + r.model === v);
+  const a = pick($("from").value), b = pick($("to").value);
+  if(!a || !b) return;
+  const cost = m => (m.inUsd * inTok + m.outUsd * outTok) / 1e6;
+  const ca = cost(a), cb = cost(b);
+  $("lblFrom").textContent = "Mevcut · " + a.model;
+  $("lblTo").textContent = "Alternatif · " + b.model;
+  $("costFrom").textContent = money(ca * fx);
+  $("costTo").textContent = money(cb * fx);
+  const diff = (ca - cb) * fx;
+  $("save").textContent = (diff >= 0 ? "" : "+") + money(Math.abs(diff)) +
+      " / ay  ·  " + money(Math.abs(diff)*12) + " / yıl" +
+      (ca > 0 ? "  (%" + Math.round(Math.abs(diff)/(ca*fx)*100) + ")" : "");
+}
+
+$("q").addEventListener("input", e => { state.q = e.target.value; render(); });
+$("prov").addEventListener("change", e => { state.prov = e.target.value; render(); });
+$("onlyDirect").addEventListener("click", e => {
+  state.onlyDirect = !state.onlyDirect;
+  e.target.className = state.onlyDirect ? "" : "ghost";
+  render();
+});
+["from","to","inTok","outTok"].forEach(id => $(id).addEventListener("input", calcSavings));
+boot();
+</script>
+</body>
+</html>

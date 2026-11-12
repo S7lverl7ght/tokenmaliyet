@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Yönetici girişi | {{ site_name }}{% endblock %}
+{% block description %}Korumalı yönetim alanı.{% endblock %}
+{% block content %}
+<div class="container" style="max-width:460px">
+  <header class="page-head"><h1 style="font-size:var(--fs-h2)">Yönetim girişi</h1>
+    <p class="lede">Doğrulama kuyruğu korumalıdır.</p></header>
+  {% if error %}<div class="notice notice-danger" role="alert">{{ error }}</div>{% endif %}
+  <form class="surface surface-pad mt-4" method="post" action="/admin/login">
+    <div class="field">
+      <label for="token">Erişim anahtarı</label>
+      <input id="token" name="token" type="password" autocomplete="current-password" required>
+      <span class="help-text">Sunucudaki ADMIN_TOKEN ortam değişkeniyle eşleşmelidir.</span>
+    </div>
+    <p class="mt-4"><button class="btn" type="submit">Giriş</button></p>
+  </form>
+</div>
+{% endblock %}

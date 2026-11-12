@@ -1,0 +1,51 @@
+{% extends "legal.html" %}
+{% block body %}
+<h2>Kısaca</h2>
+<p>{{ site_name }} bir fiyat karşılaştırma sitesidir. Üyelik yok, ödeme yok, kullanıcı hesabı yok.
+Sizi tanımlayan bir veriyi toplamıyoruz.</p>
+
+<h2>Hangi veriler işleniyor?</h2>
+<table>
+  <thead><tr><th>Veri</th><th>Amaç</th><th>Saklama</th></tr></thead>
+  <tbody>
+    <tr><td>Sunucu erişim kayıtları (IP, tarayıcı, tarih)</td>
+        <td>Güvenlik, hata ayıklama, kötüye kullanım tespiti</td>
+        <td>En fazla 30 gün</td></tr>
+    <tr><td>Tema tercihi (açık/koyu)</td>
+        <td>Görünüm hatırlansın diye tarayıcınızda tutulur (localStorage)</td>
+        <td>Siz silene kadar, cihazınızda</td></tr>
+    <tr><td>Token sayacına yapıştırdığınız metin</td>
+        <td>Yalnızca sayım için; <strong>sunucuya gönderilmez</strong>, tarayıcıda işlenir</td>
+        <td>Sayfa kapanınca kaybolur</td></tr>
+    <tr><td>Hesaplayıcı seçimleri</td>
+        <td>Bağlantı paylaşımı için URL parametresi olarak taşınır</td>
+        <td>Tarayıcı geçmişinizde</td></tr>
+  </tbody>
+</table>
+
+<h2>Çerez kullanımı</h2>
+<p>Zorunlu olmayan çerez kullanmıyoruz. Tema tercihi çerez değil, tarayıcı yerel depolamasıdır ve
+sunucuya iletilmez. İleride analitik veya reklam eklenirse bu sayfa güncellenir ve onay istenir.</p>
+
+<h2>Üçüncü taraflar</h2>
+<p>Sayfalar yalnızca kendi sunucumuzdan yüklenir; harici yazı tipi, harici script veya gömülü
+reklam yoktur. Dış kaynak bağlantıları (sağlayıcı fiyat sayfaları) yeni sekmede açılır ve o sitelerin
+kendi gizlilik politikaları geçerlidir.</p>
+
+<h2>Haklarınız (KVKK md. 11)</h2>
+<p>Kişisel veri işlemediğimiz için silme/düzeltme talebi genellikle uygulanmaz; yine de aşağıdaki
+haklara sahipsiniz:</p>
+<ul>
+  <li>Kişisel veri işlenip işlenmediğini öğrenme</li>
+  <li>İşlenmişse buna ilişkin bilgi talep etme</li>
+  <li>İşlenme amacını ve amaca uygun kullanılıp kullanılmadığını öğrenme</li>
+  <li>Eksik/yanlış işlenmişse düzeltilmesini isteme</li>
+  <li>Silinmesini veya yok edilmesini isteme</li>
+</ul>
+<p>Başvuru: {{ contact_email }}</p>
+
+<h2>Sorumluluk reddi</h2>
+<p>Fiyatlar bilgilendirme amaçlıdır ve resmî sağlayıcı sayfalarından toplanır; ancak sözleşme, vergi
+ve kur farkı nedeniyle gerçek fatura farklı olabilir. Bu sitedeki bilgiler yatırım, hukuk veya mali
+müşavirlik tavsiyesi değildir. Hesaplamalar tahmindir.</p>
+{% endblock %}

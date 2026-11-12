@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% set nav = 'gpu' %}
+{% block title %}GPU kiralama maliyetleri — saatlik fiyat karşılaştırma | {{ site_name }}{% endblock %}
+{% block description %}H100, H200, B200, A100 ve RTX GPU kiralama fiyatları: Runpod, Vast.ai, DataCrunch, Lambda ve Hyperstack saatlik ücretleri, kaynak ve gözlem tarihiyle.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">GPU maliyetleri</li></ol></nav>
+    <h1>GPU kiralama maliyetleri</h1>
+    <p class="lede">{{ providers|length }} sağlayıcıdan {{ gpu_count }} GPU-saat fiyatı. Fiyatlar resmî API ve
+      fiyat sayfalarından okunur; her satırda kaynak ve gözlem zamanı bulunur.</p>
+    <div class="meta">
+      <span>Son veri kontrolü: <strong>{{ last_checked }}</strong></span>
+      <span>Birim: <strong>USD / GPU-saat</strong></span>
+      <span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong></span>
+    </div>
+  </header>
+
+  {% if not has_gpu %}
+  <div class="notice notice-info" role="status">
+    <div><strong>Veri yok.</strong> GPU fiyat kaynağı henüz toplanmadı; örnek fiyat gösterilmez.</div>
+  </div>
+  {% else %}
+
+  <section class="surface" aria-labelledby="gpu-tablo">
+    <h2 id="gpu-tablo" class="sr-only">GPU fiyat tablosu</h2>
+    <div class="table-wrap">
+      <table class="prices">
+        <caption>GPU ailesi başına en düşük <strong>on-demand</strong> saatlik fiyat. Spot ve topluluk fiyatları
+          ayrı satırda gösterilir. GPU adına tıklayarak tüm sağlayıcıları görebilirsiniz.</caption>
+        <thead>
+          <tr>
+            <th scope="col" style="width:22%">GPU</th>
+            <th scope="col" style="width:10%">VRAM</th>
+            <th scope="col" style="width:20%">En düşük fiyat</th>
+            <th scope="col" style="width:16%">Sağlayıcı</th>
+            <th scope="col" style="width:14%">Tip</th>
+            <th scope="col" style="width:18%">Fiyat aralığı</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for f in families %}
+          <tr>
+            <td data-label="GPU">
+              <details>
+                <summary style="cursor:pointer;font-weight:560">{{ f.family }}</summary>
+                <ul style="list-style:none;padding:var(--sp-2) 0 0;margin:0;display:grid;gap:2px;font-size:var(--fs-xs)">
+                  {% for o in f.offers %}
+                  <li class="flex" style="justify-content:space-between;gap:var(--sp-3)">
+                    <a href="{{ o.url }}" target="_blank" rel="noopener nofollow">{{ o.provider }}</a>
+                    <span class="num">{{ o.price|tl_dyn }} $</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </td>
+            <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
+            <td data-label="En düşük" class="cell-price">
+              <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
+              <span class="pu">≈ {{ (f.best.price * fx_rate)|tl(2) }} ₺ / saat</span>
+              <span class="pu">≈ {{ (f.best.price * 730 * fx_rate)|tl(0) }} ₺ / ay (730 saat)</span>
+            </td>
+            <td data-label="Sağlayıcı" class="text-sm">{{ f.best.provider }}</td>
+            <td data-label="Tip">
+              {% if f.best.kind == 'on_demand' %}<span class="badge badge-info">On-demand</span>
+              {% elif f.best.kind == 'spot' %}<span class="badge badge-warn">Spot</span>
+              {% elif f.best.kind == 'reserved' %}<span class="badge badge-neutral">Rezerve</span>
+              {% else %}<span class="badge badge-neutral">Topluluk</span>{% endif %}
+              {% if f.has_discount %}
+              <span class="text-xs" style="display:block;color:var(--muted)">
+                spot/topluluk: {{ f.cheapest_any.price|tl_dyn }} $
+              </span>
+              {% endif %}
+            </td>
+            <td data-label="Aralık" class="text-sm num">
+              {% if f.max > f.best.price %}{{ f.best.price|tl_dyn }} – {{ f.max|tl_dyn }} $
+              {% else %}{{ f.best.price|tl_dyn }} ${% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid12 mt-5">
+    <div style="grid-column:span 7" class="surface surface-pad">
+      <h2 style="font-size:var(--fs-h3)">Kaynaklar</h2>
+      <div class="table-wrap mt-3">
+        <table class="prices" style="table-layout:auto">
+          <caption class="sr-only">GPU sağlayıcıları ve fiyat aralıkları</caption>
+          <thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Tip</th><th scope="col" class="is-num">Kalem</th>
+            <th scope="col" class="is-num">En düşük</th><th scope="col" class="is-num">En yüksek</th></tr></thead>
+          <tbody>
+          {% for p in providers %}
+            <tr>
+              <td><a href="{{ p.url }}" target="_blank" rel="noopener nofollow">{{ p.name }} ↗</a></td>
+              <td class="text-sm">{{ 'Pazaryeri' if p.kind == 'marketplace' else 'Bulut' }}</td>
+              <td class="num">{{ p.count }}</td>
+              <td class="num">{{ p.min|tl_dyn }} $</td>
+              <td class="num">{{ p.max|tl_dyn }} $</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <aside style="grid-column:span 5" class="surface surface-pad">
+      <h2 style="font-size:var(--fs-h3)">Bu veriyi nasıl okumalı?</h2>
+      <ul class="text-sm text-muted mt-3" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
+        <li><strong>On-demand</strong> = anında açılır, saatlik faturalanır.</li>
+        <li><strong>Spot</strong> = kapasite boşken ucuz, kesilebilir; uzun işler için riskli.</li>
+        <li><strong>Rezerve / kluster</strong> = minimum süre taahhüdü (ör. 2 hafta) karşılığında indirim.</li>
+        <li><strong>Topluluk</strong> = bireysel host ilanları; kararlılık değişken, medyan fiyat alınır.</li>
+      </ul>
+      <p class="help mt-4">Vergi, çıkış trafiği ve depolama dahil değildir. GPU-saat fiyatı token fiyatıyla
+        aynı tabloda karıştırılmaz.</p>
+      <p class="mt-4"><a class="btn btn-secondary" href="/hesaplayici">Token maliyeti hesapla</a></p>
+    </aside>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

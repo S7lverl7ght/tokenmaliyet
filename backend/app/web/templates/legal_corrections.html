@@ -1,0 +1,31 @@
+{% extends "legal.html" %}
+{% block body %}
+<h2>Neden bu sayfa var?</h2>
+<p>Yanlış bir sayı yayımlandığında sessizce değiştirmiyoruz. Eski değer, yeni değer ve tarih burada
+kayıt altında kalır. Bu, sitenin tek varlığı olan güvenin korunması içindir.</p>
+
+<h2>Kayıt</h2>
+{% if corrections %}
+<table>
+  <thead><tr><th>Tarih</th><th>Model / kalem</th><th>Eski</th><th>Yeni</th><th>Neden</th></tr></thead>
+  <tbody>
+  {% for c in corrections %}
+    <tr>
+      <td>{{ c.date }}</td>
+      <td>{{ c.item }}</td>
+      <td class="num">{{ c.old }}</td>
+      <td class="num">{{ c.new }}</td>
+      <td>{{ c.reason }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">Henüz yayımlanmış bir düzeltme kaydı yok.</p>
+{% endif %}
+
+<h2>Nasıl çalışıyor?</h2>
+<p>Bot her çalıştığında fiyatlar kaynaktan yeniden okunur. Değişim %30'u aşarsa otomatik onay
+uygulanmaz, kayıt insan incelemesine düşer. Ayrıca çıktı/girdi oranı aykırı olan satırlar
+(ör. birim dönüşüm hatası) yayına çıkmaz.</p>
+{% endblock %}

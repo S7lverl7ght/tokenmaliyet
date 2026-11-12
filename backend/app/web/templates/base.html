@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}{{ site_name }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ site_desc }}{% endblock %}">
+<link rel="canonical" href="{{ canonical }}">
+{% if noindex %}<meta name="robots" content="noindex,nofollow">{% else %}<meta name="robots" content="index,follow,max-image-preview:large">{% endif %}
+<meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
+
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+<meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+<meta property="og:description" content="{% block og_desc %}{{ self.description() }}{% endblock %}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:locale" content="tr_TR">
+<meta name="twitter:card" content="summary">
+
+<link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("amm-theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+{% block head_extra %}{% endblock %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":{{ site_name|tojson }},"url":{{ site_url|tojson }},"inLanguage":"tr-TR"}
+</script>
+{% block structured_data %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#main">{{ t('a11y.skip') }}</a>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="/fiyatlar" aria-label="{{ site_name }} ana sayfa">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 19v-5.5" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>
+          <path d="M9.33 19v-9" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+          <path d="M14.67 19V6.5" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M20 19V3.5" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-word">
+        <b>{{ site_name }}</b>
+        <small>{{ site_tagline }}</small>
+      </span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Ana menü" data-open="false">
+      <a href="/fiyatlar" {% if nav == 'fiyatlar' %}aria-current="page"{% endif %}>{{ t('nav.prices') }}</a>
+      <a href="/karsilastir" {% if nav == 'karsilastir' %}aria-current="page"{% endif %}>{{ t('nav.compare') }}</a>
+      <a href="/hesaplayici" {% if nav == 'hesaplayici' %}aria-current="page"{% endif %}>{{ t('nav.calculator') }}</a>
+      <a href="/token-sayaci" {% if nav == 'token' and path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
+      <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>Türkçe farkı</a>
+      <a href="/gpu-maliyetleri" {% if nav == 'gpu' %}aria-current="page"{% endif %}>{{ t('nav.gpu') }}</a>
+      <a href="/rehber" {% if nav == 'rehber' %}aria-current="page"{% endif %}>{{ t('nav.guides') }}</a>
+      <a href="/hakkinda" {% if nav == 'hakkinda' %}aria-current="page"{% endif %}>{{ t('nav.about') }}</a>
+    </nav>
+    <div class="header-tools">
+      <form method="get" action="{{ path }}" class="pref-form" aria-label="Görüntüleme tercihleri">
+        {% for k, v in (keep_params or {}).items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <label class="sr-only" for="currency">{{ t('common.currency') }}</label>
+        <select id="currency" name="currency" class="pref-select" onchange="this.form.submit()">
+          <option value="USD" {% if currency != 'TRY' %}selected{% endif %}>USD</option>
+          <option value="TRY" {% if currency == 'TRY' %}selected{% endif %}>TRY</option>
+        </select>
+        <label class="sr-only" for="lang">{{ t('common.language') }}</label>
+        <select id="lang" name="lang" class="pref-select" onchange="this.form.submit()">
+          <option value="tr" {% if lang != 'en' %}selected{% endif %}>TR</option>
+          <option value="en" {% if lang == 'en' %}selected{% endif %}>EN</option>
+        </select>
+        <noscript><button class="btn btn-secondary" type="submit">Uygula</button></noscript>
+      </form>
+      <a class="btn btn-secondary" href="/fiyatlar#filtreler" style="min-height:38px">{{ t('nav.search') }}</a>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="{{ t('theme.toggle') }}" title="{{ t('common.language') }}">
+        <span aria-hidden="true" id="theme-icon">◐</span>
+      </button>
+      <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menüyü aç">
+        <span aria-hidden="true">☰</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="cols">
+      <div>
+        <h4>Veri</h4>
+        <ul>
+          <li><a href="/fiyatlar">Fiyat listesi</a></li>
+          <li><a href="/karsilastir">Model karşılaştır</a></li>
+          <li><a href="/hesaplayici">Maliyet hesaplayıcı</a></li>
+          <li><a href="/gpu-maliyetleri">GPU maliyetleri</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kaynaklar</h4>
+        <ul>
+          {% for p in footer_providers %}
+          <li><a href="{{ p.pricing_url }}" rel="noopener nofollow" target="_blank">{{ p.name }} fiyat sayfası</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h4>Ürün</h4>
+        <ul>
+          <li><a href="/token-sayaci">Token sayacı</a></li>
+          <li><a href="/rehber">Rehberler</a></li>
+          <li><a href="/hakkinda">Hakkında ve metodoloji</a></li>
+          <li><a href="/api/v1/prices?format=json">API</a></li>
+          <li><a href="/docs">API dokümantasyonu</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kurumsal</h4>
+        <ul>
+          <li><a href="/iletisim">İletişim</a></li>
+          <li><a href="/duzeltmeler">Düzeltmeler</a></li>
+          <li><a href="/gizlilik">Gizlilik ve KVKK</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal">
+      <p><strong>{{ site_name }}</strong> · Bağımsız bir fiyat karşılaştırma sitesidir; sağlayıcı değildir.
+      Fiyatlar resmî sağlayıcı sayfalarından otomatik toplanır, yayın öncesi doğrulama kontrolünden geçer.</p>
+      <p class="mt-2">Veriler bilgilendirme amaçlıdır ve <em>yatırım, hukuk veya mali müşavirlik tavsiyesi değildir</em>.
+      Vergiler, kur farkları ve sözleşme koşulları nedeniyle gerçek fatura farklı olabilir.
+      Hesaplamalar tahmindir. Hatalı veri bildirimi için <a href="/iletisim">iletişim</a>.</p>
+      <p class="mt-2">Son veri kontrolü: {{ last_checked }} · Reklam ve izleme çerezi kullanılmaz ·
+      <a href="/gizlilik">Gizlilik</a> · <a href="/duzeltmeler">Düzeltmeler</a></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById("theme-toggle"), icon=document.getElementById("theme-icon");
+  function apply(mode){
+    root.dataset.theme=mode;
+    btn.setAttribute("aria-label", mode==="dark" ? "Açık temaya geç" : "Koyu temaya geç");
+    icon.textContent = mode==="dark" ? "☀" : "◐";
+    try{localStorage.setItem("amm-theme",mode);}catch(e){}
+  }
+  btn.addEventListener("click", function(){ apply(root.dataset.theme==="dark"?"light":"dark"); });
+  // Kılavuz: açık tema varsayılan. Sistem tercihi yalnızca kullanıcı seçim yapmadıysa
+  // ilk boyamada uygulanmaz; böylece sayfa beklendiği gibi açık gelir.
+  var menu=document.getElementById("menu-toggle"), nav=document.getElementById("nav");
+  menu.addEventListener("click", function(){
+    var open = nav.dataset.open==="true";
+    nav.dataset.open = String(!open);
+    menu.setAttribute("aria-expanded", String(!open));
+    menu.setAttribute("aria-label", open ? "Menüyü aç" : "Menüyü kapat");
+  });
+})();
+</script>
+<script>
+/* Ilerlemeli iyilestirme: hesaplayici/karistirma secimlerinde tam model listesi.
+   Sunucu yalnizca dogrudan saglayici modellerini gomer; bu betik tam listeyi ekler.
+   JS kapaliysa sayfa dogrudan API modelleriyle calismaya devam eder. */
+(function(){
+  var selects = document.querySelectorAll('select[data-model-options]');
+  if(!selects.length || !window.fetch) return;
+  fetch('/api/v1/model-options').then(function(r){ return r.ok ? r.json() : null; }).then(function(list){
+    if(!list || !list.length) return;
+    selects.forEach(function(sel){
+      var current = sel.value;
+      var groups = {direct:null, marketplace:null};
+      var base = document.createElement('optgroup'); base.label='Doğrudan API';
+      var market = document.createElement('optgroup'); market.label='Pazaryeri';
+      list.forEach(function(o){
+        var opt = document.createElement('option');
+        opt.value = o.value; opt.textContent = o.label;
+        (o.group === 'marketplace' ? market : base).appendChild(opt);
+      });
+      sel.innerHTML='';
+      sel.appendChild(base); sel.appendChild(market);
+      if(current){
+        var found=false;
+        for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===current){ found=true; break; } }
+        if(!found){ var keep=document.createElement('option'); keep.value=current; keep.textContent=current; keep.hidden=true; sel.appendChild(keep); }
+        sel.value = current;
+      }
+    });
+  }).catch(function(){ /* sessiz: sunucudan gelen liste yeterli */ });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

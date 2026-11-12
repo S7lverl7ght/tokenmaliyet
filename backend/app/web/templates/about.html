@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% set nav = 'hakkinda' %}
+{% block title %}Hakkında ve veri metodolojisi | {{ site_name }}{% endblock %}
+{% block description %}TokenMaliyet nasıl çalışır: fiyatlar hangi kaynaklardan toplanır, nasıl doğrulanır, hangi kurallarla yayınlanır ve hangi sınırları vardır.{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:860px">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Hakkında</li></ol></nav>
+    <h1>Hakkında ve metodoloji</h1>
+    <p class="lede">{{ site_name }}, AI API fiyatlarını kaynağıyla birlikte sunan yerel bir veri motorudur.
+      Fiyatlar tahmin edilmez; resmî kaynaklardan okunur, doğrulanır ve tarihçesi korunarak saklanır.</p>
+  </header>
+
+  <article class="prose">
+    <h2>Veri nereden geliyor?</h2>
+    <p>Her fiyat, sağlayıcının kendi resmî kaynağından okunur:</p>
+    <table>
+      <thead><tr><th>Sağlayıcı</th><th>Kaynak</th><th>Yöntem</th></tr></thead>
+      <tbody>
+        {% for p in sources %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>
+            <a href="{{ p.pricing_url }}" target="_blank" rel="noopener nofollow">{{ p.pricing_url }}</a>
+            {% if p.extra %}
+            <div class="text-xs text-muted" style="margin-top:2px">
+              yedek: {% for e in p.extra %}<a href="{{ e.url }}" target="_blank" rel="noopener nofollow">{{ e.url }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td>{{ p.method }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Doğrulama kuralları</h2>
+    <ul>
+      <li><strong>Zorunlu alanlar:</strong> kaynak URL, gözlem zamanı, para birimi, fatura birimi ve fiyat boyutu olmadan kayıt yayınlanmaz.</li>
+      <li><strong>Negatif fiyat reddedilir.</strong> Sıfır fiyat yalnızca kaynakta "ücretsiz" ibaresi varsa kabul edilir.</li>
+      <li><strong>Birim korunur:</strong> kaynak hangi birimi veriyorsa (USD/1M token, USD/görsel, USD/istek) o saklanır; karşılaştırma için ayrıca 1M token karşılığı hesaplanır.</li>
+      <li><strong>Fiyat geçmişi değiştirilmez:</strong> fiyat değiştiğinde eski satır silinmez veya güncellenmez; yeni bir gözlem satırı eklenir.</li>
+      <li><strong>Onaysız veri yayınlanmaz:</strong> doğrulama kontrolünden geçmeyen kayıt arayüzde ve API'de görünmez.</li>
+      <li><strong>Kanallar karıştırılmaz:</strong> doğrudan sağlayıcı fiyatı ile pazaryeri (OpenRouter) fiyatı ayrı etiketlenir.</li>
+      <li><strong>Güncellik:</strong> bir fiyat {{ stale_days }} günden eskiyse "güncelliği geçmiş" olarak işaretlenir; güncel gibi sunulmaz.</li>
+    </ul>
+
+    <h2>Kur (TRY) nasıl hesaplanıyor?</h2>
+    <p>
+      Fiyatlar kaynakta USD'dir. TRY karşılığı, <strong>tarihli</strong> bir kurla çevrilir ve kurun tarihi
+      her yerde gösterilir{% if fx_date %} (şu an: 1 USD = {{ fx_rate|tl(3) }} TRY, {{ fx_date }}){% endif %}.
+      Kur değişikliği kaynak USD fiyatını değiştirmez; yalnızca TRY gösterimini etkiler.
+    </p>
+
+    <h2>Neyi yapmıyoruz?</h2>
+    <ul>
+      <li>Kalite, gecikme (latency) veya bağlam penceresi ölçmüyoruz. Daha ucuz model "daha iyi" demek değildir.</li>
+      <li>Örnek, tahmini veya sabit kodlanmış fiyat göstermiyoruz. Veri yoksa sayfa boş kalır ve nedeni yazılır.</li>
+      <li>Vergi, kur farkı ve sözleşme indirimlerini hesaba katmıyoruz; sonuç tahmindir.</li>
+      <li>Sağlayıcıların fiyat sayfaları değiştiğinde otomatik olarak "doğru" kabul etmiyoruz; toplama başarısızsa
+          eski fiyat güncel gibi gösterilmez.</li>
+    </ul>
+
+    <h2>GPU fiyatları</h2>
+    <p>
+      GPU kiralama fiyatları ayrı bir toplama hattıyla, ayrı birimde (USD/GPU-saat) tutulur ve token
+      fiyatlarıyla aynı tabloya karıştırılmaz. Beş kaynak kullanılır: Runpod (resmî GraphQL API),
+      DataCrunch, Lambda, Hyperstack (resmî fiyat sayfaları) ve Vast.ai (pazaryeri; yalnızca doğrulanmış
+      hostların medyanı). Varsayılan karşılaştırma <strong>on-demand</strong> fiyatıdır; spot ve topluluk
+      fiyatları ayrı gösterilir. On-demand fiyatın çok altında kalan aykırı teklifler elenir.
+    </p>
+
+    <h2>Diller ve para birimi</h2>
+    <p>
+      Arayüz Türkçe ve İngilizce sunulur (`?lang=en`). Fiyatlar kaynakta USD'dir; TRY görünümü
+      tarihli kurdan çevrilir ve her zaman kur tarihi belirtilir. TRY gösterimi <em>dönüşüm</em>dür,
+      kaynak fiyatı değiştirmez.
+    </p>
+
+    <h2>Teknik yapı</h2>
+    <p>
+      Python + FastAPI, PostgreSQL 18, SQLAlchemy ve Jinja2 ile sunucu tarafında render edilir.
+      Toplama, doğrulama ve yayınlama ayrı adımlardır; hiçbir fiyat insan/otomatik onay olmadan yayınlanmaz.
+      Ham kaynak yanıtları ileride inceleme için saklanır.
+    </p>
+    <h2>Yayıncı ve iletişim</h2>
+    <p>
+      {{ site_name }} bağımsız bir veri projesidir; herhangi bir AI sağlayıcısıyla ortaklığı, sponsorluğu
+      veya satış anlaşması yoktur. Site reklam geliriyle değil, veri kalitesiyle ayakta kalır.
+    </p>
+    <ul>
+      <li>İletişim: <a href="/iletisim">{{ contact_email }}</a></li>
+      <li>Yayımlanmış düzeltmeler: <a href="/duzeltmeler">Düzeltmeler</a></li>
+      <li>Gizlilik ve KVKK: <a href="/gizlilik">Gizlilik</a></li>
+    </ul>
+    <p class="text-sm text-muted">
+      Son veri kontrolü: {{ last_checked }} · Onaylı gözlem sayısı: {{ observation_count }} ·
+      GPU fiyatı: {{ gpu_count }} · API: <a href="/docs">/docs</a>
+    </p>
+  </article>
+</div>
+{% endblock %}

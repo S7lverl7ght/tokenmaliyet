@@ -84,6 +84,25 @@ jobs:
             -c "CREATE DATABASE ai_maliyet_test OWNER ai_maliyet_user;" || true
           pytest tests tests_nodb -q
 
+      - name: Fiyat degisimlerini bildir
+        # Sadece onaylanmis (cift onay) abonelere e-posta gonderir.
+        # Ucretsiz limit: Resend 100 e-posta/gun.
+        continue-on-error: true
+        env:
+          BILDIR_SECRET: ${{ secrets.BILDIR_SECRET }}
+          SITE_URL: https://tokenmaliyet.com
+        run: |
+          python scripts/alert_changes.py --out data/alert_changes.json
+          COUNT=$(python -c "import json;print(len(json.load(open('data/alert_changes.json'))['changes']))")
+          echo "degisim sayisi: $COUNT"
+          if [ "$COUNT" != "0" ]; then
+            curl -sS -X POST "https://tokenmaliyet.com/api/bildir" \
+              -H "Content-Type: application/json" \
+              -H "x-bildir-secret: $BILDIR_SECRET" \
+              --data @data/alert_changes.json | head -c 500
+            echo ""
+          fi
+
       - name: Degisiklik varsa commit et
         run: |
           git config user.name "TokenMaliyet Bot"

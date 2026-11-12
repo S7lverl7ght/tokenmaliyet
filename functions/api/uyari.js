@@ -1,11 +1,13 @@
 /**
- * POST /api/uyari — fiyat uyarisi kaydi.
+ * POST /api/uyari — fiyat uyarisi kaydi (cift onay).
  *
- * Statik sitede sunucu yok; bu Pages Function kaydi Cloudflare D1'e yazar.
- * E-posta gonderimi OPSIYONEL: RESEND_API_KEY tanimliysa Resend ile onay
- * e-postasi gonderilir (ucretsiz katman: 100/gun). Tanimli degilse kayit
- * yine alinir, kullaniciya "kaydedildi" denir.
+ * Akis:
+ *   1. Form gelir -> dogrula -> D1'e confirmed=0 olarak yaz
+ *   2. Resend ile onay e-postasi gonder (confirm linki)
+ *   3. Kullanici linke tiklar -> /api/onayla -> confirmed=1
+ *   4. Fiyat degisince /api/bildir -> sadece confirmed kayitlara e-posta
  */
+import { sendMail, siteUrl } from "../_lib/mail.js";
 
 const MAX_EMAIL = 254;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -51,58 +53,67 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: false, error: "Veritabani baglantisi yok." }, 503);
   }
 
-  const token = crypto.randomUUID().replace(/-/g, "");
+  const confirmToken = crypto.randomUUID().replace(/-/g, "");
+  const unsubToken = crypto.randomUUID().replace(/-/g, "");
   const now = new Date().toISOString();
 
   try {
     await env.DB.prepare(
       `INSERT INTO price_alerts
          (email, target, target_label, direction, threshold_pct,
-          confirmed, confirm_token, consent_at, consent_text_version)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'v1')
+          confirmed, confirm_token, unsubscribe_token, consent_at, consent_text_version)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 'v1')
        ON CONFLICT(email, target) DO UPDATE SET
          threshold_pct = excluded.threshold_pct,
          direction = excluded.direction,
          target_label = excluded.target_label,
+         confirm_token = excluded.confirm_token,
          unsubscribed_at = NULL`
-    ).bind(email, target, targetLabel, direction, threshold, token, now).run();
-  } catch (e) {
+    ).bind(email, target, targetLabel, direction, threshold,
+           confirmToken, unsubToken, now).run();
+  } catch {
     return json({ ok: false, error: "Kayit sirasinda hata olustu." }, 500);
   }
 
-  // Opsiyonel: onay e-postasi (Resend ucretsiz katman)
-  let mailSent = false;
-  if (env.RESEND_API_KEY && env.ALERT_FROM) {
-    const site = env.SITE_URL || "https://tokenmaliyet.com";
-    const body = {
-      from: env.ALERT_FROM,
-      to: [email],
-      subject: "TokenMaliyet fiyat uyarisi kaydiniz",
-      text:
-        "Merhaba,\n\n" +
-        "TokenMaliyet'te " + targetLabel + " icin fiyat uyarisi kaydiniz alindi.\n" +
-        "Bildirim esigi: %" + threshold + " (" +
-        (direction === "down" ? "sadece ucuzlarsa" : direction === "up" ? "sadece pahalanirsa" : "her iki yon") +
-        ").\n\n" +
-        "Kaydinizi iptal etmek icin: " + site + "/uyari?iptal=" + token + "\n\n" +
-        "Bu e-postayi siz istediniz. Ucuncu taraflarla paylasilmiyor.",
-    };
-    try {
-      const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          authorization: "Bearer " + env.RESEND_API_KEY,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      mailSent = r.ok;
-    } catch {
-      mailSent = false;
-    }
-  }
+  const site = siteUrl(env);
+  const confirmUrl = site + "/api/onayla?t=" + confirmToken;
+  const unsubUrl = site + "/api/iptal?t=" + unsubToken;
 
-  return json({ ok: true, mail_sent: mailSent });
+  const dirText = direction === "down" ? "sadece ucuzlarsa"
+    : direction === "up" ? "sadece pahalanirsa" : "her iki yon";
+
+  const mail = await sendMail(env, {
+    to: email,
+    subject: "TokenMaliyet: fiyat uyarisi kaydinizi onaylayin",
+    text:
+      "Merhaba,\n\n" +
+      "TokenMaliyet'te \"" + targetLabel + "\" icin fiyat uyarisi kaydiniz olusturuldu.\n" +
+      "Bildirim esigi: %" + threshold + " (" + dirText + ")\n\n" +
+      "Kaydinizi etkinlestirmek icin asagidaki baglantiya tiklayin:\n" +
+      confirmUrl + "\n\n" +
+      "Bu adimi atlarsaniz uyari gonderilmez (cift onay).\n\n" +
+      "Iptal etmek icin her zaman: " + unsubUrl + "\n\n" +
+      "Bu e-postayi siz istediniz. Adresiniz ucuncu taraflarla paylasilmiyor.\n" +
+      "TokenMaliyet - AI API fiyat ve maliyet verisi",
+    html:
+      '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;line-height:1.6">' +
+      '<h2 style="font-size:18px;margin:0 0 12px">Fiyat uyarisi kaydinizi onaylayin</h2>' +
+      "<p><strong>" + targetLabel + "</strong> icin fiyat uyarisi olusturuldu.</p>" +
+      "<p>Bildirim esigi: <strong>%" + threshold + "</strong> (" + dirText + ")</p>" +
+      '<p style="margin:24px 0"><a href="' + confirmUrl + '" ' +
+      'style="background:#4F46E5;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">' +
+      "Kaydi etkinlestir</a></p>" +
+      '<p style="color:#64748b;font-size:13px">Onaylamazsaniz uyari gonderilmez.</p>' +
+      '<p style="color:#64748b;font-size:13px">Iptal: <a href="' + unsubUrl + '">aboneligi kaldir</a></p>' +
+      "</div>",
+  });
+
+  return json({
+    ok: true,
+    mail_sent: mail.ok,
+    needs_confirm: true,
+    mail_reason: mail.ok ? undefined : mail.reason,
+  });
 }
 
 export async function onRequestGet() {

@@ -289,7 +289,7 @@ def calculator_page(
     db: Session = Depends(get_session),
 ):
     rows = queries.price_rows(db)
-    options = _model_options(rows, direct_only=True)
+    options = _model_options(rows, direct_only=False)
     if not options:
         return TEMPLATES.TemplateResponse(request, "404.html",
             base_context(db, request, nav="hesaplayici", noindex=True,

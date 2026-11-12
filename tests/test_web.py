@@ -152,8 +152,12 @@ def test_mobile_card_css_present(client):
 
 def test_form_inputs_have_labels(client):
     body = client.get("/hesaplayici").text
-    for field in ("from", "to", "inTok", "outTok"):
+    # Model secimi aranabilir combobox: etiket gorunur input'a baglanir,
+    # degeri gizli input tasir (JS kapaliysa da form gonderilebilir).
+    for field in ("from-q", "to-q", "inTok", "outTok"):
         assert f'for="{field}"' in body, f"{field} icin label yok"
+    assert 'id="from"' in body and 'name="from"' in body
+    assert 'id="to"' in body and 'name="to"' in body
 
 def test_token_counter_page_has_form(client):
     body = client.get("/token-sayaci").text

@@ -21,21 +21,27 @@
     <fieldset class="fieldset">
       <legend>Modeller</legend>
       <div class="form-grid">
-        <div class="field">
-          <label for="from">Mevcut model</label>
-          <select id="from" name="from" data-model-options>
-            {% for opt in options %}
-            <option value="{{ opt.value }}" {% if opt.value == f['from'] %}selected{% endif %}>{{ opt.label }}</option>
-            {% endfor %}
-          </select>
+                <div class="field">
+          <label for="from-q">Mevcut model</label>
+          <div class="picker" data-picker>
+            <input type="text" id="from-q" class="picker-input" autocomplete="off" role="combobox"
+                   aria-expanded="false" aria-controls="from-list" aria-autocomplete="list"
+                   placeholder="Model adı yazın…"
+                   data-value-input="from" data-current="{{ f['from'] }}">
+            <input type="hidden" id="from" name="from" value="{{ f['from'] }}">
+            <ul class="picker-list" id="from-list" role="listbox" hidden></ul>
+          </div>
         </div>
         <div class="field">
-          <label for="to">Alternatif model</label>
-          <select id="to" name="to" data-model-options>
-            {% for opt in options %}
-            <option value="{{ opt.value }}" {% if opt.value == f['to'] %}selected{% endif %}>{{ opt.label }}</option>
-            {% endfor %}
-          </select>
+          <label for="to-q">Alternatif model</label>
+          <div class="picker" data-picker>
+            <input type="text" id="to-q" class="picker-input" autocomplete="off" role="combobox"
+                   aria-expanded="false" aria-controls="to-list" aria-autocomplete="list"
+                   placeholder="Model adı yazın…"
+                   data-value-input="to" data-current="{{ f['to'] }}">
+            <input type="hidden" id="to" name="to" value="{{ f['to'] }}">
+            <ul class="picker-list" id="to-list" role="listbox" hidden></ul>
+          </div>
         </div>
       </div>
     </fieldset>
@@ -188,6 +194,118 @@
 
 {% block scripts %}
 <script>
+/* Tum model secenekleri (arama icin). Sunucudan gelir; uydurma veri yok. */
+window.__MODEL_OPTIONS__ = {{ options|tojson }};
+</script>
+<script>
+  /* ---------- Aranabilir model secici ----------
+     iki amac: (1) 487 modeli tek listede arama ile bulmak,
+              (2) JS kapaliysa gizli input + normal form gonderimi calissin. */
+  var ALL_MODELS = window.__MODEL_OPTIONS__ || [];
+
+  function norm(s){
+    return (s||"").toLocaleLowerCase("tr")
+      .replace(/ı/g,"i").replace(/ş/g,"s").replace(/ğ/g,"g")
+      .replace(/ü/g,"u").replace(/ö/g,"o").replace(/ç/g,"c")
+      .replace(/[\s\-_./]+/g,"");      // bosluk/tire/nokta farkini yok say
+  }
+
+  function initPicker(root){
+    var input = root.querySelector(".picker-input");
+    var list = root.querySelector(".picker-list");
+    var hidden = root.querySelector("input[type=hidden]");
+    if(!input || !list || !hidden) return;
+
+    var active = -1;
+
+    function currentLabel(){
+      var v = hidden.value;
+      var m = ALL_MODELS.find(function(o){ return o.value === v; });
+      return m ? m.label : "";
+    }
+    if(hidden.value) input.value = currentLabel();
+
+    function render(q){
+      var needle = norm(q);
+      var hits = needle
+        ? ALL_MODELS.filter(function(o){
+            var hay = norm(o.label);
+            if (hay.indexOf(needle) !== -1) return true;
+            // Kelime bazli: her parca geciyorsa eslesir ("gpt 6" -> gpt + 6)
+            var parts = String(q).trim().split(/\s+/).filter(Boolean);
+            return parts.length > 1 && parts.every(function(pp){
+              return hay.indexOf(norm(pp)) !== -1;
+            });
+          })
+        : ALL_MODELS.slice(0, 60);
+      if(needle) hits = hits.slice(0, 60);
+
+      list.innerHTML = "";
+      if(!hits.length){
+        var empty = document.createElement("li");
+        empty.className = "picker-empty";
+        empty.textContent = "Eşleşen model yok";
+        list.appendChild(empty);
+      } else {
+        hits.forEach(function(o, idx){
+          var li = document.createElement("li");
+          li.className = "picker-item";
+          li.setAttribute("role", "option");
+          li.dataset.value = o.value;
+          li.dataset.index = idx;
+          li.textContent = o.label;
+          list.appendChild(li);
+        });
+      }
+      active = -1;
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
+
+    function choose(li){
+      hidden.value = li.dataset.value;
+      input.value = li.textContent;
+      list.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    input.addEventListener("focus", function(){ render(input.value === currentLabel() ? "" : input.value); });
+    input.addEventListener("input", function(){
+      hidden.value = "";          // yazmaya baslayinca eski secim gecersiz
+      render(input.value);
+    });
+    input.addEventListener("keydown", function(e){
+      var items = list.querySelectorAll(".picker-item");
+      if(e.key === "ArrowDown" || e.key === "ArrowUp"){
+        e.preventDefault();
+        if(!items.length) return;
+        active = e.key === "ArrowDown"
+          ? Math.min(active + 1, items.length - 1)
+          : Math.max(active - 1, 0);
+        items.forEach(function(el, i){ el.classList.toggle("is-active", i === active); });
+        items[active].scrollIntoView({ block: "nearest" });
+      } else if(e.key === "Enter"){
+        if(active >= 0 && items[active]){ e.preventDefault(); choose(items[active]); }
+      } else if(e.key === "Escape"){
+        list.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+      }
+    });
+    list.addEventListener("mousedown", function(e){
+      var li = e.target.closest(".picker-item");
+      if(li){ e.preventDefault(); choose(li); }
+    });
+    document.addEventListener("click", function(e){
+      if(!root.contains(e.target)){
+        list.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  document.querySelectorAll("[data-picker]").forEach(initPicker);
+
 (function(){
   // Binlik ayirici (rapor 4. tur 2.1)
   function formatThousands(el){

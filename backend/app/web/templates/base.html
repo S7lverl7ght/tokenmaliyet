@@ -194,57 +194,7 @@
   });
 })();
 </script>
-<script>
-/* Ilerlemeli iyilestirme: model secimlerinde tam liste.
-   Sunucu yalnizca dogrudan saglayici modellerini gomer; bu betik tam listeyi ekler.
-   JS kapaliysa sayfa dogrudan API modelleriyle calismaya devam eder. */
-(function(){
-  var selects = document.querySelectorAll("select[data-model-options]");
-  if (!selects.length || !window.fetch) return;
-  function apply(sel, list){
-    // ONEMLI: placeholder ("— secin —") korunur; aksi halde liste yeniden
-    // dolduruldugunda tarayici ilk modeli otomatik secer (rapor 4. tur P0-2).
-    var placeholder = sel.querySelector('option[value=""]');
-    var current = sel.value;
-    var direct = document.createElement("optgroup"); direct.label = "{{ t('cmp.direct') }}";
-    var market = document.createElement("optgroup"); market.label = "{{ t('prices.channel.marketplace') }}";
-    list.forEach(function(o){
-      var opt = document.createElement("option");
-      opt.value = o.value; opt.textContent = o.label;
-      (o.group === "marketplace" ? market : direct).appendChild(opt);
-    });
-    sel.innerHTML = "";
-    if (placeholder) {
-      var ph = document.createElement("option");
-      ph.value = ""; ph.textContent = placeholder.textContent;
-      sel.appendChild(ph);
-    }
-    sel.appendChild(direct); sel.appendChild(market);
 
-    // Secim SADECE acik bir istek varsa yapilir: mevcut deger veya data-default-model.
-    var wanted = current || sel.dataset.defaultModel || "";
-    if (wanted) {
-      var found = false;
-      for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === wanted) { found = true; break; }
-      }
-      if (!found) {
-        var keep = document.createElement("option");
-        keep.value = wanted; keep.textContent = wanted; keep.hidden = true;
-        sel.appendChild(keep);
-      }
-      sel.value = wanted;
-    } else if (placeholder) {
-      sel.value = "";   // varsayilan: "Secilmedi"
-    }
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-  fetch("/api/v1/model-options").then(function(r){ return r.ok ? r.json() : null; }).then(function(list){
-    if (!list || !list.length) return;
-    selects.forEach(function(sel){ apply(sel, list); });
-  }).catch(function(){ /* sessiz: sunucudan gelen liste yeterli */ });
-})();
-</script>
 <script>
 /* STATIK HOSTING ICIN ZORUNLU (rapor 4. tur bolum 2.3):
    Cloudflare Pages'te sunucu query string islemez; secimler ve filtreler

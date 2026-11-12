@@ -256,3 +256,40 @@ def test_prices_description_mentions_marketplace(client):
     """Rapor 3.+4. tur: aciklama pazaryerini de soylemeli."""
     body = client.get("/fiyatlar").text
     assert "pazaryeri" in body.lower()
+
+
+def test_gpu_hourly_greater_than_per_gb_strict(client):
+    """Rapor 4. tur P0-1: saatlik fiyat HER ZAMAN $/GB'den buyuk olmali."""
+    import re
+    body = client.get("/gpu-maliyetleri").text
+    m = re.search(r"<tbody>(.*?)</tbody>", body, re.S)
+    if not m:
+        pytest.skip("gpu verisi yok")
+    rows = re.findall(r"<tr>(.*?)</tr>", m.group(1), re.S)
+    checked = 0
+    for row in rows:
+        cells = dict((lbl, re.sub(r"<[^>]+>", " ", c)) for lbl, c in
+                     re.findall(r'<td[^>]*data-label="([^"]*)"[^>]*>(.*?)</td>', row, re.S))
+        hourly_txt = next((v for k, v in cells.items() if k.startswith("En d")), "")
+        pergb_txt = next((v for k, v in cells.items() if "$" in k and "GB" in k), "")
+        h = re.search(r"(\d[\d.]*,\d+)", hourly_txt)
+        g = re.search(r"(\d[\d.]*,\d+)", pergb_txt)
+        if h and g:
+            hv = float(h.group(1).replace(".", "").replace(",", "."))
+            gv = float(g.group(1).replace(".", "").replace(",", "."))
+            assert hv > gv, f"saatlik {hv} <= $/GB {gv}"
+            checked += 1
+    assert checked > 0, "kontrol edilecek satir yok"
+
+
+def test_changes_corrections_in_accordion(client):
+    """Rapor 4. tur 3.2: ham parser hata loglari kapali akordeonda olmali."""
+    body = client.get("/degisiklikler").text
+    assert "Teknik doğrulama günlüklerini göster" in body
+    assert "<details" in body
+
+
+def test_compare_single_chart(client):
+    """Rapor 4. tur 3.2: ayni veri iki kez cizilmemeli."""
+    body = client.get("/karsilastir").text
+    assert body.count("bar_pct") <= 1, "cift gorsellestirme"

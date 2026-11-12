@@ -86,7 +86,7 @@ Cloudflare Workers'a taşınır.
 
 ### Adım 1 — Statik export (bu depoda hazır)
 ```powershell
-.\scripts\export_static.ps1
+python scripts/export_static.py
 # -> dist/ : tüm herkese açık sayfalar HTML olarak
 ```
 Export, her sayfayı **sunucunun ürettiği HTML** olarak kaydeder. Böylece:

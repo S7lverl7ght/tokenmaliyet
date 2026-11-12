@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Statik varlik surumu: tarayici onbellegini guvenle gecersiz kilmak icin.
-ASSET_VERSION = "20261112c"
+ASSET_VERSION = "20261112d"
 
 SITE_NAME = "TokenMaliyet"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
@@ -206,6 +206,46 @@ def qs(base: dict, **overrides) -> str:
     return ("?" + urlencode(clean)) if clean else ""
 
 
+_EN_PATHS = {"/fiyatlar", "/karsilastir", "/hesaplayici", "/token-sayaci",
+             "/gpu-maliyetleri", "/uyari", "/hakkinda"}
+
+
+_TRY_PATHS = {"/fiyatlar", "/gpu-maliyetleri"}
+
+
+def _cur_url(request, target: str) -> str:
+    """Para birimi baglantisi. Statik sitede /try/ oneki kullanilir."""
+    path = request.url.path
+    base = path[5:] if path.startswith("/try/") else path
+    base = base.rstrip("/") or "/fiyatlar"
+    if target == "TRY" and base in _TRY_PATHS:
+        return "/try" + base
+    return base
+
+
+def _lang_url(request, target: str) -> str:
+    """Dil degistirme baglantisi. Statik sitede /en/ oneki kullanilir."""
+    path = request.url.path
+    base = path[3:] if path.startswith("/en/") else path
+    if target == "en":
+        return "/en" + (base if base != "/" else "/fiyatlar")
+    return base if base != "/" else "/fiyatlar"
+
+
+def _hreflang_pairs(path: str, lang: str) -> list[dict]:
+    """TR <-> EN eslesme ciftleri. Yalnizca cevirisi olan sayfalar icin."""
+    p = path.rstrip("/") or "/"
+    if p.startswith("/en/"):
+        p = p[3:]
+    if p not in _EN_PATHS:
+        return []
+    return [
+        {"lang": "tr", "url": SITE_URL + p},
+        {"lang": "en", "url": SITE_URL + "/en" + p},
+        {"lang": "x-default", "url": SITE_URL + p},
+    ]
+
+
 def _pref(value, allowed, default):
     return value if value in allowed else default
 
@@ -259,6 +299,11 @@ def base_context(db: Session, request, **extra) -> dict:
         "path": request.url.path,
         "request": request,
         "noindex": False,
+        "hreflang_pairs": _hreflang_pairs(request.url.path, lang),
+        "cur_usd_url": _cur_url(request, "USD"),
+        "cur_try_url": _cur_url(request, "TRY"),
+        "lang_tr_url": _lang_url(request, "tr"),
+        "lang_en_url": _lang_url(request, "en"),
         "canonical": SITE_URL + request.url.path,
     }
     ctx.update(extra)

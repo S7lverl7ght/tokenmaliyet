@@ -14,11 +14,11 @@
         <li aria-current="page">{{ primary.name }}</li>
       </ol>
     </nav>
-    <h1>{{ primary.name }} <span class="text-muted" style="font-weight:400">fiyatları</span></h1>
+    <h1>{{ primary.name }} <span class="text-muted" style="font-weight:400">{{ 'pricing' if lang == 'en' else 'fiyatları' }}</span></h1>
     <p class="lede">{{ provider_label }} modeli{% if primary.channel == 'marketplace' %}, pazaryeri (OpenRouter) kanalı{% endif %}.
       Fiyatlar {{ primary.source_url }} adresinden okunur; son doğrulama {{ primary.observed_at|dt_tr }}.</p>
     <div class="meta">
-      <span>Sağlayıcı: <strong>{{ provider_label }}</strong></span>
+      <span>{{ t('col.provider') }}: <strong>{{ provider_label }}</strong></span>
       <span>Kanal: <strong>{{ channel_labels.get(primary.channel, primary.channel) }}</strong></span>
       <span>Son doğrulama: <strong>{{ primary.observed_at|dt_tr }}</strong></span>
       {% if fx_rate %}<span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong> ({{ fx_date }})</span>{% endif %}

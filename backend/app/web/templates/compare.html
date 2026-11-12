@@ -7,9 +7,9 @@
 <div class="container">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Karşılaştır</li></ol></nav>
-    <h1>Modelleri karşılaştır</h1>
-    <p class="lede">2–4 model seçin; aynı token hacmiyle aylık maliyeti yan yana görün.
-      Bu karşılaştırma <strong>yalnızca maliyettir</strong>: kalite, hız ve bağlam penceresi ölçülmemiştir.</p>
+    <h1>{{ 'Compare models' if lang == 'en' else 'Modelleri karşılaştır' }}</h1>
+    <p class="lede">{{ 'Pick 2–4 models and see the monthly cost side by side for the same token volume.' if lang == 'en' else '2–4 model seçin; aynı token hacmiyle aylık maliyeti yan yana görün.' }}
+      {{ 'This comparison is <strong>cost only</strong>: quality, speed and context window are not measured.</p>'|safe if lang == 'en' else 'Bu karşılaştırma <strong>yalnızca maliyettir</strong>: kalite, hız ve bağlam penceresi ölçülmemiştir.</p>'|safe }}
   </header>
 
   <form class="surface surface-pad" method="get" action="/karsilastir">
@@ -28,7 +28,7 @@
         </div>
         {% endfor %}
         <div class="field">
-          <label for="dil">Metin dili</label>
+          <label for="dil">{{ t('cmp.text_lang') }}</label>
           <select id="dil" name="dil">
             <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio|tl(2) }}× token</option>
             <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce — 1,00×</option>
@@ -68,7 +68,7 @@
       <article class="compare-card {{ 'is-best' if c.best }}">
         <div class="flex items-center gap-2 wrap">
           <h3 style="font-size:1rem;margin:0">{{ c.name }}</h3>
-          {% if c.best %}<span class="badge badge-ok">en düşük maliyet</span>{% endif %}
+          {% if c.best %}<span class="badge badge-ok">{{ t('cmp.best') }}</span>{% endif %}
         </div>
         <p class="text-xs text-muted mt-2">{{ c.provider_label }} · {{ c.channel_label }}</p>
         <div class="mt-3">
@@ -76,12 +76,12 @@
           <div class="text-sm text-muted">≈ {{ c.month_try|tl(0) }} ₺ / ay</div>
         </div>
         <dl>
-          <dt>Girdi</dt><dd>{{ c.in_price|tl_dyn }} USD/1M</dd>
-          <dt>Çıktı</dt><dd>{{ c.out_price|tl_dyn }} USD/1M</dd>
-          <dt>Fark</dt><dd>{{ c.diff_try|tl(0) }} ₺/ay</dd>
-          <dt>Son doğrulama</dt><dd>{{ c.observed|dt_tr }}</dd>
+          <dt>{{ t('cmp.input') }}</dt><dd>{{ c.in_price|tl_dyn }} USD/1M</dd>
+          <dt>{{ t('cmp.output') }}</dt><dd>{{ c.out_price|tl_dyn }} USD/1M</dd>
+          <dt>{{ t('cmp.diff') }}</dt><dd>{{ c.diff_try|tl(0) }} ₺/ay</dd>
+          <dt>{{ t('cmp.last_verified') }}</dt><dd>{{ c.observed|dt_tr }}</dd>
         </dl>
-        <p class="mt-3"><a class="text-sm" href="/modeller/{{ c.provider_slug }}/{{ c.slug }}">Model detayı →</a></p>
+        <p class="mt-3"><a class="text-sm" href="/modeller/{{ c.provider_slug }}/{{ c.slug }}">{{ t('cmp.detail_link') }} →</a></p>
       </article>
       {% endfor %}
     </div>

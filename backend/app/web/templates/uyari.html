@@ -6,7 +6,7 @@
 <div class="container" style="max-width:640px">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Fiyat uyarısı</li></ol></nav>
-    <h1>Fiyat uyarısı</h1>
+    <h1>{{ t('alert.title') }}</h1>
     <p class="lede">{% if form.target_label %}<strong>{{ form.target_label }}</strong> için {% endif %}fiyat
       değiştiğinde e-posta gönderelim. Ücretsiz; istediğiniz an tek tıkla iptal edebilirsiniz.</p>
   </header>
@@ -14,7 +14,7 @@
   {% if submitted %}
   <div class="notice notice-info" role="status">
     <div>
-      <strong>Kaydınız alındı.</strong>
+      <strong>{{ 'Your alert was saved.' if lang == 'en' else 'Kaydınız alındı.' }}</strong>
       {% if duplicate %}
       Bu e-posta bu hedef için zaten kayıtlı; tekrar bir şey yapmanıza gerek yok.
       {% else %}
@@ -28,7 +28,7 @@
   <form class="surface surface-pad" method="post" action="/uyari" novalidate id="alertForm" data-api="/api/uyari">
       <div class="notice notice-info mb-3" id="alertLive" role="status" aria-live="polite" hidden></div>
     <div class="field">
-      <label for="email">E-posta adresiniz</label>
+      <label for="email">{{ t('alert.email') }}</label>
       <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" required
              aria-describedby="email-help{% if errors.get('email') %} email-err{% endif %}"
              {% if errors.get('email') %}aria-invalid="true"{% endif %}>
@@ -37,7 +37,7 @@
     </div>
 
     <div class="field mt-4">
-      <label for="threshold">Ne zaman haber vereyim?</label>
+      <label for="threshold">{{ t('alert.threshold') }}</label>
       <select id="threshold" name="threshold_pct">
         <option value="5" {% if form.threshold_pct == '5' %}selected{% endif %}>%5 veya daha fazla değişince</option>
         <option value="10" {% if form.threshold_pct == '10' %}selected{% endif %}>%10 veya daha fazla değişince</option>
@@ -46,7 +46,7 @@
     </div>
 
     <div class="field mt-4">
-      <label for="direction">Değişim yönü</label>
+      <label for="direction">{{ t('alert.direction') }}</label>
       <select id="direction" name="direction">
         <option value="down" {% if form.direction == 'down' %}selected{% endif %}>Sadece ucuzlarsa</option>
         <option value="up" {% if form.direction == 'up' %}selected{% endif %}>Sadece pahalanırsa</option>

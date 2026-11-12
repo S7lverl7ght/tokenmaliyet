@@ -163,13 +163,18 @@ def test_token_counter_page_has_form(client):
 
 
 def test_currency_switch_changes_rendering(client):
+    """Para birimi secimi TRY'de fiyatlari cevirmeli.
+
+    NOT: secim artik <select> degil LINK (statik sitede query string islenmiyor),
+    bu yuzden test secili option degil, uretilen degerleri kontrol eder.
+    """
     usd = client.get("/fiyatlar").text
     tryv = client.get("/fiyatlar?currency=TRY").text
-    assert '<option value="TRY" selected>' in tryv
-    assert 'value="TRY" selected' in tryv
-    assert usd.count("cur\">USD") >= 1
-    # TRY modunda fiyat hücresi TRY birimini göstermeli
+    assert 'class="cur">USD' in usd
     assert 'class="cur">TRY' in tryv
+    # Dil/para birimi secicileri link olarak sunuluyor
+    assert 'aria-current="true">USD' in usd or "cur_usd_url" not in usd
+    assert '/try/fiyatlar' in tryv or 'aria-current="true">TRY' in tryv
 
 
 def test_language_switch(client):

@@ -7,9 +7,9 @@
 <div class="container" style="max-width:1080px">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Token sayacı</li></ol></nav>
-    <h1>Token sayacı</h1>
-    <p class="lede">Metninizi yapıştırın; token sayısını ve seçtiğiniz modeldeki maliyetini görün.
-      Sayaç tarayıcınızda çalışır — metniniz sunucuya <strong>gönderilmez</strong>.</p>
+    <h1>{{ t('tok.title') }}</h1>
+    <p class="lede">{{ 'Paste your text to see the token count and what it costs on the model you pick.' if lang == 'en' else 'Metninizi yapıştırın; token sayısını ve seçtiğiniz modeldeki maliyetini görün.' }}
+      {{ 'The counter runs in your browser — your text is <strong>never sent</strong> to the server.</p>'|safe if lang == 'en' else 'Sayaç tarayıcınızda çalışır — metniniz sunucuya <strong>gönderilmez</strong>.</p>'|safe }}
   </header>
 
   <div class="grid12">
@@ -18,7 +18,7 @@
         <div class="field">
           <label for="text">Metin</label>
           <textarea id="text" rows="12" style="width:100%;font:inherit;padding:12px;border-radius:var(--r-sm);border:1px solid var(--border-strong);resize:vertical"
-            placeholder="Buraya metninizi yapıştırın…" aria-describedby="text-help"></textarea>
+            placeholder="{{ 'Paste your text here…' if lang == 'en' else 'Buraya metninizi yapıştırın…' }}" aria-describedby="text-help"></textarea>
           <span class="help-text" id="text-help">Yapıştırınca sayım otomatik güncellenir. Metin cihazınızdan çıkmaz.</span>
         </div>
         <div class="flex gap-2 mt-3 wrap">

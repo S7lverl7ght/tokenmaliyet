@@ -168,8 +168,11 @@ def main() -> int:
         "  Referrer-Policy: strict-origin-when-cross-origin",
         "  Permissions-Policy: camera=(), microphone=(), geolocation=()",
         "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
-        "  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+        "  Content-Security-Policy: default-src 'self'; "
+        # Cloudflare Web Analytics beacon (cerezsiz, KVKK dostu) izinli olmali.
+        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+        "connect-src 'self' https://cloudflareinsights.com; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         "",
         "/api/*",
@@ -184,6 +187,70 @@ def main() -> int:
     # yine de dist'e kopyalamak zarar vermez ve tek klasor deploy'u kolaylastirir.
     if (ROOT / "functions").exists():
         shutil.copytree(ROOT / "functions", DIST / "functions", dirs_exist_ok=True)
+
+    # --- TRY VARYANTI (/try/fiyatlar/) ---
+    # Ayni sebep: statik sitede ?currency=TRY sunucuda islenmiyor.
+    # Fiyatlar TRY'ye cevrilmis ayri yol uretiliyor.
+    TRY_PAGES = [
+        ("/fiyatlar", "fiyatlar"),
+        ("/gpu-maliyetleri", "gpu-maliyetleri"),
+    ]
+    try_written = 0
+    for path, slug in TRY_PAGES:
+        resp = client.get(path + "?currency=TRY")
+        if resp.status_code != 200:
+            continue
+        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+        html = html.replace(
+            f'<link rel="canonical" href="https://tokenmaliyet.com{path}">',
+            f'<link rel="canonical" href="https://tokenmaliyet.com/try{path}">',
+            1,
+        )
+        target = DIST / "try" / slug / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(html, encoding="utf-8")
+        try_written += 1
+        print(f"[try] /try{path}")
+    print(f"  -> {try_written} TRY sayfasi uretildi")
+
+    # --- INGILIZCE VARYANTLAR (/en/...) ---
+    # Statik sitede ?lang=en sunucuda islenmiyor (Cloudflare Pages query string'i
+    # uygulamaya vermez). Bu yuzden EN sayfalari ayri yol olarak uretiliyor:
+    #   /en/fiyatlar/  /en/hesaplayici/ ...
+    # Boylece URL paylasilabilir, SEO'da ayri sayfa olur ve hreflang verilebilir.
+    EN_PAGES = [
+        ("/fiyatlar", "fiyatlar"),
+        ("/karsilastir", "karsilastir"),
+        ("/hesaplayici", "hesaplayici"),
+        ("/token-sayaci", "token-sayaci"),
+        ("/gpu-maliyetleri", "gpu-maliyetleri"),
+        ("/uyari", "uyari"),
+        ("/hakkinda", "hakkinda"),
+    ]
+    en_written = 0
+    for path, slug in EN_PAGES:
+        resp = client.get(path + "?lang=en")
+        if resp.status_code != 200:
+            continue
+        html = resp.text
+        # EN sayfasi: canonical + hreflang kendine isaret etmeli
+        html = html.replace(
+            f'<link rel="canonical" href="https://tokenmaliyet.com{path}">',
+            f'<link rel="canonical" href="https://tokenmaliyet.com/en{path}">',
+            1,
+        )
+        html = html.replace(
+            '<head>',
+            '<head>\n<script>window.__STATIC__=true;</script>',
+            1,
+        )
+        target = DIST / "en" / slug / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(html, encoding="utf-8")
+        en_written += 1
+        print(f"[en] /en{path}")
+
+    print(f"  -> {en_written} Ingilizce sayfa uretildi")
 
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)

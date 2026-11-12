@@ -35,6 +35,15 @@
 }
 .nav a:hover{background:var(--surface-2); color:var(--ink)}
 .nav a[aria-current="page"]{color:var(--primary); background:var(--primary-soft); font-weight:600}
+.lang-switch{
+  display:inline-flex; align-items:center; border:1px solid var(--border);
+  border-radius:var(--r-sm); overflow:hidden; font-size:var(--fs-xs); font-weight:600;
+}
+.lang-switch a{
+  padding:6px 9px; color:var(--muted); text-decoration:none; line-height:1;
+}
+.lang-switch a:hover{background:var(--surface-2); color:var(--ink)}
+.lang-switch a[aria-current="true"]{background:var(--primary-soft); color:var(--primary)}
 .header-tools{
   margin-left:auto; display:flex; align-items:center; gap:var(--sp-2);
   flex:0 0 auto;

@@ -7,11 +7,11 @@
 <div class="container">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">GPU maliyetleri</li></ol></nav>
-    <h1>GPU kiralama maliyetleri</h1>
-    <p class="lede">{{ providers|length }} sağlayıcıdan {{ gpu_count }} GPU-saat fiyatı. Fiyatlar resmî API ve
-      fiyat sayfalarından okunur; her satırda kaynak ve gözlem zamanı bulunur.</p>
+    <h1>{{ t('gpu.title') }}</h1>
+    <p class="lede">{{ 'GPU-hour prices from ' if lang == 'en' else '' }}{{ providers|length }}{{ ' providers' if lang == 'en' else ' sağlayıcıdan' }} {{ gpu_count }}{{ ' GPU-hour prices. Prices are read from official APIs and' if lang == 'en' else ' GPU-saat fiyatı. Fiyatlar resmî API ve' }}
+      {{ 'pricing pages; every row carries its source and observation time.</p>'|safe if lang == 'en' else 'fiyat sayfalarından okunur; her satırda kaynak ve gözlem zamanı bulunur.</p>'|safe }}
     <div class="meta">
-      <span>Son veri kontrolü: <strong>{{ last_checked }}</strong></span>
+      <span>{{ t('footer.last_check') }}: <strong>{{ last_checked }}</strong></span>
       <span>Birim: <strong>USD / GPU-saat</strong></span>
       <span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong></span>
     </div>
@@ -19,7 +19,7 @@
 
   {% if not has_gpu %}
   <div class="notice notice-info" role="status">
-    <div><strong>Veri yok.</strong> GPU fiyat kaynağı henüz toplanmadı; örnek fiyat gösterilmez.</div>
+    <div>{% if lang == 'en' %}<strong>No data.</strong> The GPU price source has not been collected yet; no sample price is shown.{% else %}<strong>Veri yok.</strong> GPU fiyat kaynağı henüz toplanmadı; örnek fiyat gösterilmez.{% endif %}</div>
   </div>
   {% else %}
 
@@ -44,7 +44,7 @@
       </select>
     </div>
     <div class="field field-xs">
-      <label for="sort">Sıralama</label>
+      <label for="sort">{{ t('gpu.sort') }}</label>
       <select id="sort" name="sort">
         <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>VRAM: yüksek → düşük</option>
         <option value="price" {% if f.sort == 'price' %}selected{% endif %}>Fiyat: düşük → yüksek</option>
@@ -88,9 +88,14 @@
             </td>
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
             <td data-label="En düşük" class="cell-price">
+              {% if currency == 'TRY' and fx_rate %}
+              <span class="pv">{{ (f.best.price * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
+              <span class="pu">{{ f.best.price|tl_dyn }} USD · {{ 'saat' if lang == 'tr' else 'hour' }}</span>
+              {% else %}
               <span class="pv">{{ f.best.price|tl_dyn }} <span class="cur">USD</span></span>
-              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * fx_rate)|tl(2) }}{% else %}—{% endif %} ₺ / saat</span>
-              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * 730 * fx_rate)|tl(0) }}{% else %}—{% endif %} ₺ / ay (730 saat)</span>
+              {% endif %}
+              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * fx_rate)|tl(2) }}{% else %}—{% endif %} {% if lang == 'tr' %}₺ / saat{% else %}TRY / hour{% endif %}</span>
+              <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * 730 * fx_rate)|tl(0) }}{% else %}—{% endif %} {% if lang == 'tr' %}₺ / ay (730 saat){% else %}TRY / mo (730 h){% endif %}</span>
             </td>
             <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
             <td data-label="Sağlayıcı" class="text-sm">{{ f.best.provider }}</td>

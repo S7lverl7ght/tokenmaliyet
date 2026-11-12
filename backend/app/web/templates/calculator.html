@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% set nav = 'hesaplayici' %}
-{% block title %}Aylık API maliyeti hesaplayıcı | {{ site_name }}{% endblock %}
+{% block title %}{{ 'Monthly API cost calculator' if lang == 'en' else 'Aylık API maliyeti hesaplayıcı' }} | {{ site_name }}{% endblock %}
 {% block description %}İki AI modelini aylık girdi ve çıktı token hacminizle karşılaştırın; aylık maliyet, fark ve tasarruf yüzdesini görün. Formül ve varsayımlar açıktır.{% endblock %}
 
 {% block content %}
 <div class="container">
   <header class="page-head">
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Hesaplayıcı</li></ol></nav>
-    <h1>Aylık API maliyetini karşılaştır</h1>
+    <h1>{{ 'Compare monthly API cost' if lang == 'en' else 'Aylık API maliyetini karşılaştır' }}</h1>
     <p class="lede">Mevcut modelinizi ve alternatifi seçin, aylık token hacminizi girin.
       Sonuç yalnızca <strong>token fiyatı karşılaştırmasıdır</strong>; kalite, gecikme veya bağlam penceresi bu hesaba dahil değildir.</p>
   </header>
 
   <div class="chip-row" style="margin-bottom:var(--sp-4)" role="group" aria-label="Hazır senaryolar">
-    <span class="text-xs text-muted">Hazır senaryo:</span>
+    <span class="text-xs text-muted">{{ 'Preset:' if lang == 'en' else 'Hazır senaryo:' }}</span>
     {% for s in scenarios %}
     <a class="chip" href="/hesaplayici?in={{ s.inp }}&out={{ s.out }}&from={{ f['from'] }}&to={{ f['to'] }}"
        title="{{ s.note }}">{{ s.label }}</a>
@@ -44,14 +44,14 @@
     </fieldset>
 
     <fieldset class="fieldset mt-4">
-      <legend>Aylık kullanım</legend>
+      <legend>{{ 'Monthly usage' if lang == 'en' else 'Aylık kullanım' }}</legend>
       <div class="form-grid">
         <div class="field">
-          <label for="inTok">Aylık girdi (input) token</label>
+          <label for="inTok">{{ 'Monthly input tokens' if lang == 'en' else 'Aylık girdi (input) token' }}</label>
           <input id="inTok" name="in" type="text" inputmode="numeric" value="{{ f['in'] }}" autocomplete="off"
                  aria-describedby="in-help{% if errors.get('in') %} in-err{% endif %}"
                  {% if errors.get('in') %}aria-invalid="true"{% endif %}>
-          <span class="help-text" id="in-help">Örnek: 100.000.000 (yüz milyon token)</span>
+          <span class="help-text" id="in-help">{{ 'Example: 100,000,000 (one hundred million tokens)' if lang == 'en' else 'Örnek: 100.000.000 (yüz milyon token)' }}</span>
           <div class="chip-row" data-chips="inTok" aria-label="Hızlı girdi token seçimi">
             {% for v, label in [('1000000','1M'),('10000000','10M'),('50000000','50M'),('100000000','100M'),('500000000','500M'),('1000000000','1B')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
@@ -60,11 +60,11 @@
           {% if errors.get('in') %}<span class="error-text" id="in-err">{{ errors['in'] }}</span>{% endif %}
         </div>
         <div class="field">
-          <label for="outTok">Aylık çıktı (output) token</label>
+          <label for="outTok">{{ 'Monthly output tokens' if lang == 'en' else 'Aylık çıktı (output) token' }}</label>
           <input id="outTok" name="out" type="text" inputmode="numeric" value="{{ f['out'] }}" autocomplete="off"
                  aria-describedby="out-help{% if errors.get('out') %} out-err{% endif %}"
                  {% if errors.get('out') %}aria-invalid="true"{% endif %}>
-          <span class="help-text" id="out-help">Örnek: 25.000.000 (yirmi beş milyon token)</span>
+          <span class="help-text" id="out-help">{{ 'Example: 25,000,000 (twenty-five million tokens)' if lang == 'en' else 'Örnek: 25.000.000 (yirmi beş milyon token)' }}</span>
           <div class="chip-row" data-chips="outTok" aria-label="Hızlı çıktı token seçimi">
             {% for v, label in [('1000000','1M'),('5000000','5M'),('10000000','10M'),('25000000','25M'),('50000000','50M')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
@@ -74,7 +74,7 @@
         </div>
       </div>
       <div class="field mt-4" style="max-width:320px">
-        <label for="dil">Metin dili</label>
+        <label for="dil">{{ t('calc.text_lang') }}</label>
         <select id="dil" name="dil">
           <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce (çarpan yok)</option>
           <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio }}× token çarpanı</option>
@@ -95,7 +95,7 @@
         <span class="help-text">Önbellek fiyatı modelde varsa hesaba katılır; yoksa yok sayılır.</span>
       </div>
       <p class="help mt-3" id="formSummary" aria-live="polite"></p>
-      <p class="mt-4"><button class="btn" type="submit">Hesapla</button>
+      <p class="mt-4"><button class="btn" type="submit">{{ t('calc.calc') }}</button>
         <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">Alanları sıfırla</a></p>
     </fieldset>
   </form>
@@ -105,31 +105,31 @@
     <h2 id="sonuc" style="font-size:var(--fs-h3)">Sonuç</h2>
     <div class="result-grid mt-3" role="status" aria-live="polite">
       <div class="result">
-        <div class="k">Mevcut · {{ result.from_name }}</div>
+        <div class="k">{{ t('calc.current') }} · {{ result.from_name }}</div>
         <div class="v">{{ result.from_usd|tl(2) }} USD</div>
         <div class="n">≈ {{ result.from_try|tl(0) }} ₺ / ay</div>
       </div>
       <div class="result">
-        <div class="k">Alternatif · {{ result.to_name }}</div>
+        <div class="k">{{ t('calc.alternative') }} · {{ result.to_name }}</div>
         <div class="v">{{ result.to_usd|tl(2) }} USD</div>
         <div class="n">≈ {{ result.to_try|tl(0) }} ₺ / ay</div>
       </div>
-      <div class="result"><div class="k">Aylık fark</div><div class="v">{{ result.diff_usd|tl(2) }} USD</div><div class="n">≈ {{ result.diff_try|tl(0) }} ₺</div></div>
-      <div class="result"><div class="k">Yıllık fark</div><div class="v">{{ result.year_diff_try|tl(0) }} ₺</div><div class="n">12 ay üzerinden</div></div>
+      <div class="result"><div class="k">{{ t('calc.monthly_diff') }}</div><div class="v">{{ result.diff_usd|tl(2) }} USD</div><div class="n">≈ {{ result.diff_try|tl(0) }} ₺</div></div>
+      <div class="result"><div class="k">{{ t('calc.yearly_diff') }}</div><div class="v">{{ result.year_diff_try|tl(0) }} ₺</div><div class="n">{{ t('calc.year_months') }}</div></div>
       {% if result.saving %}
       <div class="result result-save">
-        <div class="k">Tasarruf</div>
+        <div class="k">{{ t('calc.saving') }}</div>
         <div class="v">%{{ result.pct|tl(1) }}</div>
-        <div class="n">Alternatif daha ucuz</div>
+        <div class="n">{{ t('calc.cheaper') }}</div>
       </div>
       {% elif result.pct is not none and result.pct < 0 %}
       <div class="result result-cost">
-        <div class="k">Maliyet artışı</div>
+        <div class="k">{{ t('calc.cost_increase') }}</div>
         <div class="v">%{{ (-result.pct)|tl(1) }}</div>
-        <div class="n">Alternatif daha pahalı — bu bir tasarruf değildir</div>
+        <div class="n">{{ t('calc.pricier') }}</div>
       </div>
       {% else %}
-      <div class="result"><div class="k">Fark</div><div class="v">%0,0</div><div class="n">İki model aynı maliyette</div></div>
+      <div class="result"><div class="k">Fark</div><div class="v">%0,0</div><div class="n">{{ t('calc.same') }}</div></div>
       {% endif %}
     </div>
     {% if result.tr_mult and result.tr_mult > 1 %}
@@ -144,7 +144,7 @@
     {% endif %}
 
     <figure class="mt-4" style="margin:0">
-      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">Aylık maliyet karşılaştırması (USD)</figcaption>
+      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">{{ t('cmp.monthly_chart') }}</figcaption>
       <div style="display:grid;gap:var(--sp-2)">
         <div>
           <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">

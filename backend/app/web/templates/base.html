@@ -6,6 +6,11 @@
 <title>{% block title %}{{ site_name }}{% endblock %}</title>
 <meta name="description" content="{% block description %}{{ site_desc }}{% endblock %}">
 <link rel="canonical" href="{{ canonical }}">
+  {# Cok dilli SEO: TR ve EN varyantlari birbirine isaret eder (statik sitede /en/ yolu). #}
+  {% if hreflang_pairs %}
+  {% for hp in hreflang_pairs %}<link rel="alternate" hreflang="{{ hp.lang }}" href="{{ hp.url }}">
+  {% endfor %}
+  {% endif %}
 {% if noindex %}<meta name="robots" content="noindex,nofollow">{% else %}<meta name="robots" content="index,follow,max-image-preview:large">{% endif %}
 <meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
@@ -46,7 +51,7 @@
         <small>{{ site_tagline }}</small>
       </span>
     </a>
-    <nav class="nav" id="nav" aria-label="Ana menü" data-open="false">
+    <nav class="nav" id="nav" aria-label="{{ t('nav.menu') }}" data-open="false">
       <a href="/fiyatlar" {% if nav == 'fiyatlar' %}aria-current="page"{% endif %}>{{ t('nav.prices') }}</a>
       <a href="/gpu-maliyetleri" {% if nav == 'gpu' %}aria-current="page"{% endif %}>GPU</a>
 
@@ -54,33 +59,34 @@
       <div class="nav-group" data-open="false">
         <button type="button" class="nav-group-btn" aria-expanded="false" aria-haspopup="true"
                 {% if nav in ('hesaplayici', 'karsilastir', 'token') %}data-active="true"{% endif %}>
-          Araçlar <span aria-hidden="true" class="nav-caret">▾</span>
+          {{ t('nav.tools') }} <span aria-hidden="true" class="nav-caret">▾</span>
         </button>
-        <div class="nav-menu" role="group" aria-label="Araçlar">
+        <div class="nav-menu" role="group" aria-label="{{ t('nav.tools') }}">
           <a href="/hesaplayici" {% if nav == 'hesaplayici' %}aria-current="page"{% endif %}>{{ t('nav.calculator') }}</a>
           <a href="/karsilastir" {% if nav == 'karsilastir' %}aria-current="page"{% endif %}>{{ t('nav.compare') }}</a>
           <a href="/token-sayaci" {% if path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
-          <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>Türkçe token farkı</a>
+          <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>{{ t('nav.tr_difference') }}</a>
         </div>
       </div>
 
-      <a href="/degisiklikler" {% if nav == 'degisiklikler' %}aria-current="page"{% endif %}>Değişiklikler</a>
+      <a href="/degisiklikler" {% if nav == 'degisiklikler' %}aria-current="page"{% endif %}>{{ t('nav.changes') }}</a>
       <a href="/rehber" {% if nav == 'rehber' %}aria-current="page"{% endif %}>{{ t('nav.guides') }}</a>
       <a href="/hakkinda" {% if nav == 'hakkinda' %}aria-current="page"{% endif %}>{{ t('nav.about') }}</a>
     </nav>
     <div class="header-tools">
-      <form method="get" action="{{ path }}" class="pref-form" aria-label="Görüntüleme tercihleri">
+      <form method="get" action="{{ path }}" class="pref-form" aria-label="{{ t('pref.label') }}">
         {% for k, v in (keep_params or {}).items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
-        <label class="sr-only" for="currency">{{ t('common.currency') }}</label>
-        <select id="currency" name="currency" class="pref-select" onchange="this.form.submit()">
-          <option value="USD" {% if currency != 'TRY' %}selected{% endif %}>USD</option>
-          <option value="TRY" {% if currency == 'TRY' %}selected{% endif %}>TRY</option>
-        </select>
-        <label class="sr-only" for="lang">{{ t('common.language') }}</label>
-        <select id="lang" name="lang" class="pref-select" onchange="this.form.submit()">
-          <option value="tr" {% if lang != 'en' %}selected{% endif %}>TR</option>
-          <option value="en" {% if lang == 'en' %}selected{% endif %}>EN</option>
-        </select>
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <span class="lang-switch" role="group" aria-label="{{ t('common.currency') }}">
+          <a href="{{ cur_usd_url }}" {% if currency != 'TRY' %}aria-current="true"{% endif %}>USD</a>
+          <a href="{{ cur_try_url }}" {% if currency == 'TRY' %}aria-current="true"{% endif %}>TRY</a>
+        </span>
+        {# Dil secimi LINK olarak: statik sitede query string sunucuda islenmiyor,
+           bu yuzden /en/ yolu gercek sayfa olarak uretiliyor. #}
+        <span class="lang-switch" role="group" aria-label="{{ t('common.language') }}">
+          <a href="{{ lang_tr_url }}" hreflang="tr" {% if lang != 'en' %}aria-current="true"{% endif %}>TR</a>
+          <a href="{{ lang_en_url }}" hreflang="en" {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+        </span>
         <noscript><button class="btn btn-secondary" type="submit">Uygula</button></noscript>
       </form>
       {% if nav != 'fiyatlar' %}
@@ -89,7 +95,7 @@
       <button class="icon-btn" id="theme-toggle" type="button" aria-label="{{ t('theme.toggle') }}" title="{{ t('common.language') }}">
         <span aria-hidden="true" id="theme-icon">◐</span>
       </button>
-      <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menüyü aç">
+      <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="{{ t('nav.menu_open') }}">
         <span aria-hidden="true">☰</span>
       </button>
     </div>
@@ -107,8 +113,8 @@
         <h4>Veri</h4>
         <ul>
           <li><a href="/fiyatlar">Fiyat listesi</a></li>
-          <li><a href="/karsilastir">Model karşılaştır</a></li>
-          <li><a href="/hesaplayici">Maliyet hesaplayıcı</a></li>
+          <li><a href="/karsilastir">{{ t('footer.compare') }}</a></li>
+          <li><a href="/hesaplayici">{{ t('footer.calculator') }}</a></li>
           <li><a href="/gpu-maliyetleri">GPU maliyetleri</a></li>
         </ul>
       </div>
@@ -116,37 +122,37 @@
         <h4>Kaynaklar</h4>
         <ul>
           {% for p in footer_providers %}
-          <li><a href="{{ p.pricing_url }}" rel="noopener nofollow" target="_blank">{{ p.name }} fiyat sayfası</a></li>
+          <li><a href="{{ p.pricing_url }}" rel="noopener nofollow" target="_blank">{{ p.name }} {{ t('footer.price_page') }}</a></li>
           {% endfor %}
         </ul>
       </div>
       <div>
-        <h4>Ürün</h4>
+        <h4>{{ t('footer.product') }}</h4>
         <ul>
-          <li><a href="/token-sayaci">Token sayacı</a></li>
+          <li><a href="/token-sayaci">{{ t('nav.token') }}</a></li>
           <li><a href="/rehber">Rehberler</a></li>
-          <li><a href="/hakkinda">Hakkında ve metodoloji</a></li>
+          <li><a href="/hakkinda">{{ t('footer.about') }}</a></li>
           <li><a href="/api/v1/prices?format=json">API</a></li>
-          <li><a href="/docs">API dokümantasyonu</a></li>
+          <li><a href="/docs">{{ t('footer.api_docs') }}</a></li>
         </ul>
       </div>
       <div>
         <h4>Kurumsal</h4>
         <ul>
-          <li><a href="/iletisim">İletişim</a></li>
-          <li><a href="/duzeltmeler">Düzeltmeler</a></li>
-          <li><a href="/gizlilik">Gizlilik ve KVKK</a></li>
+          <li><a href="/iletisim">{{ t('footer.contact') }}</a></li>
+          <li><a href="/duzeltmeler">{{ t('footer.corrections') }}</a></li>
+          <li><a href="/gizlilik">{{ t('footer.privacy') }}</a></li>
         </ul>
       </div>
     </div>
     <div class="legal">
-      <p><strong>{{ site_name }}</strong> · Bağımsız bir fiyat karşılaştırma sitesidir; sağlayıcı değildir.
-      Fiyatlar resmî sağlayıcı sayfalarından otomatik toplanır, yayın öncesi doğrulama kontrolünden geçer.</p>
-      <p class="mt-2">Veriler bilgilendirme amaçlıdır ve <em>yatırım, hukuk veya mali müşavirlik tavsiyesi değildir</em>.
-      Vergiler, kur farkları ve sözleşme koşulları nedeniyle gerçek fatura farklı olabilir.
-      Hesaplamalar tahmindir. Hatalı veri bildirimi için <a href="/iletisim">iletişim</a>.</p>
-      <p class="mt-2">Son veri kontrolü: {{ last_checked }} · Reklam ve izleme çerezi kullanılmaz ·
-      <a href="/gizlilik">Gizlilik</a> · <a href="/duzeltmeler">Düzeltmeler</a></p>
+      <p><strong>{{ site_name }}</strong> · {{ t('footer.disclaimer_title') }}
+      {{ t('footer.disclaimer_data') }}</p>
+      <p class="mt-2"><em>{{ t('footer.disclaimer_warn') }}</em>
+      {{ t('footer.disclaimer_tax') }}
+      {{ t('footer.disclaimer_estimate') }} {{ t('footer.report_error') }} <a href="/iletisim">{{ t('footer.contact') }}</a>.</p>
+      <p class="mt-2">{{ t('footer.last_check') }}: {{ last_checked }} · {{ t('footer.no_cookies') }} ·
+      <a href="/gizlilik">{{ t('footer.privacy') }}</a> · <a href="/duzeltmeler">{{ t('footer.corrections') }}</a></p>
     </div>
   </div>
 </footer>
@@ -156,7 +162,7 @@
   var root=document.documentElement, btn=document.getElementById("theme-toggle"), icon=document.getElementById("theme-icon");
   function apply(mode){
     root.dataset.theme=mode;
-    btn.setAttribute("aria-label", mode==="dark" ? "Açık temaya geç" : "Koyu temaya geç");
+    btn.setAttribute("aria-label", mode==="dark" ? "{{ t('theme.toggle.light') }}" : "{{ t('theme.toggle') }}");
     icon.textContent = mode==="dark" ? "☀" : "◐";
     try{localStorage.setItem("amm-theme",mode);}catch(e){}
   }
@@ -184,7 +190,7 @@
     var open = nav.dataset.open==="true";
     nav.dataset.open = String(!open);
     menu.setAttribute("aria-expanded", String(!open));
-    menu.setAttribute("aria-label", open ? "Menüyü aç" : "Menüyü kapat");
+    menu.setAttribute("aria-label", open ? "{{ t('nav.menu_close') }}" : "{{ t('nav.menu_open') }}");
   });
 })();
 </script>
@@ -200,8 +206,8 @@
     // dolduruldugunda tarayici ilk modeli otomatik secer (rapor 4. tur P0-2).
     var placeholder = sel.querySelector('option[value=""]');
     var current = sel.value;
-    var direct = document.createElement("optgroup"); direct.label = "Doğrudan API";
-    var market = document.createElement("optgroup"); market.label = "Pazaryeri";
+    var direct = document.createElement("optgroup"); direct.label = "{{ t('cmp.direct') }}";
+    var market = document.createElement("optgroup"); market.label = "{{ t('prices.channel.marketplace') }}";
     list.forEach(function(o){
       var opt = document.createElement("option");
       opt.value = o.value; opt.textContent = o.label;

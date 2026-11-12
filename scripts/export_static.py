@@ -253,13 +253,15 @@ def main() -> int:
 
     # Kok dizin: GERCEK 301 benzeri yonlendirme (meta refresh DEGIL).
     # Meta refresh her bilinmeyen yolu yutuyordu (404 ve /api kiriliyordu).
+    # Ana sayfa = HESAPLAYICI. Sitenin amaci token maliyeti hesaplamak;
+    # kullanici once isini gormeli. Fiyat listesi menude.
     (DIST / "index.html").write_text(
         '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">'
-        '<title>TokenMaliyet - AI API fiyat ve maliyet verisi</title>'
-        '<link rel="canonical" href="https://tokenmaliyet.com/fiyatlar">'
-        '<meta http-equiv="refresh" content="0; url=/fiyatlar/">'
+        '<title>TokenMaliyet - AI API maliyet hesaplayici</title>'
+        '<link rel="canonical" href="https://tokenmaliyet.com/">'
+        '<meta http-equiv="refresh" content="0; url=/hesaplayici/">'
         '</head><body><h1>TokenMaliyet</h1>'
-        '<p><a href="/fiyatlar/">AI API fiyatlarina git</a></p></body></html>',
+        '<p><a href="/hesaplayici/">Maliyet hesaplayiciya git</a></p></body></html>',
         encoding="utf-8",
     )
 

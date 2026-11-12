@@ -1,18 +1,15 @@
 {% extends "base.html" %}
 {% set nav = 'hesaplayici' %}
 {% block title %}{{ 'Monthly API cost calculator' if lang == 'en' else 'Aylık API maliyeti hesaplayıcı' }} | {{ site_name }}{% endblock %}
-{% block description %}İki AI modelini aylık girdi ve çıktı token hacminizle karşılaştırın; aylık maliyet, fark ve tasarruf yüzdesini görün. Formül ve varsayımlar açıktır.{% endblock %}
+{% block description %}{{ 'Compare the monthly cost of two AI models with your input and output token volume. The formula and assumptions are public.' if lang == 'en' else 'İki AI modelini aylık girdi ve çıktı token hacminizle karşılaştırın; aylık maliyet, fark ve tasarruf yüzdesini görün. Formül ve varsayımlar açıktır.' }}{% endblock %}
 
 {% block content %}
-<div class="container">
-  <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Hesaplayıcı</li></ol></nav>
-    <h1>{{ 'Compare monthly API cost' if lang == 'en' else 'Aylık API maliyetini karşılaştır' }}</h1>
-    <p class="lede">Mevcut modelinizi ve alternatifi seçin, aylık token hacminizi girin.
-      Sonuç yalnızca <strong>token fiyatı karşılaştırmasıdır</strong>; kalite, gecikme veya bağlam penceresi bu hesaba dahil değildir.</p>
+<div class="container calc-tight">
+  <header style="margin-bottom:var(--sp-3)">
+    <h1 style="margin-bottom:0">{{ 'Monthly API cost' if lang == 'en' else 'Aylık API maliyeti' }}</h1>
   </header>
 
-  <div class="chip-row" style="margin-bottom:var(--sp-4)" role="group" aria-label="Hazır senaryolar">
+  <div class="chip-row" style="margin-bottom:var(--sp-3)" role="group" aria-label="{{ 'Presets' if lang == 'en' else 'Hazır senaryolar' }}">
     <span class="text-xs text-muted">{{ 'Preset:' if lang == 'en' else 'Hazır senaryo:' }}</span>
     {% for s in scenarios %}
     <a class="chip" href="/hesaplayici?in={{ s.inp }}&out={{ s.out }}&from={{ f['from'] }}&to={{ f['to'] }}"
@@ -20,7 +17,7 @@
     {% endfor %}
   </div>
 
-  <form class="surface surface-pad" method="get" action="/hesaplayici" id="calc-form" novalidate>
+<form class="surface surface-pad" method="get" action="/hesaplayici" id="calc-form" novalidate>
     <fieldset class="fieldset">
       <legend>Modeller</legend>
       <div class="form-grid">
@@ -51,7 +48,7 @@
           <input id="inTok" name="in" type="text" inputmode="numeric" value="{{ f['in'] }}" autocomplete="off"
                  aria-describedby="in-help{% if errors.get('in') %} in-err{% endif %}"
                  {% if errors.get('in') %}aria-invalid="true"{% endif %}>
-          <span class="help-text" id="in-help">{{ 'Example: 100,000,000 (one hundred million tokens)' if lang == 'en' else 'Örnek: 100.000.000 (yüz milyon token)' }}</span>
+          <span class="help-text" id="in-help">{{ 'Tokens per month' if lang == 'en' else 'Aylık token' }}</span>
           <div class="chip-row" data-chips="inTok" aria-label="Hızlı girdi token seçimi">
             {% for v, label in [('1000000','1M'),('10000000','10M'),('50000000','50M'),('100000000','100M'),('500000000','500M'),('1000000000','1B')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
@@ -64,7 +61,7 @@
           <input id="outTok" name="out" type="text" inputmode="numeric" value="{{ f['out'] }}" autocomplete="off"
                  aria-describedby="out-help{% if errors.get('out') %} out-err{% endif %}"
                  {% if errors.get('out') %}aria-invalid="true"{% endif %}>
-          <span class="help-text" id="out-help">{{ 'Example: 25,000,000 (twenty-five million tokens)' if lang == 'en' else 'Örnek: 25.000.000 (yirmi beş milyon token)' }}</span>
+          <span class="help-text" id="out-help">{{ 'Tokens per month' if lang == 'en' else 'Aylık token' }}</span>
           <div class="chip-row" data-chips="outTok" aria-label="Hızlı çıktı token seçimi">
             {% for v, label in [('1000000','1M'),('5000000','5M'),('10000000','10M'),('25000000','25M'),('50000000','50M')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
@@ -73,26 +70,23 @@
           {% if errors.get('out') %}<span class="error-text" id="out-err">{{ errors['out'] }}</span>{% endif %}
         </div>
       </div>
-      <div class="field mt-4" style="max-width:320px">
-        <label for="dil">{{ t('calc.text_lang') }}</label>
-        <select id="dil" name="dil">
-          <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce (çarpan yok)</option>
-          <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio }}× token çarpanı</option>
-        </select>
-        <span class="help-text">
-          Aynı içerik Türkçe'de {{ turkce.ratio }}× daha fazla token harcar
-          ({{ turkce.samples }} cümle ile ölçüldü). <a href="/turkce-token-maliyeti">Ölçüm</a>
-        </span>
-      </div>
-      <div class="field mt-4" style="max-width:320px">
-        <label for="cache">Önbellek (cache) okuma oranı — isteğe bağlı</label>
-        <select id="cache" name="cache">
-          <option value="0" {% if f.cache == '0' %}selected{% endif %}>Kullanmıyorum</option>
-          <option value="25" {% if f.cache == '25' %}selected{% endif %}>Girdinin %25'i önbellekten</option>
-          <option value="50" {% if f.cache == '50' %}selected{% endif %}>Girdinin %50'si önbellekten</option>
-          <option value="75" {% if f.cache == '75' %}selected{% endif %}>Girdinin %75'i önbellekten</option>
-        </select>
-        <span class="help-text">Önbellek fiyatı modelde varsa hesaba katılır; yoksa yok sayılır.</span>
+      <div class="form-grid mt-4" style="grid-template-columns:1.3fr .7fr;align-items:start">
+        <div class="field">
+          <label for="dil">{{ t('calc.text_lang') }}</label>
+          <select id="dil" name="dil">
+            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>{{ 'English (no multiplier)' if lang == 'en' else 'İngilizce (çarpan yok)' }}</option>
+            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>{{ 'Turkish — ' if lang == 'en' else 'Türkçe — ' }}{{ turkce.ratio|tl(2) }}×</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cache">{{ 'Cache read' if lang == 'en' else 'Önbellek okuma' }}</label>
+          <select id="cache" name="cache">
+            <option value="0" {% if f.cache == '0' %}selected{% endif %}>{{ 'None' if lang == 'en' else 'Yok' }}</option>
+            <option value="25" {% if f.cache == '25' %}selected{% endif %}>%25</option>
+            <option value="50" {% if f.cache == '50' %}selected{% endif %}>%50</option>
+            <option value="75" {% if f.cache == '75' %}selected{% endif %}>%75</option>
+          </select>
+        </div>
       </div>
       <p class="help mt-3" id="formSummary" aria-live="polite"></p>
       <p class="mt-4"><button class="btn" type="submit">{{ t('calc.calc') }}</button>
@@ -101,9 +95,9 @@
   </form>
 
   {% if result %}
-  <section class="mt-5" aria-labelledby="sonuc">
-    <h2 id="sonuc" style="font-size:var(--fs-h3)">Sonuç</h2>
-    <div class="result-grid mt-3" role="status" aria-live="polite">
+  <section class="mt-4" aria-labelledby="sonuc" id="sonuc-alani">
+    <h2 id="sonuc" class="sr-only">{{ 'Result' if lang == 'en' else 'Sonuç' }}</h2>
+    <div class="result-grid" role="status" aria-live="polite">
       <div class="result">
         <div class="k">{{ t('calc.current') }} · {{ result.from_name }}</div>
         <div class="v">{{ result.from_usd|tl(2) }} USD</div>
@@ -142,8 +136,12 @@
       </div>
     </div>
     {% endif %}
+  </section>
+  {% endif %}
 
-    <figure class="mt-4" style="margin:0">
+  {% if result %}
+  <section class="mt-4">
+<figure class="mt-4" style="margin:0">
       <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">{{ t('cmp.monthly_chart') }}</figcaption>
       <div style="display:grid;gap:var(--sp-2)">
         <div>

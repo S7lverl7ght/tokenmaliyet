@@ -94,7 +94,12 @@ def _calc_try(amount: float, fx: float | None) -> float | None:
 
 @router.get("/", include_in_schema=False)
 def home():
-    return RedirectResponse("/fiyatlar", status_code=302)
+    """Ana sayfa = maliyet hesaplayici.
+
+    Sitenin amaci token maliyeti hesaplamak; kullaniciyi once aradigi isi
+    yaptirmak gerekiyor. Fiyat listesi menuden erisilebilir.
+    """
+    return RedirectResponse("/hesaplayici", status_code=302)
 
 
 @router.get("/fiyatlar", response_class=HTMLResponse, include_in_schema=False)
@@ -380,7 +385,8 @@ def calculator_page(
         result=result,
         scenarios=SCENARIOS,
     )
-    ctx["canonical"] = SITE_URL + "/hesaplayici"
+    # Ana sayfa hesaplayici oldugu icin canonical "/" (mukerrer icerik onlenir).
+    ctx["canonical"] = SITE_URL + "/"
     ctx["noindex"] = user_selected
     return TEMPLATES.TemplateResponse(request, "calculator.html", ctx)
 
@@ -1040,7 +1046,7 @@ def robots():
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap(db: Session = Depends(get_session)) -> Response:
     from .content.guides import GUIDES
-    urls = ["/fiyatlar", "/karsilastir", "/hesaplayici", "/token-sayaci",
+    urls = ["/", "/fiyatlar", "/karsilastir", "/token-sayaci",
             "/gpu-maliyetleri", "/rehber", "/hakkinda",
             "/gizlilik", "/iletisim", "/duzeltmeler",
             "/turkce-token-maliyeti", "/degisiklikler"]

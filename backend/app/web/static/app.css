@@ -556,3 +556,44 @@ details.disclosure .body{padding:0 var(--sp-4) var(--sp-4); font-size:var(--fs-s
 .mt-4{margin-top:var(--sp-4)} .mt-5{margin-top:var(--sp-5)} .mb-3{margin-bottom:var(--sp-3)}
 .text-muted{color:var(--muted)} .text-sm{font-size:var(--fs-sm)} .text-xs{font-size:var(--fs-xs)}
 .nowrap{white-space:nowrap} .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- hesaplayici: ilk ekran ---------- */
+/* Amac: kullanici kaydirmadan formu ve sonucu birlikte gorsun.
+   Yalnizca bu sayfada dikey bosluklar daraltilir; diger sayfalar etkilenmez. */
+.calc-tight .page-head{margin-bottom:var(--sp-3)}
+.calc-tight .fieldset{padding:10px var(--sp-3)}
+.calc-tight fieldset legend{font-size:10px; padding-inline:6px}
+.calc-tight .container{padding-top:var(--sp-3)}
+.calc-tight .fieldset + .fieldset{margin-top:var(--sp-3)}
+.calc-tight .surface-pad{padding:var(--sp-3) var(--sp-4)}
+.calc-tight .field{margin-bottom:0}
+.calc-tight .field label{font-size:var(--fs-xs); margin-bottom:2px}
+.calc-tight .field select,
+.calc-tight .field input[type="text"]{padding:8px 10px; min-height:38px}
+.calc-tight .help-text{font-size:11px; margin-top:2px}
+.calc-tight .chip-row{gap:6px}
+.calc-tight .chip{padding:2px 8px; font-size:11px}
+.calc-tight h1{font-size:clamp(1.25rem,2vw,1.6rem); margin-bottom:2px}
+.calc-tight .chip-row{margin-top:2px}
+.calc-tight .result{padding:10px var(--sp-3)}
+.calc-tight .result .v{font-size:1.35rem}
+.calc-tight #sonuc-alani{margin-top:var(--sp-3)}
+.calc-tight .result .k{font-size:10px}
+.calc-tight .result .n{font-size:11px}
+
+/* Son ayar: form + sonuc 845px viewport'a sigsin. */
+.calc-tight .chip-row[data-chips]{margin-top:2px}
+.calc-tight .field .chip-row{gap:4px}
+.calc-tight .result-grid{gap:var(--sp-2)}
+.calc-tight #calc-form{margin-top:0}
+.calc-tight .fieldset + .fieldset{margin-top:8px}
+.calc-tight .mt-4{margin-top:var(--sp-3)}
+.calc-tight .form-grid{margin-top:2px}
+.calc-tight .field label{font-size:11px}
+.calc-tight .field select,
+.calc-tight .field input[type="text"]{padding:6px 10px; min-height:34px}
+.calc-tight .help-text{display:none}
+.calc-tight #formSummary{font-size:11px; margin-top:6px}
+.calc-tight .btn{padding:8px 16px; min-height:36px}
+.calc-tight .result .v{font-size:1.2rem}
+.calc-tight .result .n{display:none}

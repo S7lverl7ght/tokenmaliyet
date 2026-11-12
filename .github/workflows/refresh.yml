@@ -52,7 +52,7 @@ jobs:
 
       - name: Semayi olustur
         run: |
-          python -m alembic upgrade head
+          python scripts/init_dev_db.py
           python -m app.seed
 
       - name: Fiyatlari topla

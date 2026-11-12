@@ -515,6 +515,7 @@ def gpu_page(
     request: Request,
     provider: str = "",
     kind: str = "",
+    family: str = "",
     sort: str = "vram",
     db: Session = Depends(get_session),
 ):
@@ -533,6 +534,8 @@ def gpu_page(
         stmt = stmt.where(GpuProvider.slug == provider)
     if kind:
         stmt = stmt.where(GpuPrice.price_kind == kind)
+    if family:
+        stmt = stmt.where(GpuPrice.gpu_family == family)
     rows = db.execute(stmt).all()
 
     fam_map: dict[str, dict] = {}
@@ -1052,6 +1055,13 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
             "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">"]
     for path in urls:
         body.append(f"<url><loc>{SITE_URL}{path}</loc><changefreq>daily</changefreq></url>")
+    # GPU ailesi sayfalari (rapor 4. tur bolum 4)
+    from ..models import GpuPrice
+    fams = sorted({p.gpu_family for p in db.query(GpuPrice).filter(GpuPrice.status == "approved").all()})
+    for fam in fams[:20]:
+        slug = fam.lower().replace(" ", "-")
+        body.append(f"<url><loc>{SITE_URL}/gpu/{slug}</loc><changefreq>daily</changefreq></url>")
+
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")
 

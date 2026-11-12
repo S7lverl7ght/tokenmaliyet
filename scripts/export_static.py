@@ -95,6 +95,50 @@ def main() -> int:
             if count >= 60:
                 break
 
+    # Programatik GPU detay sayfalari (rapor 4. tur bolum 4: /gpu/<slug>)
+    from app.db import SessionLocal as _SL
+    from app.models import GpuPrice as _GP, GpuProvider as _GProv
+
+    with _SL() as gdb:
+        fams = {p.gpu_family for p in gdb.query(_GP).filter(_GP.status == "approved").all()}
+    for fam in sorted(fams):
+        slug = fam.lower().replace(" ", "-")
+        resp = client.get(f"/gpu-maliyetleri?family={fam}")
+        if resp.status_code != 200:
+            continue
+        target = DIST / "gpu" / slug / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+        target.write_text(html, encoding="utf-8")
+        print(f"[ok] /gpu/{slug}")
+
+    # Programatik karsilastirma sayfalari (rapor 4. tur: populer 20 cift)
+    from app.db import SessionLocal as _SL2
+    from app.web import default_models as _dm
+    from app.web import queries as _q
+
+    populer = []
+    with _SL2() as db2:
+        for row in _q.price_rows(db2):
+            if _dm.is_indexable(row):
+                populer.append(row)
+            if len(populer) >= 8:
+                break
+
+    import itertools
+    for a, b in itertools.islice(itertools.combinations(populer, 2), 20):
+        ka = f"{a.provider_slug}|{a.slug}|{a.variant or ''}"
+        kb = f"{b.provider_slug}|{b.slug}|{b.variant or ''}"
+        resp = client.get("/karsilastir", params=[("models", ka), ("models", kb),
+                                                  ("in", "100000000"), ("out", "25000000")])
+        if resp.status_code != 200:
+            continue
+        slug = f"{a.slug}-vs-{b.slug}".replace("/", "-").lower()[:120]
+        target = DIST / "karsilastir" / slug / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+        target.write_text(html, encoding="utf-8")
+
     # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)
     (DIST / "_headers").write_text(
         "/*\n"

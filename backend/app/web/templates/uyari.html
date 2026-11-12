@@ -25,7 +25,8 @@
   <p class="mt-4"><a class="btn btn-secondary" href="/fiyatlar">Fiyat listesine dön</a></p>
   {% else %}
 
-  <form class="surface surface-pad" method="post" action="/uyari" novalidate>
+  <form class="surface surface-pad" method="post" action="/uyari" novalidate id="alertForm" data-api="/api/uyari">
+      <div class="notice notice-info mb-3" id="alertLive" role="status" aria-live="polite" hidden></div>
     <div class="field">
       <label for="email">E-posta adresiniz</label>
       <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" required
@@ -76,4 +77,52 @@
   </form>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Fiyat uyarisi formu.
+   Statik sitede /uyari POST'u yok; kayit /api/uyari (Pages Function + D1) uzerinden
+   alinir. Istek basarisiz olursa kullaniciya acik mesaj gosterilir, sessiz yutulmaz. */
+(function(){
+  var form = document.getElementById("alertForm");
+  if (!form) return;
+  var live = document.getElementById("alertLive");
+
+  function show(msg, ok){
+    if (!live) return;
+    live.hidden = false;
+    live.className = "notice " + (ok ? "notice-ok" : "notice-warn") + " mb-3";
+    live.textContent = msg;
+    live.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  form.addEventListener("submit", function(e){
+    var statik = window.__STATIC__ === true ||
+                 (form.dataset.api && !location.pathname.startsWith("/uyari"));
+    if (!statik) return;   // sunucu tarafi calisiyorsa normal POST
+    e.preventDefault();
+
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = "Kaydediliyor..."; }
+
+    fetch(form.dataset.api, { method: "POST", body: new FormData(form) })
+      .then(function(r){ return r.json().catch(function(){ return { ok: false, error: "Sunucu yaniti okunamadi." }; }); })
+      .then(function(j){
+        if (j.ok) {
+          show("Kaydiniz alindi. " + (j.mail_sent ? "Onay e-postasi gonderildi; gelen kutunuzu kontrol edin." : "Fiyat degisince e-posta ile haber verecegiz."), true);
+          form.reset();
+        } else {
+          show(j.error || "Kayit alinamadi. Lutfen tekrar deneyin.", false);
+        }
+      })
+      .catch(function(){
+        show("Baglanti hatasi. Internet baglantinizi kontrol edip tekrar deneyin.", false);
+      })
+      .finally(function(){
+        if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || "Kaydet"; }
+      });
+  });
+})();
+</script>
 {% endblock %}

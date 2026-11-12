@@ -1,0 +1,9 @@
+# Cloudflare Pages + D1 (fiyat uyarisi kayitlari)
+name = "tokenmaliyet"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tokenmaliyet-alerts"
+database_id = "d5ef2d86-f3d5-460f-92ee-3c08da43958e"

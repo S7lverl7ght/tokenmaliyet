@@ -179,6 +179,12 @@ def main() -> int:
     ])
     (DIST / "_headers").write_text(headers_txt, encoding="utf-8")
 
+    # Cloudflare Pages Functions (D1 ile fiyat uyarisi kaydi).
+    # dist/functions DEGIL, proje kokundeki /functions Pages tarafindan otomatik bulunur;
+    # yine de dist'e kopyalamak zarar vermez ve tek klasor deploy'u kolaylastirir.
+    if (ROOT / "functions").exists():
+        shutil.copytree(ROOT / "functions", DIST / "functions", dirs_exist_ok=True)
+
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)
     (DIST / "robots.txt").write_bytes(client.get("/robots.txt").content)

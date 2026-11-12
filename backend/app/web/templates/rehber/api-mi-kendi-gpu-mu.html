@@ -1,0 +1,81 @@
+{% extends "guide_base.html" %}
+{% set nav = 'rehber' %}
+{% block title %}API mi, kendi GPU'nuz mu? Başa baş noktası | {{ site_name }}{% endblock %}
+{% block description %}Aylık token hacminizi ve GPU kiralama fiyatlarını karşılaştırarak API ile kendi GPU'nuz arasındaki başabaş noktasını hesaplayın.{% endblock %}
+{% block article %}
+<h1>API mi, kendi GPU'nuz mu? Başa baş noktası</h1>
+<p class="lede"><strong>Kısa cevap:</strong> aylık toplamı birkaç yüz milyon token'ın altında kalıyorsanız
+API neredeyse her zaman daha ucuzdur. Üstünde, kiralık GPU ciddi biçimde avantajlı hale gelir — ama
+yalnızca donanımı gerçekten doldurabiliyorsanız.</p>
+
+<h2>Karşılaştırma neden zor?</h2>
+<p>API fiyatı <em>token</em>, GPU fiyatı <em>saat</em> üzerinden ödenir. İkisini karşılaştırmak için
+GPU'nun saatte kaç token ürettiğini bilmeniz gerekir. Bu sayı model, niceleme (quantization),
+toplu iş boyutu ve donanıma göre değişir; bu yüzden aşağıdaki hesap <strong>ölçüm değil, çerçeve</strong>.</p>
+<p class="formula">API aylık maliyet = (girdi_token/1M × girdi_fiyatı) + (çıktı_token/1M × çıktı_fiyatı)</p>
+<p class="formula">GPU aylık maliyet = saatlik ücret × 730 × kullanım oranı</p>
+
+<h2>Bugünkü gerçek fiyatlar</h2>
+<p>Aşağıdaki tablo bu sitedeki doğrulanmış veriden gelir; her satırda kaynak ve gözlem tarihi vardır.</p>
+<table>
+  <thead><tr><th>GPU</th><th>VRAM</th><th>En düşük on-demand</th><th>Aylık (730 saat)</th></tr></thead>
+  <tbody>
+  {% for g in gpu_samples %}
+    <tr>
+      <td>{{ g.family }}</td>
+      <td>{{ g.vram ~ ' GB' if g.vram else '—' }}</td>
+      <td class="num">{{ g.price|tl_dyn }} $/saat</td>
+      <td class="num">{{ (g.price * 730)|tl_dyn }} $</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-sm text-muted">API tarafında: {{ api_samples|length }} model listeleniyor;
+en ucuz doğrudan model {{ cheapest.name }} ({{ cheapest.input|tl_dyn }} $ girdi / {{ cheapest.output|tl_dyn }} $ çıktı per 1M).</p>
+
+<h2>Başa baş hesabı</h2>
+<p>Bir GPU'nun saatte ürettiği token sayısı model boyutuna ve toplu iş boyutuna göre
+<strong>50.000 ile 500.000</strong> arasında değişir (7B–70B modeller, vLLM/TensorRT-LLM).
+Aylık 730 saatte bu, <strong>36 milyon ile 365 milyon token</strong> demektir.</p>
+<p>Hesabı tablodaki <strong>en ucuz GPU</strong> ile yapıyoruz ({{ gpu_samples[0].family }}):</p>
+<ul>
+  <li><strong>{{ gpu_samples[0].family }} = {{ gpu_samples[0].price|tl_dyn }} $/saat</strong> (kesintisiz) ≈
+      <strong>{{ (gpu_samples[0].price * 730)|tl_dyn }} $/ay</strong></li>
+  <li>Aynı parayla API'de yaklaşık <strong>{{ api_equivalent|tl_dyn }} milyon token</strong>
+      alabilirsiniz ({{ cheapest.name }} fiyatıyla, %75 girdi / %25 çıktı varsayımı)</li>
+</ul>
+<p>Yani <em>bu GPU</em>, ancak ayda <strong>{{ api_equivalent|tl_dyn }} milyon token'dan fazla</strong>
+iş yapıyorsanız (ve donanımı %70+ dolu tutabiliyorsanız) kârlı olur.</p>
+<p class="help">Daha güçlü bir kart (H100, B200) alırsanız saatlik ücret artar ve başa baş noktası
+yukarı çıkar; <a href="/gpu-maliyetleri">güncel GPU fiyatlarından</a> kendi kartınızı seçip
+hesabı tekrarlayabilirsiniz.</p>
+
+<h2>Karar değiştiren koşullar</h2>
+<table>
+  <thead><tr><th>Durum</th><th>API</th><th>Kendi GPU</th></tr></thead>
+  <tbody>
+    <tr><td>Düşük/orta hacim (aylık &lt; 100M token)</td><td><strong>Kesin API</strong></td><td>Maliyetsiz</td></tr>
+    <tr><td>Ani trafik artışı</td><td><strong>API</strong> (esneklik)</td><td>Kapasite planı gerekir</td></tr>
+    <tr><td>Veri dışarı çıkamıyor (KVKK/regülasyon)</td><td>Kısıtlı</td><td><strong>Kendi GPU</strong></td></tr>
+    <tr><td>Çok yüksek sabit hacim (aylık &gt; 500M)</td><td>Pahalı</td><td><strong>GPU</strong></td></tr>
+    <tr><td>İnce ayar (fine-tune) gerekiyor</td><td>Ek ücret</td><td><strong>GPU</strong></td></tr>
+    <tr><td>En yeni/büyük model gerekiyor</td><td><strong>API</strong></td><td>VRAM yetmeyebilir</td></tr>
+  </tbody>
+</table>
+
+<h2>Gizli maliyetler</h2>
+<p>GPU tarafında saatlik ücret tek kalem değildir: depolama, çıkış trafiği, model yükleme süresi,
+kesinti riski (spot kullanıyorsanız), mühendislik bakım süresi ve kullanılmayan kapasite.
+Bu site GPU fiyatlarını <strong>saatlik liste fiyatı</strong> olarak yayınlar; toplam sahip olma
+maliyeti bundan yüksektir.</p>
+
+<div class="notice notice-warn mt-5">
+  <div><strong>Dürüst uyarı:</strong> Yukarıdaki token/saat aralığı sektör ortalamasıdır, bu sitede
+  ölçülmemiştir. Kendi modelinizle gerçek ölçüm yapmadan yatırım kararı vermeyin.</div>
+</div>
+
+<p class="mt-5">
+  <a class="btn" href="/hesaplayici">API maliyetinizi hesaplayın</a>
+  <a class="btn btn-secondary" href="/gpu-maliyetleri" style="margin-left:var(--sp-2)">Güncel GPU fiyatları</a>
+</p>
+{% endblock %}

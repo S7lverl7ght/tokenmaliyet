@@ -46,6 +46,15 @@ GUIDES: list[Guide] = [
         updated="11.11.2026",
         reading_min=4,
     ),
+    Guide(
+        slug="api-mi-kendi-gpu-mu",
+        title="API mi, kendi GPU'nuz mu? Başa baş noktası",
+        description=("Aylık token hacminiz ile GPU kiralama fiyatlarını karşılaştırarak hangisinin "
+                     "ne zaman kârlı olduğunu gösteren çerçeve ve gerçek fiyatlar."),
+        published="12.11.2026",
+        updated="12.11.2026",
+        reading_min=7,
+    ),
 ]
 
 

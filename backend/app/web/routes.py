@@ -569,8 +569,49 @@ def guide_page(slug: str, request: Request, db: Session = Depends(get_session)):
                 })
     peak_examples.sort(key=lambda x: (x["model"], x["period"]))
 
+    # GPU vs API rehberi icin ek veri (yalnizca o yazida kullanilir)
+    gpu_samples: list[dict] = []
+    api_equivalent = 0.0
+    cheapest = {"name": "-", "input": 0.0, "output": 0.0}
+    if slug == "api-mi-kendi-gpu-mu":
+        from ..models import GpuPrice, GpuProvider
+        gpu_rows = db.execute(
+            sselect(GpuPrice, GpuProvider)
+            .join(GpuProvider, GpuProvider.id == GpuPrice.provider_id)
+            .where(GpuPrice.status == "approved", GpuPrice.price_kind == "on_demand")
+            .order_by(GpuPrice.price_per_hour)
+        ).all()
+        seen_fam: set[str] = set()
+        for price, prov in gpu_rows:
+            if price.gpu_family in seen_fam:
+                continue
+            seen_fam.add(price.gpu_family)
+            gpu_samples.append({
+                "family": price.gpu_family,
+                "vram": price.vram_gb,
+                "price": float(price.price_per_hour),
+            })
+            if len(gpu_samples) >= 6:
+                break
+        direct = [r for r in rows if r.channel == "direct" and r.has_tokens]
+        if direct:
+            cheapest_row = sorted(
+                direct, key=lambda r: (price_value(r.dim("input"))[0] or 0)
+            )[0]
+            ci = price_value(cheapest_row.dim("input"))[0] or 0
+            co = price_value(cheapest_row.dim("output"))[0] or 0
+            cheapest = {"name": cheapest_row.name, "input": ci, "output": co}
+            if gpu_samples and ci > 0:
+                monthly_gpu = gpu_samples[0]["price"] * 730
+                # %75 girdi / %25 cikti karisimi varsayimi
+                blended = ci * 0.75 + co * 0.25
+                api_equivalent = round(monthly_gpu / blended, 1) if blended else 0.0
+
     ctx = base_context(db, request, nav="rehber", guide=guide, other_guides=others,
-                       examples=examples, peak_examples=peak_examples)
+                       examples=examples, peak_examples=peak_examples,
+                       gpu_samples=gpu_samples, api_equivalent=api_equivalent,
+                       api_samples=[r for r in rows if r.channel == "direct"][:10],
+                       cheapest=cheapest)
     ctx["canonical"] = f"{SITE_URL}/rehber/{slug}"
     ctx["noindex"] = False
     template = f"rehber/{slug}.html"

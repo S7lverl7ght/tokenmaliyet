@@ -78,7 +78,7 @@ jobs:
         # diye AYRI veritabaninda kosar.
         env:
           DATABASE_URL: postgresql+psycopg://ai_maliyet_user:ci_password@localhost:5432/ai_maliyet_test
-      TEST_DATABASE_URL: postgresql+psycopg://ai_maliyet_user:ci_password@localhost:5432/ai_maliyet_test
+          TEST_DATABASE_URL: postgresql+psycopg://ai_maliyet_user:ci_password@localhost:5432/ai_maliyet_test
         run: |
           PGPASSWORD=ci_password psql -h localhost -U ai_maliyet_user -d ai_maliyet_merkezi \
             -c "CREATE DATABASE ai_maliyet_test OWNER ai_maliyet_user;" || true

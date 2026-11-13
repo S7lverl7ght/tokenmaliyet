@@ -155,3 +155,70 @@ sitemap'e eklendi. **Canlı: 200, 13.850 bayt.**
 | Faz 3 gelir (Shopier, API key) | Kullanıcı onayı + ticari karar |
 
 **Son durum:** 203 test geçiyor · commit `7983893` · canlı `tokenmaliyet.com`
+
+---
+
+## Ek 2: Güvenlik sertleştirme (madde 3.6)
+
+### Cookie `secure` bayrağı ✅
+
+`admin.py` içinde `set_cookie(..., secure=...)` eksikti. Artık:
+```python
+_secure = os.getenv("APP_ENV", "dev") == "production"
+response.set_cookie(COOKIE, ..., httponly=True, samesite="strict", secure=_secure)
+```
+Üretimde HTTPS zorunlu, yerel geliştirmede http çalışmaya devam ediyor.
+
+### Sabit zamanlı secret karşılaştırma ✅
+
+`bildir.js` içinde `secret !== env.BILDIR_SECRET` zamanlama sızıntısı veriyordu.
+Artık `timingSafeEqual()` (uzunluk + XOR toplamı) kullanılıyor.
+
+---
+
+## P0-5 Turnstile: NEDEN YAPILMADI
+
+Kod tarafı hazır değil çünkü **Cloudflare hesabında site key oluşturulması** gerekiyor:
+
+1. dash.cloudflare.com → Turnstile → Add widget
+2. Domain: `tokenmaliyet.com`
+3. Site key + Secret key alınır
+4. Secret key → Pages env: `TURNSTILE_SECRET`
+5. Site key → formda `data-sitekey`
+6. `uyari.js` içinde `/siteverify` çağrısı
+
+**Mevcut durum:** form çalışıyor ama bot koruması yok. Resend günlük 100
+e-posta limiti doğal bir tavan oluşturuyor (kota tükenirse `mail_sent:false`,
+kayıt yine alınır).
+
+**Ek koruma (kod tarafı, hesap gerektirmez):** D1 üzerinde IP başına günlük
+kayıt sayacı eklenebilir. Bu bir sonraki turda yapılabilir.
+
+---
+
+## SON DURUM
+
+```
+205 test geçiyor, 6 atlandı
+Canlı kabul testi: 7/7 PASS
+commit: 757275c
+18 statik sayfa + 11 varyant + 2 JSON API
+```
+
+### Kapatılan bulgular
+
+| # | Bulgu | Durum |
+|---|---|---|
+| P0-1 | Stored XSS | ✅ |
+| P0-2 | Token sayacı JSON | ✅ |
+| P0-3 | İstemci hesap motoru | ✅ |
+| P0-4 | MIME çakışması | ✅ |
+| P0-5 | Rate limit / Turnstile | ⏸ hesap gerekiyor |
+| P1-1 | 50 subrequest (batch) | ✅ |
+| P1-2 | PAT 30 gün | 📄 dokümante |
+| P1-4 | Anlık arama | ✅ |
+| P1-5 | GPU affiliate altyapısı | ✅ (kod hazır) |
+| P2-1 | Danışmanlık sayfası | ✅ |
+| 3.6 | Cookie secure + timing-safe | ✅ |
+
+**9/11 bulgu kapatıldı.** Kalan 2: Turnstile (hesap) ve PAT (kullanıcı işlemi).

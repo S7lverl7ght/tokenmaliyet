@@ -69,6 +69,16 @@
       {% if errors.get('consent') %}<span class="error-text">{{ errors['consent'] }}</span>{% endif %}
     </div>
 
+    <div class="field mt-4">
+      {# Cloudflare Turnstile: Managed mod, cerezsiz bot korumasi.
+         Site key public; secret key yalnizca sunucuda (TURNSTILE_SECRET). #}
+      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"
+           data-theme="auto" data-language="{{ 'en' if lang == 'en' else 'tr' }}"></div>
+      <noscript>
+        <p class="help-text">Bot koruması için JavaScript gerekir.</p>
+      </noscript>
+    </div>
+
     <p class="mt-4"><button class="btn" type="submit">Uyarı kaydı oluştur</button></p>
     <p class="help mt-3">
       Çift onay kullanıyoruz: kayıttan sonra gönderilen bağlantıyı onaylamadan hiçbir e-posta göndermiyoruz.
@@ -80,6 +90,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
 /* Fiyat uyarisi formu.
    Statik sitede /uyari POST'u yok; kayit /api/uyari (Pages Function + D1) uzerinden

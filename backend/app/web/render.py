@@ -340,6 +340,7 @@ def base_context(db: Session, request, **extra) -> dict:
         "path": request.url.path,
         "request": request,
         "noindex": False,
+        "turnstile_site_key": os.getenv("TURNSTILE_SITE_KEY", "0x4AAAAAAF_TxkQHNciYw5a6"),
         "hreflang_pairs": _hreflang_pairs(request.url.path, lang),
         "cur_usd_url": _cur_url(request, "USD", lang, _path_base),
         "cur_try_url": _cur_url(request, "TRY", lang, _path_base),

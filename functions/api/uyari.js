@@ -9,6 +9,7 @@
  */
 import { sendMail, siteUrl } from "../_lib/mail.js";
 import { escapeHtml } from "../_lib/sanitize.js";
+import { verifyTurnstile } from "../_lib/turnstile.js";
 
 const MAX_EMAIL = 254;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -50,6 +51,17 @@ export async function onRequestPost({ request, env }) {
   if (!["on", "1", "true", "yes"].includes(String(consent))) {
     return json({ ok: false, error: "Aydinlatma metnini onaylamaniz gerekir." }, 400);
   }
+  // Bot korumasi: Turnstile token'i dogrulanmadan kayit ve e-posta YOK.
+  const tsToken = form.get("cf-turnstile-response") || "";
+  const ip = request.headers.get("cf-connecting-ip") || "";
+  const ts = await verifyTurnstile(env, tsToken, ip);
+  if (!ts.ok) {
+    const msg = ts.reason === "not_configured"
+      ? "Bot korumasi yapilandirilmamis. Lutfen daha sonra tekrar deneyin."
+      : "Guvenlik dogrulamasi basarisiz. Sayfayi yenileyip tekrar deneyin.";
+    return json({ ok: false, error: msg, turnstile: ts.reason }, 400);
+  }
+
   if (!env.DB) {
     return json({ ok: false, error: "Veritabani baglantisi yok." }, 503);
   }

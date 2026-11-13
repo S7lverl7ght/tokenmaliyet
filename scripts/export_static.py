@@ -171,9 +171,10 @@ def main() -> int:
         "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
         "  Content-Security-Policy: default-src 'self'; "
         # Cloudflare Web Analytics beacon (cerezsiz, KVKK dostu) izinli olmali.
-        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
+        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-        "connect-src 'self' https://cloudflareinsights.com; "
+        "connect-src 'self' https://cloudflareinsights.com https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         "",
         # MIME: yalnizca JSON uclari json; onay/iptal HTML doner (rapor 5. tur Hata 7).

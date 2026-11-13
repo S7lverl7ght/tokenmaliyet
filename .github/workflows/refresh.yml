@@ -84,15 +84,28 @@ jobs:
             -c "CREATE DATABASE ai_maliyet_test OWNER ai_maliyet_user;" || true
           pytest tests tests_nodb -q
 
+      - name: Supabase'e kalici gecmis yaz
+        # GitHub Actions Postgres'i her calismada sifirlanir; gecmis Supabase'de kalir.
+        continue-on-error: true
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          pip install "psycopg[binary]"
+          python scripts/push_supabase.py
+
       - name: Fiyat degisimlerini bildir
-        # Sadece onaylanmis (cift onay) abonelere e-posta gonderir.
-        # Ucretsiz limit: Resend 100 e-posta/gun.
+        # Degisimler ARTIK Supabase'deki kalici gecmisten okunur.
         continue-on-error: true
         env:
           BILDIR_SECRET: ${{ secrets.BILDIR_SECRET }}
           SITE_URL: https://tokenmaliyet.com
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
-          python scripts/alert_changes.py --out data/alert_changes.json
+          python scripts/alert_changes_supabase.py --out data/alert_changes.json
           COUNT=$(python -c "import json;print(len(json.load(open('data/alert_changes.json'))['changes']))")
           echo "degisim sayisi: $COUNT"
           if [ "$COUNT" != "0" ]; then

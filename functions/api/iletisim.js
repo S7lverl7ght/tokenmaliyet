@@ -15,6 +15,7 @@ import { verifyTurnstile } from "../_lib/turnstile.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TOPICS = {
+  danismanlik: "AI Maliyet Denetimi / Danismanlik",
   duzeltme: "Veri duzeltmesi / hatali fiyat",
   isbirligi: "Is birligi / sponsorluk",
   basin: "Basin",

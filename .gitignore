@@ -15,3 +15,8 @@ _*.txt
 _*.json
 _*.js
 !**/__init__.py
+
+# Test artefaktlari (ekran goruntuleri, gecici json)
+_*.png
+_*.json
+_sn*.json

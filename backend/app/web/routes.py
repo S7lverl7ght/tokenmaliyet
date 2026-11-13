@@ -711,6 +711,7 @@ def privacy_page(request: Request, db: Session = Depends(get_session)):
 
 
 CONTACT_TOPICS = [
+    ("danismanlik", "AI Maliyet Denetimi / Danışmanlık"),
     ("duzeltme", "Veri düzeltmesi / hatalı fiyat"),
     ("isbirligi", "İş birliği / sponsorluk"),
     ("basin", "Basın"),
@@ -737,7 +738,10 @@ def contact_page(request: Request, db: Session = Depends(get_session)):
     Asil gonderim /api/iletisim (Cloudflare Function -> D1 + Resend).
     Buradaki POST yalnizca JS kapaliysa devreye giren yedektir.
     """
-    return TEMPLATES.TemplateResponse(request, "iletisim.html", _contact_ctx(db, request))
+    topic = (request.query_params.get("topic") or "").strip()
+    valid = dict(CONTACT_TOPICS)
+    form = {"name": "", "email": "", "topic": topic if topic in valid else "duzeltme", "message": ""}
+    return TEMPLATES.TemplateResponse(request, "iletisim.html", _contact_ctx(db, request, form=form))
 
 
 @router.post("/iletisim", response_class=HTMLResponse, include_in_schema=False)

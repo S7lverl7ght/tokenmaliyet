@@ -621,3 +621,7 @@ details.disclosure .body{padding:0 var(--sp-4) var(--sp-4); font-size:var(--fs-s
 .picker-item{padding:7px 10px; border-radius:6px; cursor:pointer; font-size:var(--fs-sm)}
 .picker-item:hover,.picker-item.is-active{background:var(--primary-soft); color:var(--primary)}
 .picker-empty{padding:8px 10px; color:var(--muted); font-size:var(--fs-sm)}
+
+/* Metin icinde dugme gorunumu (or. "formu yeniden acin") */
+.link-btn{background:none;border:0;padding:0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline}
+.link-btn:hover{color:var(--accent-strong,var(--accent))}

@@ -15,6 +15,13 @@
 
   <div class="notice notice-info mb-4" id="formDurum" role="status" aria-live="polite" hidden></div>
 
+  <section class="surface surface-pad" id="tesekkur" role="status" aria-live="polite" hidden>
+    <h2 style="font-size:var(--fs-h3)">Teşekkürler, mesajınız alındı</h2>
+    <p class="mt-2">Mesajınız ekibe iletildi. Genellikle 2 iş günü içinde dönüş yapıyoruz.</p>
+    <p class="mt-3"><a class="btn" href="/fiyatlar">Fiyat listesine göz atın</a></p>
+    <p class="help mt-3">Yeni bir mesaj göndermek için <button class="link-btn" type="button" id="yeniMesaj">formu yeniden açın</button>.</p>
+  </section>
+
   <form class="surface surface-pad" method="post" action="/iletisim" novalidate
         id="iletisimForm" data-api="/api/iletisim">
     <div class="field">
@@ -125,8 +132,10 @@
       .then(function(res){
         var j = res.body || {};
         if (res.status === 200 && j.ok) {
-          show("ok", "Mesajınız iletildi. En kısa sürede dönüş yapacağız.");
           form.reset();
+          form.hidden = true;
+          var card = document.getElementById("tesekkur");
+          if (card) { card.hidden = false; card.scrollIntoView({block: "center"}); }
           if (window.turnstile) { try { window.turnstile.reset(); } catch (err) {} }
         } else {
           var msg = j.error || "Gönderilemedi. Lütfen tekrar deneyin.";

@@ -12,6 +12,17 @@
 import { sendMailBatch, siteUrl } from "../_lib/mail.js";
 import { escapeHtml, headerSafe } from "../_lib/sanitize.js";
 
+/** Sabit zamanli string karsilastirma (uzunluk farki da sizdirmaz). */
+async function timingSafeEqual(a, b) {
+  const enc = new TextEncoder();
+  const ab = enc.encode(String(a || ""));
+  const bb = enc.encode(String(b || ""));
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -24,7 +35,8 @@ function json(data, status = 200) {
 
 export async function onRequestPost({ request, env }) {
   const secret = request.headers.get("x-bildir-secret") || "";
-  if (!env.BILDIR_SECRET || secret !== env.BILDIR_SECRET) {
+  // Sabit zamanli karsilastirma: sir sizmasini onler (rapor 5. tur 3.6).
+  if (!env.BILDIR_SECRET || !(await timingSafeEqual(secret, env.BILDIR_SECRET))) {
     return json({ ok: false, error: "Yetkisiz." }, 401);
   }
   if (!env.DB) return json({ ok: false, error: "DB yok." }, 503);

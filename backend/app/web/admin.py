@@ -111,7 +111,12 @@ def admin_login_post(request: Request, token: str = Form(...), db: Session = Dep
             status_code=401,
         )
     response = RedirectResponse("/admin/kuyruk", status_code=303)
-    response.set_cookie(COOKIE, _cookie_value(expected), httponly=True, samesite="strict", max_age=8 * 3600)
+    # secure: uretimde (HTTPS) zorunlu; yerel http gelistirmede kapali.
+    _secure = os.getenv("APP_ENV", "dev") == "production"
+    response.set_cookie(
+        COOKIE, _cookie_value(expected),
+        httponly=True, samesite="strict", secure=_secure, max_age=8 * 3600,
+    )
     return response
 
 

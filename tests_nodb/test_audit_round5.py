@@ -160,3 +160,17 @@ def test_consulting_route_and_nav():
     b = read(ROOT / "backend" / "app" / "web" / "templates" / "base.html")
     assert '"/danismanlik"' in r
     assert 'href="/danismanlik"' in b
+
+
+# ---------- 3.6: guvenlik sertlestirme ----------
+
+def test_cookie_secure_flag():
+    s = read(ROOT / "backend" / "app" / "web" / "admin.py")
+    assert "secure=_secure" in s, "cookie secure bayragi yok"
+    assert 'APP_ENV", "dev") == "production"' in s, "uretim kosulu yok"
+
+
+def test_timing_safe_secret_compare():
+    s = read(ROOT / "functions" / "api" / "bildir.js")
+    assert "timingSafeEqual" in s, "sabit zamanli karsilastirma yok"
+    assert "secret !== env.BILDIR_SECRET" not in s, "sizan karsilastirma kalmis"

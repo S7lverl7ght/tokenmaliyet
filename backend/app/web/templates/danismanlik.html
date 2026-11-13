@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% set nav = 'danismanlik' %}
+{% block title %}AI Maliyet Denetimi — LLM faturanızı düşürün | {{ site_name }}{% endblock %}
+{% block description %}Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Tasarruf yoksa ücret yok.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <h1>{{ 'AI cost audit' if lang == 'en' else 'AI maliyet denetimi' }}</h1>
+    <p class="lede">
+      {{ 'We analyse your monthly LLM bill and reduce it with prompt caching, model routing and Turkish token optimisation. No saving, no fee.' if lang == 'en' else 'Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Tasarruf yoksa ücret yok.' }}
+    </p>
+  </header>
+
+  <div class="grid-2 mt-5" style="gap:var(--sp-5)">
+    <section class="surface surface-pad">
+      <h2 style="font-size:var(--fs-h3)">{{ 'What we check' if lang == 'en' else 'Neye bakıyoruz?' }}</h2>
+      <ul class="prose mt-3" style="padding-left:var(--sp-5)">
+        <li>{{ 'Prompt caching: 50–90% off cached input on Anthropic and OpenAI.' if lang == 'en' else 'Prompt caching: Anthropic ve OpenAI\'da önbelleğe alınan girdide %50–90 indirim.' }}</li>
+        <li>{{ 'Model routing: send simple tasks to cheaper models.' if lang == 'en' else 'Model yönlendirme: basit işleri daha ucuz modellere gönderin.' }}</li>
+        <li>{{ 'Turkish token cost: Turkish text uses ~2.29× more tokens.' if lang == 'en' else 'Türkçe token maliyeti: Türkçe metin ~2,29× daha fazla token harcıyor.' }}</li>
+        <li>{{ 'Batch API: 50% off for time-insensitive jobs.' if lang == 'en' else 'Batch API: zamana duyarsız işlerde %50 indirim.' }}</li>
+        <li>{{ 'Output length control and retry logic waste.' if lang == 'en' else 'Çıktı uzunluğu kontrolü ve gereksiz tekrar denemeleri.' }}</li>
+      </ul>
+    </section>
+
+    <section class="surface surface-pad">
+      <h2 style="font-size:var(--fs-h3)">{{ 'How it works' if lang == 'en' else 'Nasıl işliyor?' }}</h2>
+      <ol class="prose mt-3" style="padding-left:var(--sp-5)">
+        <li>{{ 'You share your provider invoices (CSV or screenshots).' if lang == 'en' else 'Sağlayıcı faturalarınızı paylaşıyorsunuz (CSV veya ekran görüntüsü).' }}</li>
+        <li>{{ 'We model your traffic and find the savings.' if lang == 'en' else 'Trafiğinizi modelleyip tasarruf kalemlerini çıkarıyoruz.' }}</li>
+        <li>{{ 'You get a written report with exact changes.' if lang == 'en' else 'Uygulanabilir değişiklikleri içeren yazılı rapor alıyorsunuz.' }}</li>
+        <li>{{ 'Fee is one month of the verified saving.' if lang == 'en' else 'Ücret, doğrulanan tasarrufun bir aylık bedeli.' }}</li>
+      </ol>
+    </section>
+  </div>
+
+  <section class="mt-5 surface surface-pad">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Start with a free estimate' if lang == 'en' else 'Ücretsiz hesapla başlayın' }}</h2>
+    <p class="mt-2 text-sm text-muted">
+      {{ 'Run your numbers on the public calculator first — it uses the same data and formula.' if lang == 'en' else 'Önce herkese açık hesaplayıcıda kendi rakamlarınızı görün — aynı veri ve formülü kullanıyor.' }}
+    </p>
+    <p class="mt-3">
+      <a class="btn" href="/hesaplayici">{{ 'Open the calculator' if lang == 'en' else 'Hesaplayıcıyı aç' }}</a>
+      <a class="btn btn-secondary" href="/iletisim" style="margin-left:var(--sp-2)">{{ 'Contact' if lang == 'en' else 'İletişim' }}</a>
+    </p>
+  </section>
+</div>
+{% endblock %}

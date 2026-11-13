@@ -72,6 +72,7 @@
       <a href="/degisiklikler" {% if nav == 'degisiklikler' %}aria-current="page"{% endif %}>{{ t('nav.changes') }}</a>
       <a href="/rehber" {% if nav == 'rehber' %}aria-current="page"{% endif %}>{{ t('nav.guides') }}</a>
       <a href="/hakkinda" {% if nav == 'hakkinda' %}aria-current="page"{% endif %}>{{ t('nav.about') }}</a>
+      <a href="/danismanlik" {% if nav == 'danismanlik' %}aria-current="page"{% endif %}>{{ 'Cost audit' if lang == 'en' else 'Maliyet denetimi' }}</a>
     </nav>
     <div class="header-tools">
       <form method="get" action="{{ path }}" class="pref-form" aria-label="{{ t('pref.label') }}">

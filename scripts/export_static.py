@@ -28,6 +28,7 @@ PAGES = [
     ("/degisiklikler", "degisiklikler"),
     ("/rehber", "rehber"),
     ("/hakkinda", "hakkinda"),
+    ("/danismanlik", "danismanlik"),
     ("/gizlilik", "gizlilik"),
     ("/iletisim", "iletisim"),
     ("/duzeltmeler", "duzeltmeler"),
@@ -262,6 +263,33 @@ def main() -> int:
         print(f"[{lang}/{cur}] /{prefix}")
 
     print(f"  -> {variant_written} varyant sayfasi uretildi")
+
+    # Anlik arama icin tum modellerin hafif indeksi (rapor 5. tur P1-4).
+    # Statik sayfada yalnizca 50 satir var; arama JS'i bu JSON'dan filtreler.
+    import json as _json
+
+    from app.db import SessionLocal as _SL3
+    from app.web import queries as _q2
+    from app.web.render import price_value as _pv
+
+    with _SL3() as _db:
+        _rows = [r for r in _q2.price_rows(_db) if r.has_tokens and not r.is_alias]
+        index = []
+        for r in _rows:
+            ip = _pv(r.dim("input"))[0]
+            op = _pv(r.dim("output"))[0]
+            index.append({
+                "n": r.name,
+                "p": r.provider_slug,
+                "c": r.channel,
+                "s": r.slug,
+                "i": ip,
+                "o": op,
+            })
+    (DIST / "models-index.json").write_text(
+        _json.dumps(index, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
+    print(f"[api] models-index.json -> {len(index)} model")
 
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)

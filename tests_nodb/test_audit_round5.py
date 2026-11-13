@@ -112,3 +112,51 @@ def test_batch_mail_used():
     assert "sendMailBatch(env, slice)" in b
     assert "await sendMail(" not in b, "tek tek gonderim kalmis"
     assert "const CHUNK = 100" in b
+
+
+# ---------- P1-4: anlik arama ----------
+
+def test_models_index_generated():
+    s = read(ROOT / "scripts" / "export_static.py")
+    assert "models-index.json" in s
+    assert '"n": r.name' in s
+
+
+def test_instant_search_panel():
+    s = read(ROOT / "backend" / "app" / "web" / "templates" / "prices.html")
+    assert 'id="instant-search"' in s
+    assert 'id="live-q"' in s
+    assert "models-index.json" in s
+    assert "toLocaleLowerCase" in s, "Turkce normalizasyonu yok"
+
+
+# ---------- P1-5: affiliate ----------
+
+def test_affiliate_is_config_driven():
+    s = read(ROOT / "backend" / "app" / "web" / "affiliate.py")
+    assert "AFFILIATE_" in s
+    assert "def with_affiliate" in s
+    # uydurma kod olmamali: kod yoksa URL aynen doner
+    assert "if not param or not url:" in s
+
+
+def test_gpu_uses_affiliate_helper():
+    s = read(ROOT / "backend" / "app" / "web" / "routes.py")
+    assert "with_affiliate(gp.pricing_url" in s
+
+
+# ---------- P2-1: danismanlik ----------
+
+def test_consulting_page_exists():
+    p = ROOT / "backend" / "app" / "web" / "templates" / "danismanlik.html"
+    assert p.exists()
+    s = p.read_text(encoding="utf-8")
+    assert "caching" in s.lower()
+    assert "hesaplayici" in s, "hesaplayiciya baglanti yok"
+
+
+def test_consulting_route_and_nav():
+    r = read(ROOT / "backend" / "app" / "web" / "routes.py")
+    b = read(ROOT / "backend" / "app" / "web" / "templates" / "base.html")
+    assert '"/danismanlik"' in r
+    assert 'href="/danismanlik"' in b

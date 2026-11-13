@@ -16,6 +16,7 @@ from ..db import get_session
 from . import default_models as web_defaults
 from . import queries
 from ..collectors import COLLECTORS
+from .affiliate import with_affiliate
 from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, configure,
                      price_value, turkce_multiplier)
 
@@ -583,7 +584,7 @@ def gpu_page(
         entry["offers"].append({
             "provider": gp.name, "provider_slug": gp.slug,
             "gpu_model": price.gpu_model, "price": float(price.price_per_hour),
-            "kind": price.price_kind, "vram": price.vram_gb, "url": gp.pricing_url,
+            "kind": price.price_kind, "vram": price.vram_gb, "url": with_affiliate(gp.pricing_url, gp.slug),
             "min_lease": float(price.min_lease_hours) if price.min_lease_hours else None,
             "observed": price.observed_at,
         })
@@ -597,7 +598,7 @@ def gpu_page(
             entry["vram"] = price.vram_gb
 
         pe = prov_map.setdefault(gp.slug, {
-            "name": gp.name, "slug": gp.slug, "url": gp.pricing_url,
+            "name": gp.name, "slug": gp.slug, "url": with_affiliate(gp.pricing_url, gp.slug),
             "kind": gp.kind, "count": 0, "min": None, "max": None,
         })
         pe["count"] += 1
@@ -1067,7 +1068,7 @@ def robots():
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap(db: Session = Depends(get_session)) -> Response:
     from .content.guides import GUIDES
-    urls = ["/", "/fiyatlar", "/karsilastir", "/token-sayaci",
+    urls = ["/", "/fiyatlar", "/karsilastir", "/token-sayaci", "/danismanlik",
             "/gpu-maliyetleri", "/rehber", "/hakkinda",
             "/gizlilik", "/iletisim", "/duzeltmeler",
             "/turkce-token-maliyeti", "/degisiklikler"]
@@ -1101,6 +1102,14 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
 
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")
+
+
+@router.get("/danismanlik", response_class=HTMLResponse, include_in_schema=False)
+def consulting_page(request: Request, db: Session = Depends(get_session)):
+    """B2B maliyet denetimi hizmet sayfasi (rapor 5. tur P2-1)."""
+    ctx = base_context(db, request, nav="danismanlik")
+    ctx["canonical"] = SITE_URL + "/danismanlik"
+    return TEMPLATES.TemplateResponse(request, "danismanlik.html", ctx)
 
 
 @router.get("/api/v1/model-options", include_in_schema=False)

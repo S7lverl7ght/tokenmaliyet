@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Statik varlik surumu: tarayici onbellegini guvenle gecersiz kilmak icin.
-ASSET_VERSION = "20261112l"
+ASSET_VERSION = "20261113a"
 
 SITE_NAME = "TokenMaliyet"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")

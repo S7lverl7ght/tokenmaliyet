@@ -175,8 +175,25 @@ def main() -> int:
         "connect-src 'self' https://cloudflareinsights.com; "
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         "",
-        "/api/*",
+        # MIME: yalnizca JSON uclari json; onay/iptal HTML doner (rapor 5. tur Hata 7).
+        "/api/v1/*",
         "  Content-Type: application/json; charset=utf-8",
+        "  X-Robots-Tag: noindex",
+        "",
+        "/api/uyari",
+        "  Content-Type: application/json; charset=utf-8",
+        "  X-Robots-Tag: noindex",
+        "",
+        "/api/bildir",
+        "  Content-Type: application/json; charset=utf-8",
+        "  X-Robots-Tag: noindex",
+        "",
+        "/api/onayla",
+        "  Content-Type: text/html; charset=utf-8",
+        "  X-Robots-Tag: noindex",
+        "",
+        "/api/iptal",
+        "  Content-Type: text/html; charset=utf-8",
         "  X-Robots-Tag: noindex",
         "",
     ])
@@ -283,15 +300,20 @@ def main() -> int:
     </main></body></html>"""
     (DIST / "404.html").write_text(notfound, encoding="utf-8")
 
-    # API ucu statik sitede YOK. Pages uzantiyi .html sanmasin diye
-    # uzantisiz dosya + _headers ile JSON content-type veriyoruz.
+    # API: /api/v1/model-options GERCEK JSON olarak uretilir.
+    # Onceki hata (rapor 5. tur Hata 2): buraya sabit hata mesaji yaziliyordu;
+    # token sayaci list.forEach() cagirinca TypeError aliyor ve fiyatlar
+    # sonsuza kadar "yukleniyor" kaliyordu.
     api_dir = DIST / "api" / "v1"
     api_dir.mkdir(parents=True, exist_ok=True)
-    (api_dir / "model-options").write_text(
-        '{"error":"Statik yayinda API kapali",'
-        '"detail":"Veri icin /fiyatlar/ sayfasini kullanin."}',
-        encoding="utf-8",
-    )
+    resp_options = client.get("/api/v1/model-options")
+    if resp_options.status_code == 200:
+        (api_dir / "model-options").write_bytes(resp_options.content)
+        print(f"[api] model-options -> {len(resp_options.content)} bayt JSON")
+    else:
+        (api_dir / "model-options").write_text("[]", encoding="utf-8")
+        print(f"[api] model-options URETILEMEDI ({resp_options.status_code}), bos liste yazildi")
+
     print(f"\nSTATIK EXPORT TAMAM: {written} sayfa -> {DIST}")
     return 0
 

@@ -9,7 +9,8 @@
  *   - Sadece confirmed=1 ve unsubscribed_at IS NULL kayitlara gonderilir.
  *   - Esik (threshold_pct) ve yon (direction) kontrol edilir.
  */
-import { sendMail, siteUrl } from "../_lib/mail.js";
+import { sendMailBatch, siteUrl } from "../_lib/mail.js";
+import { escapeHtml, headerSafe } from "../_lib/sanitize.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -41,6 +42,8 @@ export async function onRequestPost({ request, env }) {
   let sent = 0;
   let skipped = 0;
   const errors = [];
+  // Toplu gonderim kuyrugu: her aboneye ayri fetch YAPILMAZ (50 subrequest siniri).
+  const mails = [];
 
   for (const ch of changes) {
     const target = String(ch.target || "all").slice(0, 200);
@@ -72,9 +75,9 @@ export async function onRequestPost({ request, env }) {
 
       const unsub = site + "/api/iptal?t=" + row.unsubscribe_token;
       const arrow = pct < 0 ? "dustu" : "yukseldi";
-      const mail = await sendMail(env, {
+      mails.push({
         to: row.email,
-        subject: "TokenMaliyet: " + label + " fiyati %" + Math.abs(pct).toFixed(1) + " " + arrow,
+        subject: "TokenMaliyet: " + headerSafe(label, 80) + " fiyati %" + Math.abs(pct).toFixed(1) + " " + arrow,
         text:
           label + " fiyati degisti.\n\n" +
           "Once: " + oldP + " USD / 1M token\n" +
@@ -84,23 +87,35 @@ export async function onRequestPost({ request, env }) {
           "Bu uyariyi iptal etmek icin: " + unsub,
         html:
           '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.6">' +
-          "<p><strong>" + label + "</strong> fiyati degisti.</p>" +
+          "<p><strong>" + escapeHtml(label) + "</strong> fiyati degisti.</p>" +
           "<p>Once: " + oldP + " USD/1M<br>Simdi: <strong>" + newP + " USD/1M</strong><br>" +
           "Degisim: %" + pct.toFixed(1) + "</p>" +
           '<p><a href="' + site + '/fiyatlar">Fiyat listesine git</a></p>' +
           '<p style="color:#64748b;font-size:13px"><a href="' + unsub + '">Uyariyi iptal et</a></p>' +
           "</div>",
+        rowId: row.id,
+        newPrice: newP,
       });
-      if (mail.ok) {
-        sent++;
+    }
+  }
+
+  // Tek HTTP istegiyle, 100'luk parcalar halinde gonder (Resend batch).
+  const CHUNK = 100;
+  for (let i = 0; i < mails.length; i += CHUNK) {
+    const slice = mails.slice(i, i + CHUNK);
+    const res = await sendMailBatch(env, slice);
+    if (res.ok) {
+      sent += slice.length;
+      const now = new Date().toISOString();
+      for (const m of slice) {
         try {
           await env.DB.prepare(
             "UPDATE price_alerts SET last_notified_at = ?, last_price = ? WHERE id = ?"
-          ).bind(new Date().toISOString(), newP, row.id).run();
+          ).bind(now, m.newPrice, m.rowId).run();
         } catch { /* sayim tutmazsa sorun degil */ }
-      } else {
-        errors.push(mail.reason || "mail_failed");
       }
+    } else {
+      errors.push(res.reason || "mail_failed");
     }
   }
 

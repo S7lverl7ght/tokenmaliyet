@@ -243,12 +243,15 @@ def _model_options(rows: list[queries.PriceRow], direct_only: bool = False) -> l
             label += f" ({r.variant})"
         pin = price_value(r.dim("input"))[0]
         pout = price_value(r.dim("output"))[0]
+        # Onbellek fiyati: istemci tarafli hesap (calc_client.js) bunu kullanir.
+        pcache = price_value(r.dim("cache_read"))[0]
         options.append({
             "value": f"{r.provider_slug}|{r.slug}|{r.variant or ''}",
             "label": label,
             "group": r.channel,
             "input_price": pin,
             "output_price": pout,
+            "cache_price": pcache,
         })
     return options
 

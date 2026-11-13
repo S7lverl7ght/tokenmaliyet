@@ -106,7 +106,9 @@
   // Fiyat verisi: sunucudan gelen title/option verisi yerine JSON endpoint'ten tam liste
   function loadPrices(){
     fetch('/api/v1/model-options').then(function(r){return r.ok?r.json():null;}).then(function(list){
-      if(!list) return;
+      // Savunma: yanit dizi degilse (statik stub veya hata) sessizce cik,
+    // konsola TypeError dusurme (rapor 5. tur Hata 2).
+    if(!Array.isArray(list)) return;
       list.forEach(function(o){ prices[o.value]={in:o.input_price, out:o.output_price, label:o.label}; });
       // Sunucudan gelen secenekleri de fiyatla eslestir (JS kapaliysa zaten calismaz)
       recalc();

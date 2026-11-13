@@ -2,7 +2,7 @@
  * GET /api/onayla?t=<token> — cift onay.
  * Token dogruysa confirmed=1 yapilir ve basari sayfasi doner.
  */
-import { siteUrl } from "../_lib/mail.js";
+import { escapeHtml } from "../_lib/sanitize.js";
 
 function page(title, body, ok = true) {
   return new Response(
@@ -41,7 +41,7 @@ export async function onRequestGet({ request, env }) {
 
     return page(
       "Kaydiniz onaylandi",
-      "<p><strong>" + row.target_label + "</strong> icin fiyat uyariniz etkin. " +
+      "<p><strong>" + escapeHtml(row.target_label) + "</strong> icin fiyat uyariniz etkin. " +
       "Fiyat degistiginde e-posta ile haber verecegiz.</p>"
     );
   } catch {

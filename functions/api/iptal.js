@@ -1,6 +1,8 @@
 /**
  * GET /api/iptal?t=<token> — abonelikten cikma (tek tik, KVKK).
  */
+import { escapeHtml } from "../_lib/sanitize.js";
+
 function page(title, body, ok = true) {
   return new Response(
     '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">' +
@@ -38,7 +40,7 @@ export async function onRequestGet({ request, env }) {
 
     return page(
       "Uyariniz iptal edildi",
-      "<p><strong>" + row.target_label + "</strong> icin fiyat uyarisi kaldirildi. " +
+      "<p><strong>" + escapeHtml(row.target_label) + "</strong> icin fiyat uyarisi kaldirildi. " +
       "Istediginiz zaman yeniden kaydolabilirsiniz.</p>"
     );
   } catch {

@@ -101,35 +101,36 @@
   </form>
 
   {% if result %}
-  <section class="mt-4" aria-labelledby="sonuc" id="sonuc-alani">
+  <section class="mt-4" aria-labelledby="sonuc" id="sonuc-alani"
+           data-fx="{{ fx_rate or '' }}" data-tr-mult="{{ turkce.ratio or 2.29 }}">
     <h2 id="sonuc" class="sr-only">{{ 'Result' if lang == 'en' else 'Sonuç' }}</h2>
     <div class="result-grid" role="status" aria-live="polite">
       <div class="result">
-        <div class="k">{{ t('calc.current') }} · {{ result.from_name }}</div>
-        <div class="v">{{ result.from_usd|tl(2) }} USD</div>
-        <div class="n">≈ {{ result.from_try|tl(0) }} ₺ / ay</div>
+        <div class="k">{{ t('calc.current') }} · <span data-role="from-name">{{ result.from_name }}</span></div>
+        <div class="v"><span data-role="from-usd">{{ result.from_usd|tl(2) }}</span> USD</div>
+        <div class="n">≈ <span data-role="from-try">{{ result.from_try|tl(0) }}</span> ₺ / ay</div>
       </div>
       <div class="result">
-        <div class="k">{{ t('calc.alternative') }} · {{ result.to_name }}</div>
-        <div class="v">{{ result.to_usd|tl(2) }} USD</div>
-        <div class="n">≈ {{ result.to_try|tl(0) }} ₺ / ay</div>
+        <div class="k">{{ t('calc.alternative') }} · <span data-role="to-name">{{ result.to_name }}</span></div>
+        <div class="v"><span data-role="to-usd">{{ result.to_usd|tl(2) }}</span> USD</div>
+        <div class="n">≈ <span data-role="to-try">{{ result.to_try|tl(0) }}</span> ₺ / ay</div>
       </div>
-      <div class="result"><div class="k">{{ t('calc.monthly_diff') }}</div><div class="v">{{ result.diff_usd|tl(2) }} USD</div><div class="n">≈ {{ result.diff_try|tl(0) }} ₺</div></div>
-      <div class="result"><div class="k">{{ t('calc.yearly_diff') }}</div><div class="v">{{ result.year_diff_try|tl(0) }} ₺</div><div class="n">{{ t('calc.year_months') }}</div></div>
+      <div class="result"><div class="k">{{ t('calc.monthly_diff') }}</div><div class="v"><span data-role="diff-usd">{{ result.diff_usd|tl(2) }}</span> USD</div><div class="n">≈ <span data-role="diff-try">{{ result.diff_try|tl(0) }}</span> ₺</div></div>
+      <div class="result"><div class="k">{{ t('calc.yearly_diff') }}</div><div class="v"><span data-role="year-try">{{ result.year_diff_try|tl(0) }}</span> ₺</div><div class="n">{{ t('calc.year_months') }}</div></div>
       {% if result.saving %}
       <div class="result result-save">
         <div class="k">{{ t('calc.saving') }}</div>
-        <div class="v">%{{ result.pct|tl(1) }}</div>
+        <div class="v" data-role="pct">%{{ result.pct|tl(1) }}</div>
         <div class="n">{{ t('calc.cheaper') }}</div>
       </div>
       {% elif result.pct is not none and result.pct < 0 %}
       <div class="result result-cost">
         <div class="k">{{ t('calc.cost_increase') }}</div>
-        <div class="v">%{{ (-result.pct)|tl(1) }}</div>
+        <div class="v" data-role="pct">%{{ (-result.pct)|tl(1) }}</div>
         <div class="n">{{ t('calc.pricier') }}</div>
       </div>
       {% else %}
-      <div class="result"><div class="k">Fark</div><div class="v">%0,0</div><div class="n">{{ t('calc.same') }}</div></div>
+      <div class="result"><div class="k">Fark</div><div class="v" data-role="pct">%0,0</div><div class="n">{{ t('calc.same') }}</div></div>
       {% endif %}
     </div>
     {% if result.tr_mult and result.tr_mult > 1 %}
@@ -353,6 +354,120 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
     if(el) el.addEventListener("input", updateSummary);
   });
   updateSummary();
+
+  /* ---------- Istemci tarafli hesap motoru ----------
+     Neden: statik sitede sunucu yok. Form gonderilince sayfa query string ile
+     yeniden yukleniyordu ama sonuc kartlari DERLEME ANINDAKI degerlerde kaliyordu
+     (rapor 5. tur Hata 1). Artik secim degisince kartlar aninda guncelleniyor.
+
+     Formul, backend/app/web/calc.py ile AYNIDIR:
+       eff = tokens * carpan
+       girdi = eff/1M * input_price (+ onbellek karisimi)
+       cikti = eff/1M * output_price
+  */
+  var OPTIONS = window.__MODEL_OPTIONS__ || [];
+  var CALC = {
+    fx: 0,
+    trMult: 2.29,
+    fmt: function (n, digits) {
+      if (!isFinite(n)) return "0";
+      return n.toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    },
+    num: function (el) {
+      return Number(String(el && el.value || "").replace(/[^\d]/g, "")) || 0;
+    },
+    price: function (opt) {
+      return {
+        input: Number(opt.input_price || 0),
+        output: Number(opt.output_price || 0),
+        cache: Number(opt.cache_price || 0),
+      };
+    },
+    cost: function (opt, inTok, outTok, mult, cacheShare) {
+      var p = this.price(opt);
+      var effIn = inTok * mult;
+      var effOut = outTok * mult;
+      var share = Math.max(0, Math.min(0.95, cacheShare || 0));
+      var inUsd, cacheUsd;
+      if (share > 0 && p.cache > 0) {
+        inUsd = (effIn / 1e6) * (p.input * (1 - share));
+        cacheUsd = (effIn / 1e6) * (p.cache * share);
+      } else {
+        inUsd = (effIn / 1e6) * p.input;
+        cacheUsd = 0;
+      }
+      var outUsd = (effOut / 1e6) * p.output;
+      return { total: inUsd + outUsd + cacheUsd, inUsd: inUsd, outUsd: outUsd };
+    },
+  };
+
+  function setText(role, text) {
+    var el = document.querySelector('[data-role="' + role + '"]');
+    if (el) el.textContent = text;
+  }
+
+  function recalc() {
+    var section = document.getElementById("sonuc-alani");
+    if (!section || !OPTIONS.length) return;
+
+    var fx = Number(section.dataset.fx) || CALC.fx || 0;
+    var trMult = Number(section.dataset.trMult) || CALC.trMult;
+
+    var fromKey = document.getElementById("from").value;
+    var toKey = document.getElementById("to").value;
+    if (!fromKey || !toKey) return;
+
+    var fromOpt = OPTIONS.find(function (o) { return o.value === fromKey; });
+    var toOpt = OPTIONS.find(function (o) { return o.value === toKey; });
+    if (!fromOpt || !toOpt) return;
+
+    var inTok = CALC.num(document.getElementById("inTok"));
+    var outTok = CALC.num(document.getElementById("outTok"));
+    var dilEl = document.getElementById("dil");
+    var mult = (dilEl && dilEl.value === "tr") ? trMult : 1.0;
+    var cacheEl = document.getElementById("cache");
+    var cacheShare = 0;
+    if (cacheEl) {
+      var cv = parseFloat(String(cacheEl.value || "0").replace(/[^\d.,]/g, "").replace(",", "."));
+      if (isFinite(cv)) cacheShare = Math.max(0, Math.min(95, cv)) / 100;
+    }
+
+    var a = CALC.cost(fromOpt, inTok, outTok, mult, cacheShare);
+    var b = CALC.cost(toOpt, inTok, outTok, mult, cacheShare);
+    var diff = a.total - b.total;
+    var pct = a.total > 0 ? (diff / a.total) * 100 : 0;
+
+    setText("from-name", fromOpt.label);
+    setText("from-usd", CALC.fmt(a.total, 2));
+    setText("from-try", fx ? CALC.fmt(a.total * fx, 0) : "—");
+    setText("to-name", toOpt.label);
+    setText("to-usd", CALC.fmt(b.total, 2));
+    setText("to-try", fx ? CALC.fmt(b.total * fx, 0) : "—");
+    setText("diff-usd", CALC.fmt(diff, 2));
+    setText("diff-try", fx ? CALC.fmt(diff * fx, 0) : "—");
+    setText("year-try", fx ? CALC.fmt(diff * fx * 12, 0) : "—");
+
+    var pctEl = document.querySelector('[data-role="pct"]');
+    if (pctEl) pctEl.textContent = "%" + CALC.fmt(Math.abs(pct), 1);
+  }
+
+  // Secim/token/onbellek degisimlerini dinle
+  ["from", "to", "inTok", "outTok", "dil", "cache"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("change", recalc);
+    el.addEventListener("input", recalc);
+  });
+
+  // Model picker secimi gizli input'u gunceller -> change olayi tetiklenir
+  document.querySelectorAll(".picker-input").forEach(function (inp) {
+    inp.addEventListener("change", recalc);
+  });
+
+  window.recalcClient = recalc;
+
+  // Ilk yuklemede kartlari sunucu degerleriyle senkronla
+  if (document.getElementById('sonuc-alani')) { recalc(); }
 })();
 </script>
 {% endblock %}

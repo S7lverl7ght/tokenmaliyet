@@ -8,6 +8,7 @@
  *   4. Fiyat degisince /api/bildir -> sadece confirmed kayitlara e-posta
  */
 import { sendMail, siteUrl } from "../_lib/mail.js";
+import { escapeHtml } from "../_lib/sanitize.js";
 
 const MAX_EMAIL = 254;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -98,7 +99,7 @@ export async function onRequestPost({ request, env }) {
     html:
       '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;line-height:1.6">' +
       '<h2 style="font-size:18px;margin:0 0 12px">Fiyat uyarisi kaydinizi onaylayin</h2>' +
-      "<p><strong>" + targetLabel + "</strong> icin fiyat uyarisi olusturuldu.</p>" +
+      "<p><strong>" + escapeHtml(targetLabel) + "</strong> icin fiyat uyarisi olusturuldu.</p>" +
       "<p>Bildirim esigi: <strong>%" + threshold + "</strong> (" + dirText + ")</p>" +
       '<p style="margin:24px 0"><a href="' + confirmUrl + '" ' +
       'style="background:#4F46E5;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">' +

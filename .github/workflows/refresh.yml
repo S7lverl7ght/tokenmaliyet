@@ -37,7 +37,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/backend
       SITE_URL: ${{ vars.SITE_URL || 'https://tokenmaliyet.com' }}
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
-      CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL || 'iletisim@tokenmaliyet.com' }}
+      CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL || 'omerktn55@gmail.com' }}
 
     steps:
       - uses: actions/checkout@v4

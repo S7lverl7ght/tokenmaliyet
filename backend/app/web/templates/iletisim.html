@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% set nav = 'iletisim' %}
+{% block title %}İletişim — veri düzeltmesi, iş birliği, destek | {{ site_name }}{% endblock %}
+{% block description %}Hatalı fiyat bildirimi, veri düzeltmesi, iş birliği ve teknik destek için iletişim formu. Mesajınız doğrudan ekibe ulaşır.{% endblock %}
+
+{% block content %}
+<div class="container container-narrow">
+  <header class="page-head">
+    <h1>İletişim</h1>
+    <p class="lede">
+      Hatalı fiyat bildirimi, veri düzeltmesi, iş birliği veya teknik bir sorun için
+      aşağıdaki formu kullanın. Mesajınız doğrudan ekibe ulaşır.
+    </p>
+  </header>
+
+  <div class="notice notice-info mb-4" id="formDurum" role="status" aria-live="polite" hidden></div>
+
+  <form class="surface surface-pad" method="post" action="/iletisim" novalidate
+        id="iletisimForm" data-api="/api/iletisim">
+    <div class="field">
+      <label for="name">Adınız</label>
+      <input id="name" name="name" type="text" autocomplete="name" required maxlength="80"
+             value="{{ form.name }}" {% if errors.get('name') %}aria-invalid="true"{% endif %}
+             aria-describedby="name-help">
+      <span class="help-text" id="name-help">Size nasıl hitap edelim?</span>
+      {% if errors.get('name') %}<span class="error-text">{{ errors['name'] }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="email">E-posta adresiniz</label>
+      <input id="email" name="email" type="email" autocomplete="email" required maxlength="160"
+             value="{{ form.email }}" {% if errors.get('email') %}aria-invalid="true"{% endif %}
+             aria-describedby="email-help">
+      <span class="help-text" id="email-help">Yanıtı bu adrese göndereceğiz. Üçüncü taraflarla paylaşılmaz.</span>
+      {% if errors.get('email') %}<span class="error-text">{{ errors['email'] }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="topic">Konu</label>
+      <select id="topic" name="topic" required>
+        {% for value, label in topics %}
+        <option value="{{ value }}" {% if form.topic == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="message">Mesajınız</label>
+      <textarea id="message" name="message" rows="7" required maxlength="4000"
+                {% if errors.get('message') %}aria-invalid="true"{% endif %}
+                aria-describedby="message-help">{{ form.message }}</textarea>
+      <span class="help-text" id="message-help">
+        Hatalı fiyat bildiriyorsanız: model/GPU adı, sayfada gördüğünüz değer ve kaynak bağlantısı ekleyin.
+      </span>
+      {% if errors.get('message') %}<span class="error-text">{{ errors['message'] }}</span>{% endif %}
+    </div>
+
+    {# Bot tuzagi: insanlar gormez. Doldurulursa sessizce yutulur. #}
+    <div style="position:absolute;left:-9999px" aria-hidden="true">
+      <label for="website">Website</label>
+      <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="field mt-4">
+      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"
+           data-theme="auto" data-language="tr"></div>
+      <noscript><p class="help-text">Bot koruması için JavaScript gerekir.</p></noscript>
+    </div>
+
+    <p class="mt-4">
+      <button class="btn" type="submit" id="gonderBtn">Mesajı gönder</button>
+    </p>
+    <p class="help mt-3">
+      Mesajınız kaydedilir ve ekibe e-posta ile iletiriz. Yanıt süresi genellikle 2 iş günüdür.
+    </p>
+  </form>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">Hatalı fiyat mı gördünüz?</h2>
+    <p class="mt-2">Bir fiyatın kaynağıyla uyuşmadığını düşünüyorsanız şunları yazın:</p>
+    <ul class="prose mt-2" style="padding-left:var(--sp-5)">
+      <li>Model veya GPU adı</li>
+      <li>Sayfada gördüğünüz değer</li>
+      <li>Doğru olduğunu düşündüğünüz değer ve kaynak bağlantısı</li>
+    </ul>
+    <p class="mt-3 text-sm text-muted">
+      Bildirimler <a href="/duzeltmeler">Düzeltmeler</a> sayfasında kamuya açık olarak izlenir.
+    </p>
+  </section>
+
+  <section class="mt-5">
+    <h2 style="font-size:var(--fs-h3)">Sorumlu</h2>
+    <p class="mt-2">
+      {{ site_name }} bağımsız bir veri projesidir. Yayınlanan fiyatlar sağlayıcıların
+      resmî kaynaklarından toplanır ve her kayıt kaynak bağlantısı taşır.
+    </p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+/* Iletisim formu: fetch ile gonderir, sayfa yenilenmez.
+   JS yoksa form klasik POST olarak /iletisim'e gider (sunucu tarafi yedek). */
+(function(){
+  var form = document.getElementById("iletisimForm");
+  if (!form) return;
+  var durum = document.getElementById("formDurum");
+  var btn = document.getElementById("gonderBtn");
+
+  function show(kind, text) {
+    if (!durum) return;
+    durum.hidden = false;
+    durum.className = "notice mb-4 " + (kind === "ok" ? "notice-ok" : "notice-warn");
+    durum.textContent = text;
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if (btn) { btn.disabled = true; btn.textContent = "Gönderiliyor…"; }
+
+    fetch(form.dataset.api, { method: "POST", body: new FormData(form) })
+      .then(function(r){ return r.json().then(function(j){ return {status: r.status, body: j}; }); })
+      .then(function(res){
+        var j = res.body || {};
+        if (res.status === 200 && j.ok) {
+          show("ok", "Mesajınız iletildi. En kısa sürede dönüş yapacağız.");
+          form.reset();
+          if (window.turnstile) { try { window.turnstile.reset(); } catch (err) {} }
+        } else {
+          var msg = j.error || "Gönderilemedi. Lütfen tekrar deneyin.";
+          if (j.errors) {
+            var first = Object.keys(j.errors)[0];
+            if (first) msg = j.errors[first];
+          }
+          show("err", msg);
+        }
+      })
+      .catch(function(){ show("err", "Bağlantı hatası. İnternetinizi kontrol edip tekrar deneyin."); })
+      .then(function(){
+        if (btn) { btn.disabled = false; btn.textContent = "Mesajı gönder"; }
+      });
+  });
+})();
+</script>
+{% endblock %}

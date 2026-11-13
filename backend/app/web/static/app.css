@@ -472,6 +472,10 @@ table.prices tbody tr:target{background:var(--primary-soft)}
 /* ---------- states ---------- */
 .empty{text-align:center; padding:var(--sp-7) var(--sp-4); color:var(--muted)}
 .empty h3{color:var(--ink); margin-bottom:var(--sp-2)}
+/* hidden niteliginin her zaman kazanmasi gerekir; aksi halde display:flex
+   gibi kurallar hidden'i ezip bos kutular gorunur (6. tur gorsel hata). */
+[hidden]{display:none !important}
+
 .notice{
   display:flex; gap:var(--sp-3); padding:var(--sp-3) var(--sp-4); border-radius:var(--r-sm);
   border:1px solid var(--border); background:var(--surface-2); color:var(--ink-soft); font-size:var(--fs-sm);

@@ -7,7 +7,7 @@
 
 const API = "https://api.resend.com/emails";
 
-export async function sendMail(env, { to, subject, text, html }) {
+export async function sendMail(env, { to, subject, text, html, replyTo }) {
   if (!env.RESEND_API_KEY || !env.ALERT_FROM) {
     return { ok: false, reason: "not_configured" };
   }
@@ -24,6 +24,8 @@ export async function sendMail(env, { to, subject, text, html }) {
         subject,
         text,
         ...(html ? { html } : {}),
+        // Kullanici mesajina dogrudan yanit verilebilsin diye.
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
     if (r.ok) {

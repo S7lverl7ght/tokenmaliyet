@@ -24,7 +24,7 @@ from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, configu
 router = APIRouter()
 configure()
 
-CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "iletisim@tokenmaliyet.com")
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "omerktn55@gmail.com")
 
 DIM_ORDER = ["input", "output", "cache_read", "cache_write", "image_input", "image_output",
              "audio_input", "audio_output", "request", "second", "gpu_hour"]
@@ -710,10 +710,62 @@ def privacy_page(request: Request, db: Session = Depends(get_session)):
                   "Hangi veriler işleniyor, çerez kullanımı, KVKK kapsamındaki haklarınız ve sorumluluk reddi.")
 
 
+CONTACT_TOPICS = [
+    ("duzeltme", "Veri düzeltmesi / hatalı fiyat"),
+    ("isbirligi", "İş birliği / sponsorluk"),
+    ("basin", "Basın"),
+    ("teknik", "Teknik sorun"),
+    ("diger", "Diğer"),
+]
+
+
+def _contact_ctx(db, request, form=None, errors=None):
+    ctx = base_context(db, request, nav="iletisim")
+    ctx.update({
+        "canonical": SITE_URL + "/iletisim",
+        "topics": CONTACT_TOPICS,
+        "form": form or {"name": "", "email": "", "topic": "duzeltme", "message": ""},
+        "errors": errors or {},
+    })
+    return ctx
+
+
 @router.get("/iletisim", response_class=HTMLResponse, include_in_schema=False)
 def contact_page(request: Request, db: Session = Depends(get_session)):
-    return _legal(db, request, "legal_contact.html", "İletişim",
-                  "Veri düzeltmesi, hatalı fiyat bildirimi ve iş birliği için iletişim.")
+    """Site ici iletisim formu.
+
+    Asil gonderim /api/iletisim (Cloudflare Function -> D1 + Resend).
+    Buradaki POST yalnizca JS kapaliysa devreye giren yedektir.
+    """
+    return TEMPLATES.TemplateResponse(request, "iletisim.html", _contact_ctx(db, request))
+
+
+@router.post("/iletisim", response_class=HTMLResponse, include_in_schema=False)
+async def contact_post(request: Request, db: Session = Depends(get_session)):
+    """JS kapali senaryosu: formu dogrula ve kullaniciya durum bildir."""
+    data = await request.form()
+    form = {
+        "name": str(data.get("name") or "").strip()[:80],
+        "email": str(data.get("email") or "").strip()[:160],
+        "topic": str(data.get("topic") or "diger"),
+        "message": str(data.get("message") or "").strip()[:4000],
+    }
+    errors: dict[str, str] = {}
+    if len(form["name"]) < 2:
+        errors["name"] = "Adınızı yazın."
+    if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", form["email"]):
+        errors["email"] = "Geçerli bir e-posta adresi girin."
+    if form["topic"] not in dict(CONTACT_TOPICS):
+        errors["topic"] = "Konu seçin."
+    if len(form["message"]) < 10:
+        errors["message"] = "Mesaj en az 10 karakter olmalı."
+
+    ctx = _contact_ctx(db, request, form=form, errors=errors)
+    if not errors:
+        ctx["sent_fallback"] = True
+    return TEMPLATES.TemplateResponse(
+        request, "iletisim.html", ctx, status_code=400 if errors else 200
+    )
 
 
 @router.get("/duzeltmeler", response_class=HTMLResponse, include_in_schema=False)

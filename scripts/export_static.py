@@ -301,10 +301,19 @@ def main() -> int:
     # Meta refresh her bilinmeyen yolu yutuyordu (404 ve /api kiriliyordu).
     # Ana sayfa = HESAPLAYICI. Sitenin amaci token maliyeti hesaplamak;
     # kullanici once isini gormeli. Fiyat listesi menude.
+    # Cloudflare Pages: GERCEK 301 (meta refresh degil, rapor 6. tur HATA-7).
+    # _redirects yalnizca kok dizine uygulanir; bilinmeyen yollar 404 donmeye devam eder.
+    (DIST / "_redirects").write_text(
+        "# Cloudflare Pages yonlendirmeleri\n"
+        "# Ana sayfa = hesaplayici (sitenin ana isi)\n"
+        "/                /hesaplayici/    301\n",
+        encoding="utf-8",
+    )
+    # _redirects desteklemeyen ortamlar icin (yerel onizleme) kucuk yedek sayfa.
     (DIST / "index.html").write_text(
         '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">'
         '<title>TokenMaliyet - AI API maliyet hesaplayici</title>'
-        '<link rel="canonical" href="https://tokenmaliyet.com/">'
+        '<link rel="canonical" href="https://tokenmaliyet.com/hesaplayici/">'
         '<meta http-equiv="refresh" content="0; url=/hesaplayici/">'
         '</head><body><h1>TokenMaliyet</h1>'
         '<p><a href="/hesaplayici/">Maliyet hesaplayiciya git</a></p></body></html>',

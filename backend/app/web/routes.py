@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from sqlalchemy import func as sqlfunc
 from sqlalchemy import select as sselect
 from sqlalchemy.orm import Session
 
@@ -1049,6 +1050,49 @@ def about_page(request: Request, db: Session = Depends(get_session)):
     return TEMPLATES.TemplateResponse(request, "about.html", ctx)
 
 
+# ---------------------------------------------------------------------------
+# Dil / para birimi varyantlari: /en/... ve /try/...
+#
+# Neden: statik export bu adresleri uretiyor (VARIANTS) ama dinamik sunucuda
+# karsiligi yoktu -> /en/fiyatlar 404 donuyordu (6. tur denetimi, gercek hata).
+# render.base_context dil ve para birimini YOL UZERINDEN cozer (_parse_path),
+# bu yuzden ayni handler'a baglamak yeterli.
+# ---------------------------------------------------------------------------
+_VARIANT_PAGES = [
+    ("fiyatlar", prices_page, "prices"),
+    ("hesaplayici", calculator_page, "calculator"),
+    ("karsilastir", compare_page, "compare"),
+    ("token-sayaci", token_counter, "token-sayaci"),
+    ("gpu-maliyetleri", gpu_page, "gpu"),
+    ("hakkinda", about_page, "about"),
+    ("uyari", None, "uyari"),
+]
+
+
+def _register_variants() -> None:
+    """/en/<sayfa>, /try/<sayfa>, /en/try/<sayfa> rotalarini baglar."""
+    from .render import _parse_path  # noqa: F401  (dokumantasyon amacli import)
+
+    for slug, handler, _kind in _VARIANT_PAGES:
+        if handler is None:
+            continue
+        for prefix in ("/en", "/try", "/en/try"):
+            path = f"{prefix}/{slug}"
+            # Ayni fonksiyonu farkli yola baglamak FastAPI'de destekli;
+            # endpoint adi cakismasin diye bitisik isim veriyoruz.
+            router.add_api_route(
+                path,
+                handler,
+                methods=["GET"],
+                response_class=HTMLResponse,
+                include_in_schema=False,
+                name=f"variant_{prefix.strip('/').replace('/', '_')}_{slug}",
+            )
+
+
+_register_variants()
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
     return ("User-agent: *\n"
@@ -1067,14 +1111,44 @@ def robots():
 
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap(db: Session = Depends(get_session)) -> Response:
+    """sitemap.xml — yalnizca indekslenmesini istedigimiz adresler.
+
+    Rapor 6. tur HATA-2/HATA-3/SEO-5 duzeltmeleri:
+      - /hesaplayici listede eksikti (ana sayfa buraya yonlendigi icin kritik)
+      - <lastmod> etiketi hic basilmiyordu
+      - /en/ varyantlari sitemap'te yoktu (hreflang olsa da kendileri listelenmeli)
+    """
+    import datetime as _dt
+
     from .content.guides import GUIDES
-    urls = ["/", "/fiyatlar", "/karsilastir", "/token-sayaci", "/danismanlik",
-            "/gpu-maliyetleri", "/rehber", "/hakkinda",
-            "/gizlilik", "/iletisim", "/duzeltmeler",
-            "/turkce-token-maliyeti", "/degisiklikler"]
+
+    # Verinin son gozlem zamani: lastmod icin gercek tarih (uydurma yok).
+    from ..models import GpuPrice, PriceObservation
+
+    last_obs = db.scalar(
+        sselect(sqlfunc.max(PriceObservation.observed_at)).where(
+            PriceObservation.status == "approved"
+        )
+    )
+    lastmod = (last_obs.date().isoformat() if last_obs else _dt.date.today().isoformat())
+
+    urls: list[str] = [
+        "/", "/hesaplayici", "/fiyatlar", "/karsilastir", "/token-sayaci",
+        "/danismanlik", "/gpu-maliyetleri", "/rehber", "/hakkinda",
+        "/gizlilik", "/iletisim", "/duzeltmeler",
+        "/turkce-token-maliyeti", "/degisiklikler",
+    ]
     urls += [f"/rehber/{g.slug}" for g in GUIDES]
-    # Inceleme raporu: sitemap YALNIZCA indekslenmesini istedigimiz adresleri icerir.
-    # 400+ ince model sayfasi yerine ~40 derin sayfa (thin content riskini onler).
+
+    # Ingilizce varyantlar (statik export /en/ altina uretiyor)
+    # Yalnizca GERCEKTEN var olan ve indekslenebilir Ingilizce sayfalar.
+    # /en/uyari bilincli olarak noindex (form sayfasi) -> sitemap'e girmez.
+    urls += [
+        "/en/fiyatlar", "/en/hesaplayici", "/en/karsilastir",
+        "/en/token-sayaci", "/en/gpu-maliyetleri", "/en/hakkinda",
+    ]
+
+    # 400+ ince model sayfasi yerine ~60 derin sayfa (thin content riskini onler).
     seen: set[str] = set()
     indexed = 0
     for row in queries.price_rows(db):
@@ -1089,16 +1163,24 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
         if indexed >= 60:
             break
 
-    body = ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-            "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">"]
+    body = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
     for path in urls:
-        body.append(f"<url><loc>{SITE_URL}{path}</loc><changefreq>daily</changefreq></url>")
+        body.append(
+            f"<url><loc>{SITE_URL}{path}</loc>"
+            f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
+        )
+
     # GPU ailesi sayfalari (rapor 4. tur bolum 4)
-    from ..models import GpuPrice
     fams = sorted({p.gpu_family for p in db.query(GpuPrice).filter(GpuPrice.status == "approved").all()})
     for fam in fams[:20]:
         slug = fam.lower().replace(" ", "-")
-        body.append(f"<url><loc>{SITE_URL}/gpu/{slug}</loc><changefreq>daily</changefreq></url>")
+        body.append(
+            f"<url><loc>{SITE_URL}/gpu/{slug}</loc>"
+            f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
+        )
 
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")

@@ -123,9 +123,11 @@ def test_models_index_generated():
 
 
 def test_instant_search_panel():
+    """6. tur HATA-6: tek arama kutusu (#q), ayri #live-q kaldirildi."""
     s = read(ROOT / "backend" / "app" / "web" / "templates" / "prices.html")
     assert 'id="instant-search"' in s
-    assert 'id="live-q"' in s
+    assert 'id="q"' in s
+    assert 'id="live-q"' not in s, "ikinci arama kutusu kalmis"
     assert "models-index.json" in s
     assert "toLocaleLowerCase" in s, "Turkce normalizasyonu yok"
 

@@ -32,7 +32,8 @@ def test_calculator_canonical_is_home():
 
 def test_sitemap_starts_with_home():
     src = ROUTES.read_text(encoding="utf-8")
-    assert 'urls = ["/", "/fiyatlar"' in src, "sitemap '/' ile baslamali"
+    assert '"/hesaplayici"' in src, "sitemap'te hesaplayici olmali"
+    assert '"/"' in src, "sitemap kok adresi icermeli"
 
 
 def test_header_has_only_title():

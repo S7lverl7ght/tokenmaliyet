@@ -1,29 +1,29 @@
 {
-  "last_run": "2026-11-13T12:54:16.751354+00:00",
+  "last_run": "2026-11-13T14:20:34.136634+00:00",
   "last_summary": {
-    "started_at": "2026-11-13T12:53:01.065081+00:00",
+    "started_at": "2026-11-13T14:19:08.950761+00:00",
     "only": null,
     "tokens": {
-      "parsed": 1572,
-      "new": 1572,
+      "parsed": 1567,
+      "new": 1567,
       "failed": [
         "openai: fetch failed: https://openai.com/api/pricing/: Client error '403 Forbidden' for url 'https://openai.com/api/pricing/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
       ]
     },
     "qa": {
-      "passed": 1509,
-      "failed": 63
+      "passed": 1506,
+      "failed": 61
     },
     "approval": {
-      "approved": 1509,
+      "approved": 1506,
       "held_for_review": 0
     },
     "gpu": {
-      "quotes": 152,
-      "new": 150,
+      "quotes": 156,
+      "new": 154,
       "failed": []
     },
-    "finished_at": "2026-11-13T12:54:16.751354+00:00"
+    "finished_at": "2026-11-13T14:20:34.136634+00:00"
   },
-  "runs": 25
+  "runs": 26
 }

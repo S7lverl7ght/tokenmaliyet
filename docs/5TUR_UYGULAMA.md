@@ -118,3 +118,40 @@ Deploy: 7b7d8e8a.tokenmaliyet.pages.dev -> tokenmaliyet.com
 - `test_calculator_has_client_engine`, `test_compare_has_client_engine`
 - `test_options_include_cache_price`, `test_headers_have_per_endpoint_mime`
 - `test_batch_mail_used`
+
+---
+
+## Ek: P1/P2 bulguları (aynı turda tamamlandı)
+
+### P1-4 · Anlık arama ✅
+
+Statik sayfada yalnızca 50 satır vardı; arama/filtreleme çalışmıyordu.
+
+**Çözüm:**
+- Build sırasında `/models-index.json` üretiliyor (**471 model, 54 KB**)
+- `/fiyatlar` sayfasına anlık arama paneli eklendi
+- Türkçe + büyük/küçük harf + boşluk toleranslı normalize
+
+**Canlı kanıt:** `/models-index.json` → 200, 54.830 bayt, 471 kayıt.
+
+### P1-5 · GPU affiliate altyapısı ✅ (kod hazır)
+
+`backend/app/web/affiliate.py` — ortam değişkeni tabanlı:
+`AFFILIATE_RUNPOD=ref=abc123`. Kod tanımlı değilse düz URL döner;
+**uydurma kod yok**. Kabul edilince `.env`'e tek satır eklemek yeterli.
+
+### P2-1 · Danışmanlık sayfası ✅
+
+`/danismanlik` — B2B AI maliyet denetimi teklifi. Navigasyona ve
+sitemap'e eklendi. **Canlı: 200, 13.850 bayt.**
+
+### Kapatılmayanlar (bilinçli)
+
+| Bulgu | Neden |
+|---|---|
+| Turnstile / rate limit (P0-5) | Cloudflare hesabında site/secret key gerekiyor |
+| Kalıcı bulut DB (P1-3) | Neon/Supabase hesabı + tasarım kararı |
+| Resend batch canlı testi | 50+ abone olmadan test edilemez |
+| Faz 3 gelir (Shopier, API key) | Kullanıcı onayı + ticari karar |
+
+**Son durum:** 203 test geçiyor · commit `7983893` · canlı `tokenmaliyet.com`

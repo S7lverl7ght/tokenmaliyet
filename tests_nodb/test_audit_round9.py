@@ -5,6 +5,7 @@ hatalari kilitler. Amac: ayni hata bir daha sessizce geri gelmesin.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -400,3 +401,95 @@ def test_canonical_and_og_are_same_url():
         if o and o.group(1).strip() and o.group(1) != c.group(1):
             bad.append((rel, "og!=canonical"))
     assert not bad, f"kanonik/og sorunu: {bad[:6]}"
+
+# --------------------------------------------------------------------------
+# HATA 11: JSON-LD bozuktu -> Google Search Console "Yanlis deger turu"
+#
+# Kok neden: Jinja'da '|' filtresi '~' operantorunden ONCE baglar. prices.html'de
+#   {{ ('AI API fiyatlari — ' ~ total ~ ' model' | tojson) }}
+# yalnizca ' model' parcasini JSON'a ceviriyordu ve cikti soyle bozuluyordu:
+#   "name":AI API fiyatlari — 452" model",
+# Bu yuzden /fiyatlar'da Dataset yapisi gecersizdi ve Google zengin sonucu
+# kaldirdi (Search Console: "Ayristirilamayan yapilandirilmis veri").
+# --------------------------------------------------------------------------
+
+def test_all_jsonld_blocks_are_valid_json():
+    """Her JSON-LD blogu gecerli JSON olmali."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    bad = []
+    total = 0
+    for f in DIST.rglob("*.html"):
+        html = f.read_text(encoding="utf-8", errors="ignore")
+        for m in re.finditer(r'<script type="application/ld\+json">([\s\S]*?)</script>', html):
+            total += 1
+            try:
+                json.loads(m.group(1))
+            except Exception as exc:
+                bad.append((f.parent.relative_to(DIST).as_posix(), str(exc)[:60]))
+    assert total > 0
+    assert not bad, f"gecersiz JSON-LD: {bad[:5]}"
+
+
+def test_prices_dataset_name_is_string():
+    """Dataset 'name' bir JSON string olmali (Jinja oncelik hatasi geri gelmesin)."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    for rel in ("fiyatlar", "try/fiyatlar", "en/fiyatlar", "en/try/fiyatlar"):
+        p = DIST / rel / "index.html"
+        if not p.exists():
+            continue
+        html = p.read_text(encoding="utf-8", errors="ignore")
+        blocks = re.findall(r'<script type="application/ld\+json">([\s\S]*?)</script>', html)
+        datasets = [json.loads(b) for b in blocks]
+        ds = next((d for d in datasets if d.get("@type") == "Dataset"), None)
+        assert ds is not None, f"{rel}: Dataset yok"
+        assert isinstance(ds.get("name"), str), f"{rel}: name string degil"
+        assert "AI API" in ds["name"]
+
+
+def test_jsonld_urls_are_directory_style():
+    """JSON-LD icindeki site adresleri de / ile bitmeli (308 zinciri olmesin)."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    base = "https://tokenmaliyet.com"
+    bad = []
+    for f in DIST.rglob("*.html"):
+        html = f.read_text(encoding="utf-8", errors="ignore")
+        for m in re.finditer(r'<script type="application/ld\+json">([\s\S]*?)</script>', html):
+            try:
+                data = json.loads(m.group(1))
+            except Exception:
+                continue
+
+            def walk(o):
+                if isinstance(o, dict):
+                    for k, v in o.items():
+                        if k in ("url", "item", "@id", "contentUrl") and isinstance(v, str) \
+                                and v.startswith(base):
+                            path = v[len(base):].split("?")[0]
+                            last = path.rsplit("/", 1)[-1] if path else ""
+                            if path and not path.endswith("/") and "." not in last:
+                                bad.append((f.parent.relative_to(DIST).as_posix(), v))
+                        else:
+                            walk(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        walk(v)
+
+            walk(data)
+    assert not bad, f"JSON-LD adresi / ile bitmiyor: {bad[:5]}"
+
+
+def test_dataset_url_matches_canonical():
+    """Dataset.url sayfanin kanonik adresiyle ayni olmali."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    p = DIST / "fiyatlar" / "index.html"
+    if not p.exists():
+        pytest.skip("fiyatlar yok")
+    html = p.read_text(encoding="utf-8", errors="ignore")
+    canon = re.search(r'<link rel="canonical" href="([^"]*)"', html).group(1)
+    blocks = re.findall(r'<script type="application/ld\+json">([\s\S]*?)</script>', html)
+    ds = next(d for d in (json.loads(b) for b in blocks) if d.get("@type") == "Dataset")
+    assert ds["url"] == canon, f"Dataset.url {ds['url']} != canonical {canon}"

@@ -230,7 +230,11 @@
 {
   "@context":"https://schema.org",
   "@type":"Dataset",
-  "name":{{ ('AI API prices — ' if lang == 'en' else 'AI API fiyatları — ') ~ total ~ ' model' | tojson }},
+  {# DIKKAT: Jinja'da '|' filtresi '~' ve '+' ifadelerinden ONCE baglar.
+     Eski hali yalnizca ' model' parcasini tojson'a sokuyordu ve JSON bozuluyordu:
+       "name":AI API fiyatları — 452" model",     <-- gecersiz, Google "Yanlis deger turu" der
+     Cozum: tum ifadeyi parantez icine alip sonunda tojson uygulamak. #}
+  "name":{{ (('AI API prices — ' if lang == 'en' else 'AI API fiyatları — ') ~ total ~ (' models' if lang == 'en' else ' model')) | tojson }},
   "description":{{ ("OpenAI, Anthropic, Google Gemini, DeepSeek official API prices and OpenRouter marketplace prices; USD per 1M input/output tokens, dated TRY equivalent and last verification time." if lang == "en" else "OpenAI, Anthropic, Google Gemini, DeepSeek resmî API fiyatları ve OpenRouter pazaryeri fiyatları; girdi/çıktı 1M token başına USD, tarihli TRY karşılığı ve son doğrulama zamanı.") | tojson }},
   "url":{{ (site_url ~ '/fiyatlar')|tojson }},
   "isAccessibleForFree":true,

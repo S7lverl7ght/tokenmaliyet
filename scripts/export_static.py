@@ -419,6 +419,7 @@ def main() -> int:
     # 308 ile yonlendiriyor. Kanonik adresler artik / ile bitiyor; ic baglantilar da
     # ayni bicimde olmali ki her gezinme gereksiz bir yonlendirme harcamasin.
     _finalize_pages()
+    _fix_jsonld_urls()
 
     print(f"\nSTATIK EXPORT TAMAM: {written} sayfa -> {DIST}")
     return 0
@@ -497,6 +498,63 @@ def _dedupe_titles() -> None:
                              encoding="utf-8")
                 fixed += 1
         print(f"[title] {fixed} mukerrer baslik ayirt edildi (gecis {_round + 1})")
+
+
+def _normalize_site_urls(value):
+    """JSON-LD icindeki site URL'lerini dizin bicimine cevirir (recursive)."""
+    base = "https://tokenmaliyet.com"
+    if isinstance(value, str):
+        if value.startswith(base):
+            rest = value[len(base):]
+            # Sorgu dizesi varsa korunur (/fiyatlar?provider=x)
+            path, sep, query = rest.partition("?")
+            last = path.rsplit("/", 1)[-1]
+            # Uzantili dosyalar (sitemap.xml, og-image.png) dokunulmaz
+            if path and not path.endswith("/") and "." not in last:
+                path += "/"
+            return base + path + (sep + query if sep else "")
+        return value
+    if isinstance(value, list):
+        return [_normalize_site_urls(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _normalize_site_urls(v) for k, v in value.items()}
+    return value
+
+
+def _fix_jsonld_urls() -> None:
+    """Tum JSON-LD bloklarini yeniden yazar: gecerli JSON + dizin bicimi URL."""
+    import json
+    import re as _re
+
+    pat = _re.compile(
+        r'<script type="application/ld\+json">([\s\S]*?)</script>', _re.S
+    )
+    fixed = 0
+    invalid = 0
+    for html_file in DIST.rglob("*.html"):
+        src = html_file.read_text(encoding="utf-8")
+
+        def repl(m):
+            nonlocal fixed, invalid
+            raw = m.group(1)
+            try:
+                data = json.loads(raw)
+            except Exception:
+                invalid += 1
+                # Bozuk JSON'u sessizce gecmeyelim: konsola yaz ki fark edilsin.
+                print(f"[jsonld] GECERSIZ JSON: {html_file.relative_to(DIST)}")
+                return m.group(0)
+            before = raw
+            data = _normalize_site_urls(data)
+            out = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+            if out != before.strip():
+                fixed += 1
+            return '<script type="application/ld+json">' + out + "</script>"
+
+        new = pat.sub(repl, src)
+        if new != src:
+            html_file.write_text(new, encoding="utf-8")
+    print(f"[jsonld] {fixed} blok guncellendi, {invalid} gecersiz")
 
 
 def _finalize_pages() -> None:

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% set nav = 'api' %}
+{% block title %}{{ 'Free price API — JSON endpoints' if lang == 'en' else 'Ücretsiz fiyat API\'si — JSON uçları' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'Free, no-key JSON API for AI model prices: per-1M-token input and output costs, providers, exchange rate. Every record carries its source URL.' if lang == 'en' else 'AI model fiyatları için ücretsiz, anahtarsız JSON API: 1M token başına girdi/çıktı, sağlayıcılar, kur. Her kayıt kaynak bağlantısı taşır.' }}{% endblock %}
+
+{% block content %}
+<div class="container container-narrow">
+  <header class="page-head">
+    <h1>{{ 'Price API' if lang == 'en' else 'Fiyat API\'si' }}</h1>
+    <p class="lede">
+      {{ 'The same data this site renders, as JSON. No API key, no sign-up, no rate-limit key. Every price record carries its source URL and observation date, so you can verify it yourself.' if lang == 'en' else 'Bu sitenin gösterdiği verinin JSON hâli. API anahtarı yok, kayıt yok. Her fiyat kaydı kaynak bağlantısını ve gözlem tarihini taşır; kendiniz doğrulayabilirsiniz.' }}
+    </p>
+  </header>
+
+  <div class="notice notice-info mb-4" role="note">
+    <div>
+      <strong>{{ 'Only approved prices are served.' if lang == 'en' else 'Yalnızca onaylanmış fiyatlar sunulur.' }}</strong>
+      {{ 'A record that fails verification never reaches these endpoints.' if lang == 'en' else 'Doğrulamadan geçmeyen kayıt bu uçlara hiç ulaşmaz.' }}
+    </div>
+  </div>
+
+  <section class="surface surface-pad">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Endpoints' if lang == 'en' else 'Uçlar' }}</h2>
+    <div class="table-wrap mt-3">
+      <table class="prices" style="table-layout:auto">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'Endpoint' if lang == 'en' else 'Adres' }}</th>
+            <th scope="col">{{ 'What it returns' if lang == 'en' else 'Ne döner?' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code><a href="/api/v1/prices">/api/v1/prices</a></code></td>
+            <td class="text-sm">{{ 'Every approved price, latest observation per model and dimension. Fields: provider, model_id, price_dimension, amount, currency, billing_unit, usd_per_1m_tokens, observed_at, source_url.' if lang == 'en' else 'Onaylı tüm fiyatlar; model ve kalem başına en güncel gözlem. Alanlar: provider, model_id, price_dimension, amount, currency, billing_unit, usd_per_1m_tokens, observed_at, source_url.' }}</td>
+          </tr>
+          <tr>
+            <td><code><a href="/api/v1/providers">/api/v1/providers</a></code></td>
+            <td class="text-sm">{{ 'Provider list with website and official pricing page URLs.' if lang == 'en' else 'Sağlayıcı listesi: web sitesi ve resmî fiyat sayfası adresleriyle.' }}</td>
+          </tr>
+          <tr>
+            <td><code><a href="/api/v1/fx">/api/v1/fx</a></code></td>
+            <td class="text-sm">{{ 'Latest USD/TRY rate with its effective date and source.' if lang == 'en' else 'En güncel USD/TRY kuru; geçerlilik tarihi ve kaynağıyla.' }}</td>
+          </tr>
+          <tr>
+            <td><code><a href="/api/v1/model-options">/api/v1/model-options</a></code></td>
+            <td class="text-sm">{{ 'Compact list for building a model picker: value, label, channel and input/output prices.' if lang == 'en' else 'Model seçici yapmak için kısa liste: value, label, kanal ve girdi/çıktı fiyatları.' }}</td>
+          </tr>
+          <tr>
+            <td><code><a href="/models-index.json">/models-index.json</a></code></td>
+            <td class="text-sm">{{ 'Minimal index (about 90 KB) for client-side search: name, provider, slug, input and output price.' if lang == 'en' else 'İstemci tarafı arama için en küçük indeks (~90 KB): ad, sağlayıcı, slug, girdi ve çıktı fiyatı.' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Example' if lang == 'en' else 'Örnek' }}</h2>
+    <pre class="formula" style="overflow-x:auto;font-size:var(--fs-xs)"><code>{{ 'curl https://tokenmaliyet.com/api/v1/prices' if lang == 'en' else 'curl https://tokenmaliyet.com/api/v1/prices' }}</code></pre>
+    <p class="mt-3 text-sm">{{ 'A single record looks like this:' if lang == 'en' else 'Tek bir kayıt şöyle görünür:' }}</p>
+    <pre class="formula" style="overflow-x:auto;font-size:var(--fs-xs)"><code>{
+  "provider": "anthropic",
+  "model_id": "anthropic/claude-sonnet-4.5",
+  "display_name": "claude-sonnet-4.5",
+  "price_dimension": "input",
+  "amount": 3.0,
+  "currency": "USD",
+  "billing_unit": "1M_tokens",
+  "usd_per_1m_tokens": 3.0,
+  "observed_at": "2026-11-15T15:10:07Z",
+  "source_url": "https://www.anthropic.com/pricing",
+  "sales_channel": "direct"
+}</code></pre>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Terms of use' if lang == 'en' else 'Kullanım koşulları' }}</h2>
+    <ul class="prose mt-3" style="padding-left:var(--sp-5)">
+      <li>{{ 'Free for personal and commercial use. Attribution is required: link back to this site.' if lang == 'en' else 'Kişisel ve ticari kullanım ücretsizdir. Kaynak göstermek zorunludur: siteye bağlantı verin.' }}</li>
+      <li>{{ 'Cache responses. Polling more than once an hour gains you nothing: prices change at most a few times a day.' if lang == 'en' else 'Yanıtları önbelleğe alın. Saatte birden sık sorgulamak bir şey kazandırmaz; fiyatlar günde en fazla birkaç kez değişir.' }}</li>
+      <li>{{ 'Do not resell the data as a standalone feed without written permission.' if lang == 'en' else 'Veriyi yazılı izin olmadan bağımsız bir akış olarak yeniden satmayın.' }}</li>
+      <li>{{ 'No warranty: provider prices change without notice. Verify before you commit to spend.' if lang == 'en' else 'Garanti yok: sağlayıcı fiyatları haber verilmeden değişir. Harcama kararından önce doğrulayın.' }}</li>
+    </ul>
+    <p class="mt-3 text-sm"><a href="/kullanim-kosullari">{{ 'Full terms of use' if lang == 'en' else 'Tüm kullanım koşulları' }} →</a></p>
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Why we publish this' if lang == 'en' else 'Bunu neden yayımlıyoruz?' }}</h2>
+    <p class="mt-2">
+      {{ 'A price comparison site that hides its own data is asking for trust it has not earned. The API is the same data the pages use; if a number on this site is wrong, you can point at the exact record.' if lang == 'en' else 'Kendi verisini saklayan bir fiyat karşılaştırma sitesi, kazanmadığı bir güveni talep ediyordur. API, sayfaların kullandığı verinin aynısıdır; bu sitedeki bir sayı yanlışsa tam olarak o kaydı gösterebilirsiniz.' }}
+    </p>
+    <p class="mt-3 text-sm text-muted">
+      {{ 'Spotted an error?' if lang == 'en' else 'Bir hata mı gördünüz?' }}
+      <a href="/iletisim">{{ 'Report it' if lang == 'en' else 'Bildirin' }}</a> ·
+      <a href="/duzeltmeler">{{ 'Published corrections' if lang == 'en' else 'Yayımlanmış düzeltmeler' }}</a>
+    </p>
+  </section>
+</div>
+{% endblock %}

@@ -833,6 +833,25 @@ def privacy_page(request: Request, db: Session = Depends(get_session)):
                   "Hangi veriler işleniyor, çerez kullanımı, KVKK kapsamındaki haklarınız ve sorumluluk reddi.")
 
 
+@router.get("/api-dokumantasyon", response_class=HTMLResponse, include_in_schema=False)
+def api_docs_page(request: Request, db: Session = Depends(get_session)):
+    """Ucretsiz JSON API dokumantasyonu.
+
+    Neden eklendi: alt bilgi ve hakkinda sayfasi /docs adresine baglanti veriyordu
+    ama statik sitede sunucu olmadigi icin /docs 404 donuyordu. Artik gercek,
+    icerikli bir sayfa var; sundugumuz JSON uclarini belgeliyor.
+    """
+    ctx = base_context(db, request, nav="api")
+    ctx["canonical"] = canonical_url("/api-dokumantasyon")
+    return TEMPLATES.TemplateResponse(request, "api_docs.html", ctx)
+
+
+@router.get("/docs", include_in_schema=False)
+def docs_redirect():
+    """Eski /docs baglantilari kirilmasin (FastAPI'nin varsayilan /docs'u kapali)."""
+    return RedirectResponse("/api-dokumantasyon", status_code=301)
+
+
 @router.get("/kullanim-kosullari", response_class=HTMLResponse, include_in_schema=False)
 def terms_page(request: Request, db: Session = Depends(get_session)):
     """Kullanim kosullari - AdSense ve genel yayin icin zorunlu yasal sayfa."""
@@ -1289,15 +1308,30 @@ _register_variants()
 
 @router.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots():
+    """robots.txt
+
+    NOT: /api/ ARTIK ENGELLENMIYOR. Neden degisti:
+      - Site "ucretsiz JSON API" vaat ediyor ve API sayfasi buna baglanti veriyor;
+        robots ile engellemek bu vaatle celisiyordu.
+      - Fiyat verisi kamuya acik ve ticari deger tasiyan bir kaynak; arama
+        motorlarinin JSON uclarina erisebilmesi trafik getirir.
+      - Gizli/admin alanlar zaten /admin altinda ve orasi kapali kaliyor.
+    Yalnizca GERCEKTEN gizli ve form/oturum iceren yollar engellenir.
+    """
     return ("User-agent: *\n"
-            "Allow: /fiyatlar\n"
-            "Allow: /modeller/\n"
-            "Allow: /karsilastir\n"
-            "Allow: /hesaplayici\n"
-            "Allow: /gpu-maliyetleri\n"
-            "Allow: /rehber\n"
+            "Allow: /\n"
+            "Allow: /api/v1/\n"
             "Disallow: /admin\n"
-            "Disallow: /api/\n"
+            # Form POST uclari: indekslenecek icerik yok, yalnizca yazma islemi.
+            "Disallow: /api/uyari\n"
+            "Disallow: /api/iletisim\n"
+            "Disallow: /api/bildir\n"
+            "Disallow: /api/bulten\n"
+            "Disallow: /api/bulten-onay\n"
+            "Disallow: /api/bulten-iptal\n"
+            "Disallow: /api/onayla\n"
+            "Disallow: /api/iptal\n"
+            # Filtre parametreleri: ayni sayfanin sonsuz varyanti (kopya icerik).
             "Disallow: /fiyatlar?\n"
             "\n"
             f"Sitemap: {SITE_URL}/sitemap.xml\n")
@@ -1331,7 +1365,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     urls: list[str] = [
         "/hesaplayici", "/hesaplayici/ses-maliyeti", "/fiyatlar", "/karsilastir", "/token-sayaci",
         "/danismanlik", "/gpu-maliyetleri", "/rehber", "/hakkinda",
-        "/gizlilik", "/kullanim-kosullari", "/iletisim", "/duzeltmeler",
+        "/api-dokumantasyon", "/gizlilik", "/kullanim-kosullari", "/iletisim", "/duzeltmeler",
         "/turkce-token-maliyeti", "/degisiklikler",
     ]
     urls += [f"/rehber/{g.slug}" for g in GUIDES]

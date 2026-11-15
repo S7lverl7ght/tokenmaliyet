@@ -314,3 +314,89 @@ def test_try_variants_have_distinct_titles():
         ta = re.search(r"<title>(.*?)</title>", pa.read_text(encoding="utf-8"), re.S).group(1)
         tb = re.search(r"<title>(.*?)</title>", pb.read_text(encoding="utf-8"), re.S).group(1)
         assert ta.strip() != tb.strip(), f"{a} ve {b} ayni basligi tasiyor"
+
+# --------------------------------------------------------------------------
+# 10. tur: API erisimi, /docs ve bulten
+# --------------------------------------------------------------------------
+
+def test_robots_does_not_block_api():
+    """/api/ robots ile ENGELLENMEMELI.
+
+    Site ucretsiz JSON API vaat ediyor ve API sayfasi buna baglanti veriyor;
+    robots ile engellemek bu vaatle celisir.
+    """
+    src = (ROOT / "backend" / "app" / "web" / "routes.py").read_text(encoding="utf-8")
+    robots = src[src.index('def robots():'):]
+    robots = robots[: robots.index("def ", robots.index("return"))] if "def " in robots[10:] else robots
+    assert '"Disallow: /api/"' not in robots, "robots hala /api/ dosyasini engelliyor"
+    assert "Allow: /api/v1/" in robots, "API uclari icin Allow kurali yok"
+    # Form uclari (yazma islemi, indekslenebilir icerik yok) kapali kalmali.
+    assert "Disallow: /api/bulten" in robots
+    assert "Disallow: /admin" in robots
+
+
+def test_api_docs_page_exists():
+    """Kullanicinin gordugu API dokumantasyonu gercekten var olmali."""
+    assert (ROOT / "backend" / "app" / "web" / "templates" / "api_docs.html").exists()
+    src = (ROOT / "backend" / "app" / "web" / "routes.py").read_text(encoding="utf-8")
+    assert '@router.get("/api-dokumantasyon"' in src
+    assert '@router.get("/docs"' in src, "/docs yonlendirmesi yok"
+
+
+def test_footer_links_to_real_api_page():
+    """/docs olu baglantisi yerine gercek sayfaya baglanti verilmeli."""
+    base = (ROOT / "backend" / "app" / "web" / "templates" / "base.html").read_text(encoding="utf-8")
+    assert 'href="/api-dokumantasyon"' in base
+    about = (ROOT / "backend" / "app" / "web" / "templates" / "about.html").read_text(encoding="utf-8")
+    assert 'href="/api-dokumantasyon"' in about
+
+
+def test_newsletter_form_in_calculator():
+    """Hesaplayicida e-posta toplama formu olmali."""
+    calc = (ROOT / "backend" / "app" / "web" / "templates" / "calculator.html").read_text(encoding="utf-8")
+    assert 'id="bultenForm"' in calc
+    assert 'action="/api/bulten"' in calc
+    # Cift onay: onay kutusu zorunlu
+    assert 'name="consent"' in calc
+    # Bot korumasi
+    assert "cf-turnstile" in calc
+
+
+def test_newsletter_endpoints_exist():
+    fn = ROOT / "functions" / "api"
+    for name in ("bulten.js", "bulten-onay.js", "bulten-iptal.js"):
+        assert (fn / name).exists(), f"{name} yok"
+    body = (fn / "bulten.js").read_text(encoding="utf-8")
+    # Cift onay: onaylanmamis kayit confirmed=0 ile yazilir
+    assert "confirmed, confirm_token" in body or "(email, lang, confirmed" in body
+    assert "verifyTurnstile" in body, "bot korumasi yok"
+    assert "honeypot" in body or "website" in body, "bal kupu yok"
+
+
+def test_newsletter_schema_has_consent_fields():
+    sql = (ROOT / "db" / "newsletter.sql").read_text(encoding="utf-8")
+    for col in ("email", "confirmed", "confirm_token", "unsubscribe_token",
+                "consent_at", "unsubscribed_at", "ip_hash"):
+        assert col in sql, f"semada {col} yok"
+
+
+def test_canonical_and_og_are_same_url():
+    """canonical ile og:url ayni olmali ve sayfanin kendisini gostermeli."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    bad = []
+    for f in DIST.rglob("index.html"):
+        rel = f.parent.relative_to(DIST).as_posix()
+        if rel == ".":
+            continue
+        html = f.read_text(encoding="utf-8", errors="ignore")
+        c = re.search(r'<link rel="canonical" href="([^"]*)"', html)
+        o = re.search(r'<meta property="og:url" content="([^"]*)"', html)
+        if not c:
+            bad.append((rel, "canonical yok"))
+            continue
+        if c.group(1) != f"/{rel}/" and not c.group(1).endswith(f"/{rel}/"):
+            bad.append((rel, c.group(1)))
+        if o and o.group(1).strip() and o.group(1) != c.group(1):
+            bad.append((rel, "og!=canonical"))
+    assert not bad, f"kanonik/og sorunu: {bad[:6]}"

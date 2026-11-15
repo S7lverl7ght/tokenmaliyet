@@ -150,6 +150,60 @@
   </section>
   {% endif %}
 
+  {# --- Haftalik maliyet raporu: e-posta toplama noktasi ---
+     Neden burada: kullanici hesabini YENI yapti, degeri gordu; donusum en yuksek.
+     Cift onay zorunlu (KVKK + istenmeyen posta); onaysiz adrese e-posta gitmez. #}
+  <section class="surface surface-pad mt-5" id="bulten" aria-labelledby="bulten-baslik">
+    <h2 id="bulten-baslik" style="font-size:var(--fs-h3)">{{ 'Weekly AI cost report' if lang == 'en' else 'Haftalık AI maliyet raporu' }}</h2>
+    <p class="mt-2 text-sm">
+      {{ 'Once a week: which model prices changed, the biggest drops and rises, and one practical way to cut your bill. No spam, no sharing your address.' if lang == 'en' else 'Haftada bir: hangi model fiyatları değişti, en büyük düşüş ve artışlar, faturanızı düşürmenin pratik bir yolu. Spam yok, adresiniz paylaşılmaz.' }}
+    </p>
+
+    <div class="notice notice-info mb-4" id="bultenDurum" role="status" aria-live="polite" hidden></div>
+
+    <div id="bultenTesekkur" role="status" aria-live="polite" hidden>
+      <p><strong>{{ 'Almost done.' if lang == 'en' else 'Son adım.' }}</strong>
+      {{ 'Check your inbox and click the confirmation link.' if lang == 'en' else 'Gelen kutunuzu kontrol edip onay bağlantısına tıklayın.' }}</p>
+    </div>
+
+    <form method="post" action="/api/bulten" id="bultenForm" data-api="/api/bulten" novalidate>
+      <input type="hidden" name="lang" value="{{ lang }}">
+      <input type="hidden" name="source" value="calculator">
+
+      <div class="form-grid" style="grid-template-columns:1.4fr 1fr;align-items:end">
+        <div class="field">
+          <label for="bultenEmail">{{ 'Your email address' if lang == 'en' else 'E-posta adresiniz' }}</label>
+          <input id="bultenEmail" name="email" type="email" autocomplete="email" required maxlength="254"
+                 aria-describedby="bultenHelp">
+          <span class="help-text" id="bultenHelp">{{ 'Only for the weekly report. One click to leave.' if lang == 'en' else 'Yalnızca haftalık rapor için. Tek tıkla çıkabilirsiniz.' }}</span>
+        </div>
+        <div class="field">
+          <button class="btn" type="submit" id="bultenBtn" style="width:100%">{{ 'Subscribe' if lang == 'en' else 'Abone ol' }}</button>
+        </div>
+      </div>
+
+      <div class="field mt-3">
+        <label style="display:flex;align-items:flex-start;gap:var(--sp-2);font-weight:400">
+          <input type="checkbox" name="consent" required style="margin-top:4px">
+          <span class="text-sm">{{ 'I have read the' if lang == 'en' else 'Aydınlatma metnini okudum, onaylıyorum:' }}
+          <a href="/gizlilik">{{ 'privacy notice' if lang == 'en' else 'gizlilik metni' }}</a>.</span>
+        </label>
+      </div>
+
+      {# Bot tuzagi #}
+      <div style="position:absolute;left:-9999px" aria-hidden="true">
+        <label for="bultenWebsite">Website</label>
+        <input id="bultenWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="mt-3">
+        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="auto"
+             data-language="{{ 'en' if lang == 'en' else 'tr' }}"></div>
+      </div>
+      <p class="help mt-2">{{ 'Double opt-in: you must confirm by email before anything is sent.' if lang == 'en' else 'Çift onay: herhangi bir e-posta gönderilmeden önce e-posta ile onaylamanız gerekir.' }}</p>
+    </form>
+  </section>
+
   {% if result %}
   <section class="mt-4">
 <figure class="mt-4" style="margin:0">
@@ -197,6 +251,59 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+/* Haftalik rapor formu: fetch ile gonderir, sayfa yenilenmez.
+   JS yoksa form klasik POST olarak /api/bulten'e gider (JSON cevap doner). */
+(function(){
+  var form = document.getElementById("bultenForm");
+  if (!form) return;
+  var durum = document.getElementById("bultenDurum");
+  var tesekkur = document.getElementById("bultenTesekkur");
+  var btn = document.getElementById("bultenBtn");
+  var EN = document.documentElement.lang === "en";
+  var T = {
+    sending: EN ? "Sending…" : "Gönderiliyor…",
+    subscribe: EN ? "Subscribe" : "Abone ol",
+    net: EN ? "Connection problem. Check your internet and try again."
+           : "Bağlantı hatası. İnternetinizi kontrol edip tekrar deneyin.",
+    generic: EN ? "Could not subscribe. Please try again."
+                : "Abone olunamadı. Lütfen tekrar deneyin."
+  };
+
+  function show(kind, text) {
+    if (!durum) return;
+    durum.hidden = false;
+    durum.className = "notice mb-4 " + (kind === "ok" ? "notice-ok" : "notice-warn");
+    durum.textContent = text;
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if (durum) durum.hidden = true;
+    if (btn) { btn.disabled = true; btn.textContent = T.sending; }
+
+    fetch(form.dataset.api, { method: "POST", body: new FormData(form) })
+      .then(function(r){ return r.json().then(function(j){ return {status: r.status, body: j}; }); })
+      .then(function(res){
+        var j = res.body || {};
+        if (res.status === 200 && j.ok) {
+          form.hidden = true;
+          if (tesekkur) { tesekkur.hidden = false; tesekkur.scrollIntoView({block: "center"}); }
+          if (window.turnstile) { try { window.turnstile.reset(); } catch (err) {} }
+        } else {
+          show("err", j.error || T.generic);
+          if (btn) { btn.disabled = false; btn.textContent = T.subscribe; }
+        }
+      })
+      .catch(function(){
+        show("err", T.net);
+        if (btn) { btn.disabled = false; btn.textContent = T.subscribe; }
+      });
+  });
+})();
+</script>
+
 <script>
 /* Tum model secenekleri (arama icin). Sunucudan gelir; uydurma veri yok. */
 window.__MODEL_OPTIONS__ = {{ options|tojson }};

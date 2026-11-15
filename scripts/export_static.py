@@ -32,6 +32,7 @@ PAGES = [
     ("/danismanlik", "danismanlik"),
     ("/gizlilik", "gizlilik"),
     ("/kullanim-kosullari", "kullanim-kosullari"),
+    ("/api-dokumantasyon", "api-dokumantasyon"),
     ("/iletisim", "iletisim"),
     ("/duzeltmeler", "duzeltmeler"),
     ("/uyari", "uyari"),
@@ -349,7 +350,11 @@ def main() -> int:
     (DIST / "_redirects").write_text(
         "# Cloudflare Pages yonlendirmeleri\n"
         "# Ana sayfa = hesaplayici (sitenin ana isi)\n"
-        "/                /hesaplayici/    301\n",
+        "/                /hesaplayici/    301\n"
+        "# Eski /docs baglantilari (FastAPI varsayilani) artik gercek API sayfasina gider.\n"
+        "# Statik sitede Python sunucu yok; bu yuzden yonlendirme Pages katmaninda yapilir.\n"
+        "/docs            /api-dokumantasyon/    301\n"
+        "/docs/*          /api-dokumantasyon/    301\n",
         encoding="utf-8",
     )
     # _redirects desteklemeyen ortamlar icin (yerel onizleme) kucuk yedek sayfa.

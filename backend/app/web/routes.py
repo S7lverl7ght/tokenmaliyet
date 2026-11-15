@@ -1275,11 +1275,30 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
 
     # GPU ailesi sayfalari (rapor 4. tur bolum 4)
     fams = sorted({p.gpu_family for p in db.query(GpuPrice).filter(GpuPrice.status == "approved").all()})
-    for fam in fams[:20]:
+    # Tum GPU aileleri: her biri ozgun baslikli, indekslenebilir sayfa.
+    for fam in fams:
         slug = fam.lower().replace(" ", "-")
         body.append(
             f"<url><loc>{SITE_URL}/gpu/{slug}</loc>"
             f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
+        )
+
+    # Programatik karsilastirma sayfalari (export ile ayni 20 cift).
+    from . import default_models as _dm2
+
+    _pop: list = []
+    for _row in queries.price_rows(db):
+        if _dm2.is_indexable(_row):
+            _pop.append(_row)
+        if len(_pop) >= 8:
+            break
+    import itertools as _it
+
+    for _a, _b in _it.islice(_it.combinations(_pop, 2), 20):
+        _slug = f"{_a.slug}-vs-{_b.slug}".replace("/", "-").lower()[:120]
+        body.append(
+            f"<url><loc>{SITE_URL}/karsilastir/{_slug}</loc>"
+            f"<lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq></url>"
         )
 
     body.append("</urlset>")

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set nav = 'fiyatlar' %}
-{% block title %}{{ primary.name }} fiyatları — {{ provider_label }} | {{ site_name }}{% endblock %}
-{% block description %}{{ primary.name }} API fiyatı: girdi, çıktı ve önbellek fiyatları 1M token başına. Kaynak bağlantısı, son doğrulama tarihi ve TRY karşılığıyla.{% endblock %}
+{% block title %}{% set _n = primary.name if primary.name|length <= 30 else primary.name[:29] ~ '…' %}{{ _n }} {{ 'pricing' if lang == 'en' else 'fiyatları' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ primary.name }} {{ 'API pricing: input, output and cache prices per 1M tokens, with source link and dated TRY equivalent.' if lang == 'en' else 'API fiyatı: girdi, çıktı ve önbellek fiyatları 1M token başına; kaynak bağlantısı ve tarihli TRY karşılığı.' }}{% endblock %}
 {% block og_type %}article{% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
   <header class="page-head">
     <nav aria-label="Sayfa yolu">
       <ol class="breadcrumb">
-        <li><a href="/fiyatlar">Fiyatlar</a></li>
+        <li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li>
         <li><a href="/fiyatlar?provider={{ primary.provider_slug }}">{{ provider_label }}</a></li>
         <li aria-current="page">{{ primary.name }}</li>
       </ol>

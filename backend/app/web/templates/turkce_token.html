@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set nav = 'token' %}
-{% block title %}Türkçe token maliyeti — aynı içerik %{{ data.totals.extra_pct }} daha pahalı | {{ site_name }}{% endblock %}
+{% block title %}{{ 'Turkish token cost — %129 more expensive' if lang == 'en' else 'Türkçe token maliyeti — %129 daha pahalı' }} | {{ site_name }}{% endblock %}
 {% block description %}Türkçe metin, aynı içerik için İngilizceye göre {{ data.totals.ratio }} kat daha fazla token harcıyor. Gerçek tokenizer ile ölçülmüş veriler ve TL maliyet farkı.{% endblock %}
 
 {% block content %}

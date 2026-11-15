@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set nav = 'fiyatlar' %}
 {% block title %}{{ t('prices.title') }} — {{ total }} {{ t('cmp.model_n') }}, {{ provider_count }} {{ t('col.provider')|lower }} | {{ site_name }}{% endblock %}
-{% block description %}OpenAI, Anthropic, Gemini, DeepSeek ve OpenRouter API fiyatları. Girdi/çıktı 1M token başına USD ve tarihli TRY karşılığı, kaynak bağlantısı ve son doğrulama tarihiyle.{% endblock %}
+{% block description %}{{ 'AI API prices from OpenAI, Anthropic, Gemini, DeepSeek and OpenRouter. USD per 1M input/output tokens, dated TRY equivalent and source links.' if lang == 'en' else 'OpenAI, Anthropic, Gemini, DeepSeek ve OpenRouter API fiyatları. Girdi/çıktı 1M token başına USD, tarihli TRY karşılığı ve kaynak bağlantısı.' }}{% endblock %}
 
 {% block content %}
 <div class="container">

@@ -122,8 +122,8 @@
     </p>{% endif %}
     <ul>
       <li>{{ 'Contact:' if lang == 'en' else 'İletişim:' }} <a href="/iletisim">{{ contact_email }}</a></li>
-      <li>{{ 'Published corrections:' if lang == 'en' else 'Yayımlanmış düzeltmeler:' }} <a href="/duzeltmeler">Düzeltmeler</a></li>
-      <li>{{ 'Privacy and data protection:' if lang == 'en' else 'Gizlilik ve KVKK:' }} <a href="/gizlilik">Gizlilik</a></li>
+      <li>{{ 'Published corrections:' if lang == 'en' else 'Yayımlanmış düzeltmeler:' }} <a href="/duzeltmeler">{{ 'Corrections' if lang == 'en' else 'Düzeltmeler' }}</a></li>
+      <li>{{ 'Privacy and data protection:' if lang == 'en' else 'Gizlilik ve KVKK:' }} <a href="/gizlilik">{{ 'Privacy' if lang == 'en' else 'Gizlilik' }}</a></li>
     </ul>
     <p class="text-sm text-muted">
       {{ 'Last data check:' if lang == 'en' else 'Son veri kontrolü:' }} {{ last_checked }} · {{ 'Approved observations:' if lang == 'en' else 'Onaylı gözlem sayısı:' }} {{ observation_count }} ·

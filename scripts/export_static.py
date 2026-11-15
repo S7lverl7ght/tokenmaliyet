@@ -123,6 +123,24 @@ def main() -> int:
             '<meta name="robots" content="index,follow,max-image-preview:large">',
             1,
         )
+        # SEO: her GPU sayfasi KENDI basligini almali.
+        # Onceki hata: 44 GPU sayfasi ayni <title> ile cikiyordu (kopya icerik).
+        import re as _re
+
+        fam_title = f"{fam} GPU fiyatlari — saatlik kiralama | TokenMaliyet"
+        fam_desc = (
+            f"{fam} GPU kiralama fiyatlari: Runpod, Vast.ai, DataCrunch, Lambda ve "
+            f"Hyperstack saatlik ucretleri, kaynak baglantisiyla."
+        )[:155]
+        html = _re.sub(r"<title>.*?</title>", f"<title>{fam_title}</title>", html, count=1, flags=_re.S)
+        html = _re.sub(r'<meta name="description" content="[^"]*">',
+                       f'<meta name="description" content="{fam_desc}">', html, count=1)
+        html = _re.sub(r'<meta property="og:title" content="[^"]*">',
+                       f'<meta property="og:title" content="{fam_title}">', html, count=1)
+        html = _re.sub(r'<meta property="og:description" content="[^"]*">',
+                       f'<meta property="og:description" content="{fam_desc}">', html, count=1)
+        html = _re.sub(r"<h1[^>]*>GPU kiralama maliyetleri</h1>",
+                       f"<h1>{fam} GPU kiralama fiyatlari</h1>", html, count=1)
         target = DIST / "gpu" / slug / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(html, encoding="utf-8")
@@ -159,6 +177,26 @@ def main() -> int:
             f'<link rel="canonical" href="https://tokenmaliyet.com/karsilastir/{slug}">',
             1,
         )
+        # SEO: her karsilastirma sayfasi KENDI basligini almali.
+        import re as _re2
+
+        # Model adlari cok uzun olabiliyor; title 60 karakteri gecmemeli.
+        _an = a.name if len(a.name) <= 22 else a.name[:21] + "…"
+        _bn = b.name if len(b.name) <= 22 else b.name[:21] + "…"
+        cmp_title = f"{_an} vs {_bn} maliyet | TokenMaliyet"
+        if len(cmp_title) > 60:
+            cmp_title = f"{_an} vs {_bn} | TokenMaliyet"
+        cmp_desc = (
+            f"{a.name} ve {b.name} aylik maliyet karsilastirmasi: 100M girdi + "
+            f"25M cikti token varsayimiyla USD ve TRY fark."
+        )[:155]
+        html = _re2.sub(r"<title>.*?</title>", f"<title>{cmp_title}</title>", html, count=1, flags=_re2.S)
+        html = _re2.sub(r'<meta name="description" content="[^"]*">',
+                        f'<meta name="description" content="{cmp_desc}">', html, count=1)
+        html = _re2.sub(r'<meta property="og:title" content="[^"]*">',
+                        f'<meta property="og:title" content="{cmp_title}">', html, count=1)
+        html = _re2.sub(r'<meta property="og:description" content="[^"]*">',
+                        f'<meta property="og:description" content="{cmp_desc}">', html, count=1)
         target.write_text(html, encoding="utf-8")
 
     # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)
@@ -317,6 +355,8 @@ def main() -> int:
     (DIST / "index.html").write_text(
         '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">'
         '<title>TokenMaliyet - AI API maliyet hesaplayici</title>'
+        '<meta name="description" content="AI API ve GPU maliyetlerini hesaplayin: '
+        '480+ model, 5 saglayici, tarihli TRY kuru. Ucretsiz hesaplayici.">'
         '<link rel="canonical" href="https://tokenmaliyet.com/hesaplayici/">'
         '<meta http-equiv="refresh" content="0; url=/hesaplayici/">'
         '</head><body><h1>TokenMaliyet</h1>'

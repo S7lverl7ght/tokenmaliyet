@@ -39,7 +39,7 @@ GUIDES: list[Guide] = [
     ),
     Guide(
         slug="peak-off-peak-fiyatlandirma",
-        title="Yoğun saat (peak) fiyatlandırması bütçeyi nasıl değiştirir?",
+        title="Peak fiyatlandırma bütçeyi nasıl değiştirir?",
         description=("DeepSeek gibi sağlayıcılarda yoğun/yoğun olmayan saat fiyat farkı ve bunun "
                      "aylık maliyete etkisi."),
         published="09.11.2026",

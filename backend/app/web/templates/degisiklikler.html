@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set nav = 'degisiklikler' %}
-{% block title %}Fiyatlarda ne değişti? — AI API fiyat değişiklikleri | {{ site_name }}{% endblock %}
+{% block title %}{{ 'AI price changes' if lang == 'en' else 'AI fiyat değişiklikleri' }} — {{ 'what changed?' if lang == 'en' else 'ne değişti?' }} | {{ site_name }}{% endblock %}
 {% block description %}Son 30 günde AI API ve GPU fiyatlarında ne değişti: yeni fiyatlar, artışlar, indirimler ve veri düzeltmeleri. Kaynaklı, tarihli.{% endblock %}
 
 {% block content %}

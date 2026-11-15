@@ -94,5 +94,7 @@ def test_gpu_detail_canonical_is_self():
         html = d.read_text(encoding="utf-8", errors="ignore")
         m = re.search(r'<link rel="canonical" href="([^"]+)"', html)
         assert m, f"{d}: canonical yok"
-        expected = "/gpu/" + d.parent.name
+        # Cloudflare Pages dizin bicimi kullanir (/gpu/h100/); kanonik de ayni olmali,
+        # yoksa "kanonik adres yonlendiriyor" uyarisi cikar.
+        expected = "/gpu/" + d.parent.name + "/"
         assert m.group(1).endswith(expected), f"{d.parent.name}: {m.group(1)}"

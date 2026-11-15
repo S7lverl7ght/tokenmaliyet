@@ -119,16 +119,16 @@
   <div class="container">
     <div class="cols">
       <div>
-        <h4>Veri</h4>
+        <h4>{{ 'Data' if lang == 'en' else 'Veri' }}</h4>
         <ul>
           <li><a href="/fiyatlar">{{ 'Price list' if lang == 'en' else 'Fiyat listesi' }}</a></li>
           <li><a href="/karsilastir">{{ t('footer.compare') }}</a></li>
           <li><a href="/hesaplayici">{{ t('footer.calculator') }}</a></li>
-          <li><a href="/gpu-maliyetleri">GPU maliyetleri</a></li>
+          <li><a href="/gpu-maliyetleri">{{ 'GPU costs' if lang == 'en' else 'GPU maliyetleri' }}</a></li>
         </ul>
       </div>
       <div>
-        <h4>Kaynaklar</h4>
+        <h4>{{ 'Sources' if lang == 'en' else 'Kaynaklar' }}</h4>
         <ul>
           {% for p in footer_providers %}
           <li><a href="{{ p.pricing_url }}" rel="noopener nofollow" target="_blank">{{ p.name }} {{ t('footer.price_page') }}</a></li>
@@ -139,18 +139,19 @@
         <h4>{{ t('footer.product') }}</h4>
         <ul>
           <li><a href="/token-sayaci">{{ t('nav.token') }}</a></li>
-          <li><a href="/rehber">Rehberler</a></li>
+          <li><a href="/rehber">{{ 'Guides' if lang == 'en' else 'Rehberler' }}</a></li>
           <li><a href="/hakkinda">{{ t('footer.about') }}</a></li>
-          <li><a href="/api/v1/prices?format=json">API</a></li>
-          <li><a href="/docs">{{ t('footer.api_docs') }}</a></li>
+          <li><a href="/api/v1/prices?format=json">{{ 'Price data (JSON)' if lang == 'en' else 'Fiyat verisi (JSON)' }}</a></li>
+          <li><a href="/hakkinda#metodoloji">{{ t('footer.api_docs') }}</a></li>
         </ul>
       </div>
       <div>
-        <h4>Kurumsal</h4>
+        <h4>{{ 'Company' if lang == 'en' else 'Kurumsal' }}</h4>
         <ul>
           <li><a href="/iletisim">{{ t('footer.contact') }}</a></li>
           <li><a href="/duzeltmeler">{{ t('footer.corrections') }}</a></li>
           <li><a href="/gizlilik">{{ t('footer.privacy') }}</a></li>
+          <li><a href="/kullanim-kosullari">{{ 'Terms of use' if lang == 'en' else 'Kullanım koşulları' }}</a></li>
         </ul>
       </div>
     </div>

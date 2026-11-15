@@ -1,39 +1,98 @@
 {% extends "base.html" %}
 {% set nav = 'danismanlik' %}
-{% block title %}AI Maliyet Denetimi — LLM faturanızı düşürün | {{ site_name }}{% endblock %}
-{% block description %}Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Tasarruf yoksa ücret yok.{% endblock %}
+{% block title %}{{ 'AI cost audit — cut your LLM bill' if lang == 'en' else 'AI maliyet denetimi — LLM faturanızı düşürün' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'We analyse your monthly LLM bill and reduce it with prompt caching, model routing and Turkish token optimisation. No verified saving, no fee.' if lang == 'en' else 'Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Doğrulanmış tasarruf yoksa ücret yok.' }}{% endblock %}
 
 {% block content %}
 <div class="container">
   <header class="page-head">
     <h1>{{ 'AI cost audit' if lang == 'en' else 'AI maliyet denetimi' }}</h1>
     <p class="lede">
-      {{ 'We analyse your monthly LLM bill and reduce it with prompt caching, model routing and Turkish token optimisation. No saving, no fee.' if lang == 'en' else 'Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Tasarruf yoksa ücret yok.' }}
+      {{ 'We analyse your monthly LLM bill and reduce it with prompt caching, model routing and Turkish token optimisation. No verified saving, no fee.' if lang == 'en' else 'Aylık LLM faturanızı analiz edip prompt caching, model yönlendirme ve Türkçe token optimizasyonu ile düşürüyoruz. Doğrulanmış tasarruf yoksa ücret yok.' }}
     </p>
   </header>
+
+  <section class="prose mt-5">
+    <h2>{{ 'Why LLM bills grow without anyone noticing' if lang == 'en' else 'LLM faturası neden sessizce büyür?' }}</h2>
+    {% if lang == 'en' %}
+    <p>Most teams that write to an AI API start with a single model and a single call pattern, and never revisit it.
+    The bill grows in three quiet ways. First, <strong>the same long system prompt is re-sent on every request</strong>;
+    without prompt caching you pay full input price for text the provider has already seen. Second, <strong>output is
+    priced several times higher than input</strong>, so an assistant that rambles costs far more than one that answers
+    in a fixed shape. Third, <strong>the model chosen for the hardest task is used for every task</strong>, including
+    classification and extraction that a model ten times cheaper handles equally well.</p>
+    <p>None of these show up as a line item. They show up as a bill that is three to ten times higher than the work
+    actually requires.</p>
+    {% else %}
+    <p>AI API'sine yazan ekiplerin çoğu tek bir modelle ve tek bir çağrı düzeniyle başlar, sonra buna bir daha bakmaz.
+    Fatura üç sessiz yoldan büyür. Birincisi, <strong>aynı uzun sistem istemi her istekte yeniden gönderilir</strong>;
+    prompt caching kullanılmazsa sağlayıcının zaten gördüğü metne tam girdi fiyatı ödenir. İkincisi, <strong>çıktı
+    fiyatı girdiden birkaç kat yüksektir</strong>; bu yüzden uzun uzun konuşan bir asistan, sabit biçimde cevap veren
+    bir asistandan çok daha pahalıdır. Üçüncüsü, <strong>en zor iş için seçilen model her işe uygulanır</strong>;
+    sınıflandırma ve çıkarım gibi on kat ucuz bir modelin rahatça hallettiği işler de pahalı modele gider.</p>
+    <p>Bunların hiçbiri faturada ayrı kalem olarak görünmez. Görünen şey, işin gerçekte gerektirdiğinden üç–on kat
+    yüksek bir toplam faturaldır.</p>
+    {% endif %}
+  </section>
 
   <div class="grid-2 mt-5" style="gap:var(--sp-5)">
     <section class="surface surface-pad">
       <h2 style="font-size:var(--fs-h3)">{{ 'What we check' if lang == 'en' else 'Neye bakıyoruz?' }}</h2>
       <ul class="prose mt-3" style="padding-left:var(--sp-5)">
-        <li>{{ 'Prompt caching: 50–90% off cached input on Anthropic and OpenAI.' if lang == 'en' else 'Prompt caching: Anthropic ve OpenAI\'da önbelleğe alınan girdide %50–90 indirim.' }}</li>
+        <li>{{ 'Prompt caching: cached input is billed 50–90% lower on Anthropic and OpenAI.' if lang == 'en' else 'Prompt caching: Anthropic ve OpenAI\'da önbelleğe alınan girdi %50–90 daha ucuza faturalanır.' }}</li>
         <li>{{ 'Model routing: send simple tasks to cheaper models.' if lang == 'en' else 'Model yönlendirme: basit işleri daha ucuz modellere gönderin.' }}</li>
-        <li>{{ 'Turkish token cost: Turkish text uses ~2.29× more tokens.' if lang == 'en' else 'Türkçe token maliyeti: Türkçe metin ~2,29× daha fazla token harcıyor.' }}</li>
-        <li>{{ 'Batch API: 50% off for time-insensitive jobs.' if lang == 'en' else 'Batch API: zamana duyarsız işlerde %50 indirim.' }}</li>
-        <li>{{ 'Output length control and retry logic waste.' if lang == 'en' else 'Çıktı uzunluğu kontrolü ve gereksiz tekrar denemeleri.' }}</li>
+        <li>{{ 'Turkish token cost: measured multiplier is' if lang == 'en' else 'Türkçe token maliyeti: ölçülen çarpan' }} {{ turkce.ratio|tl(2) }}×{{ ' more tokens for the same content.' if lang == 'en' else ' (aynı içerik daha fazla token harcıyor).' }}</li>
+        <li>{{ 'Batch API: roughly 50% off for time-insensitive jobs.' if lang == 'en' else 'Batch API: zamana duyarsız işlerde yaklaşık %50 indirim.' }}</li>
+        <li>{{ 'Output length control and retry waste.' if lang == 'en' else 'Çıktı uzunluğu kontrolü ve gereksiz tekrar denemeleri.' }}</li>
+        <li>{{ 'Context window bloat: whole documents sent where a retrieval snippet would do.' if lang == 'en' else 'Bağlam şişkinliği: kısa bir alıntının yeteceği yerde tüm dokümanın gönderilmesi.' }}</li>
       </ul>
     </section>
 
     <section class="surface surface-pad">
       <h2 style="font-size:var(--fs-h3)">{{ 'How it works' if lang == 'en' else 'Nasıl işliyor?' }}</h2>
       <ol class="prose mt-3" style="padding-left:var(--sp-5)">
-        <li>{{ 'You share your provider invoices (CSV or screenshots).' if lang == 'en' else 'Sağlayıcı faturalarınızı paylaşıyorsunuz (CSV veya ekran görüntüsü).' }}</li>
-        <li>{{ 'We model your traffic and find the savings.' if lang == 'en' else 'Trafiğinizi modelleyip tasarruf kalemlerini çıkarıyoruz.' }}</li>
-        <li>{{ 'You get a written report with exact changes.' if lang == 'en' else 'Uygulanabilir değişiklikleri içeren yazılı rapor alıyorsunuz.' }}</li>
+        <li>{{ 'You share provider invoices or usage exports (CSV).' if lang == 'en' else 'Sağlayıcı faturalarınızı veya kullanım dışa aktarımlarınızı paylaşıyorsunuz (CSV).' }}</li>
+        <li>{{ 'We model your traffic and match it against current list prices in our database.' if lang == 'en' else 'Trafiğinizi modelleyip veritabanımızdaki güncel liste fiyatlarıyla eşleştiriyoruz.' }}</li>
+        <li>{{ 'You get a written report: item, change, expected saving, effort.' if lang == 'en' else 'Yazılı rapor alıyorsunuz: kalem, değişiklik, beklenen tasarruf, emek.' }}</li>
+        <li>{{ 'We implement together, then measure the next invoice.' if lang == 'en' else 'Değişiklikleri birlikte uyguluyor, sonraki faturayı ölçüyoruz.' }}</li>
         <li>{{ 'Fee is one month of the verified saving.' if lang == 'en' else 'Ücret, doğrulanan tasarrufun bir aylık bedeli.' }}</li>
       </ol>
     </section>
   </div>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'A worked example' if lang == 'en' else 'Örnek bir hesap' }}</h2>
+    {% if lang == 'en' %}
+    <p class="mt-3">Take an assistant that handles 2,000 conversations a day, with 750 input and 200 output tokens per
+    conversation. That is about 45M input and 12M output tokens a month. On a mid-tier model at $3 / 1M input and
+    $15 / 1M output, the monthly bill is <strong>$135 + $180 = $315</strong>. Move 70% of the input into prompt
+    caching at the cached rate and the input line falls to roughly $50, taking the bill to about
+    <strong>$230</strong> — before any model routing. The same arithmetic is what the public calculator on this site
+    does; you can reproduce every number yourself.</p>
+    {% else %}
+    <p class="mt-3">Günde 2.000 sohbeti olan, sohbet başına 750 girdi ve 200 çıktı token harcayan bir asistanı ele
+    alalım. Aylık yaklaşık 45M girdi ve 12M çıktı token eder. 1M girdi 3 $, 1M çıktı 15 $ olan orta segment bir
+    modelde aylık fatura <strong>135 $ + 180 $ = 315 $</strong> olur. Girdinin %70'ini önbellek fiyatına taşıdığınızda
+    girdi kalemi yaklaşık 50 $'a iner ve fatura <strong>230 $</strong> civarına geriler — model yönlendirmeye hiç
+    dokunmadan. Bu sitedeki herkese açık hesaplayıcı tam olarak bu aritmetiği yapar; her sayıyı kendiniz
+    doğrulayabilirsiniz.</p>
+    {% endif %}
+  </section>
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Who this is for' if lang == 'en' else 'Kimler için?' }}</h2>
+    <ul class="prose mt-3" style="padding-left:var(--sp-5)">
+      <li>{{ 'Teams spending more than about $500 a month on AI APIs.' if lang == 'en' else 'AI API\'lerine ayda yaklaşık 500 $ üzerinde harcayan ekipler.' }}</li>
+      <li>{{ 'Products in Turkish where token counts are higher than expected.' if lang == 'en' else 'Türkçe ürünler: token sayısı beklenenden yüksek çıkanlar.' }}</li>
+      <li>{{ 'Anyone who inherited an integration and does not know why the bill is what it is.' if lang == 'en' else 'Devraldığı entegrasyonun neden bu kadar faturaladığını bilmeyenler.' }}</li>
+    </ul>
+    <h2 class="mt-5" style="font-size:var(--fs-h3)">{{ 'What we do not claim' if lang == 'en' else 'Neyi iddia etmiyoruz?' }}</h2>
+    <ul class="prose mt-3" style="padding-left:var(--sp-5)">
+      <li>{{ 'We do not promise a percentage saving before seeing your data.' if lang == 'en' else 'Verinizi görmeden yüzde tasarruf sözü vermiyoruz.' }}</li>
+      <li>{{ 'We do not compare model quality; a cheaper model is only cheaper if it is good enough for your task.' if lang == 'en' else 'Model kalitesini karşılaştırmıyoruz; ucuz model ancak işinize yettiği sürece ucuzdur.' }}</li>
+      <li>{{ 'We do not touch your production keys; changes are yours to merge.' if lang == 'en' else 'Üretim anahtarlarınıza dokunmuyoruz; değişiklikleri siz birleştiriyorsunuz.' }}</li>
+    </ul>
+  </section>
 
   <section class="mt-5 surface surface-pad">
     <h2 style="font-size:var(--fs-h3)">{{ 'Start with a free estimate' if lang == 'en' else 'Ücretsiz hesapla başlayın' }}</h2>
@@ -46,4 +105,18 @@
     </p>
   </section>
 </div>
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Service",
+  "name":{{ ('AI cost audit' if lang == 'en' else 'AI maliyet denetimi')|tojson }},
+  "serviceType":{{ ('LLM cost optimisation' if lang == 'en' else 'LLM maliyet optimizasyonu')|tojson }},
+  "provider":{"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}},
+  "areaServed":"TR",
+  "url":{{ canonical|tojson }}
+}
+</script>
 {% endblock %}

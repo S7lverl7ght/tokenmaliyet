@@ -80,6 +80,68 @@
         </p>
       </div>
 
+      {% if monthly %}
+      <div class="surface surface-pad mt-5">
+        <h2 style="font-size:var(--fs-h3)">{{ primary.name ~ (' ne kadar tutar?' if lang == 'tr' else ' cost examples') }}</h2>
+        <p class="help mt-2">
+          {{ 'List prices applied to three monthly volumes. The formula is public; you can reproduce every figure in the' if lang == 'en' else 'Liste fiyatlarının üç aylık hacme uygulanmış hali. Formül açıktır; her sayıyı' }}
+          <a href="/hesaplayici">{{ 'calculator' if lang == 'en' else 'hesaplayıcıda' }}</a>{{ '.' if lang == 'en' else ' kendiniz doğrulayabilirsiniz.' }}
+        </p>
+        <div class="table-wrap mt-3">
+          <table class="prices" style="table-layout:auto">
+            <caption class="sr-only">{{ 'Monthly cost examples' if lang == 'en' else 'Aylık maliyet örnekleri' }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'Monthly volume' if lang == 'en' else 'Aylık hacim' }}</th>
+                <th scope="col" class="is-num">{{ 'Monthly cost' if lang == 'en' else 'Aylık maliyet' }}</th>
+                {% if fx_rate %}<th scope="col" class="is-num">{{ 'TRY equivalent' if lang == 'en' else 'TRY karşılığı' }}</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in monthly %}
+              <tr>
+                <td class="num">{{ m.in|tl(0) }} {{ 'in' if lang == 'en' else 'girdi' }} + {{ m.out|tl(0) }} {{ 'out' if lang == 'en' else 'çıktı' }}</td>
+                <td class="num">{{ m.usd|tl_dyn }} USD</td>
+                {% if fx_rate %}<td class="num">{{ m.try|tl(0) }} ₺</td>{% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if position or cache_saving %}
+      <div class="surface surface-pad mt-5">
+        <h2 style="font-size:var(--fs-h3)">{{ 'How it compares' if lang == 'en' else 'Fiyat konumu' }}</h2>
+        {% if position %}
+        <p class="mt-3">
+          {% if lang == 'en' %}
+          Within <strong>{{ provider_label }}</strong>, this model is ranked <strong>#{{ position.rank }}</strong> of
+          {{ position.total }} models by input price: {{ position.cheaper }} cheaper, {{ position.pricier }} more expensive.
+          The median input price in this provider is {{ position.median|tl_dyn }} USD per 1M tokens.
+          {% else %}
+          <strong>{{ provider_label }}</strong> içinde bu model, girdi fiyatına göre {{ position.total }} model arasında
+          <strong>{{ position.rank }}.</strong> sırada: {{ position.cheaper }} model daha ucuz, {{ position.pricier }} model daha pahalı.
+          Bu sağlayıcıdaki medyan girdi fiyatı 1M token başına {{ position.median|tl_dyn }} USD.
+          {% endif %}
+        </p>
+        <p class="help mt-2">
+          {{ 'Ranking uses the input price only; output price and quality are not part of it.' if lang == 'en' else 'Sıralama yalnızca girdi fiyatına göredir; çıktı fiyatı ve kalite hesaba katılmaz.' }}
+        </p>
+        {% endif %}
+        {% if cache_saving %}
+        <div class="notice notice-info mt-3" role="note">
+          <div>
+            {{ 'Prompt caching: reading the same context from cache costs' if lang == 'en' else 'Prompt caching: aynı bağlamı önbellekten okumak' }}
+            <strong>{{ cache_saving }}% {{ 'less' if lang == 'en' else 'daha az' }}</strong>
+            {{ 'than sending it as fresh input.' if lang == 'en' else 'maliyetlidir (taze girdi olarak göndermeye göre).' }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
       {% if variants|length > 1 %}
       <div class="surface surface-pad mt-5">
         <h2 style="font-size:var(--fs-h3)">Varyantlar</h2>

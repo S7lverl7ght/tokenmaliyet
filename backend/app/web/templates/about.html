@@ -109,9 +109,11 @@
 
     <h2>{{ 'Technical stack' if lang == 'en' else 'Teknik yapı' }}</h2>
     <p>
-      Python + FastAPI, PostgreSQL 18, SQLAlchemy ve Jinja2 ile sunucu tarafında render edilir.
+      {% if lang == 'en' %}Rendered server-side with Python + FastAPI, PostgreSQL 18, SQLAlchemy and Jinja2.
+      Collection, verification and publishing are separate steps; no price is published without human or automatic approval.
+      Raw source responses are stored for later review.{% else %}Python + FastAPI, PostgreSQL 18, SQLAlchemy ve Jinja2 ile sunucu tarafında render edilir.
       Toplama, doğrulama ve yayınlama ayrı adımlardır; hiçbir fiyat insan/otomatik onay olmadan yayınlanmaz.
-      Ham kaynak yanıtları ileride inceleme için saklanır.
+      Ham kaynak yanıtları ileride inceleme için saklanır.{% endif %}
     </p>
     <h2>{{ 'Publisher and contact' if lang == 'en' else 'Yayıncı ve iletişim' }}</h2>
     {% if lang == 'en' %}<p>Rendered server-side with Python + FastAPI, PostgreSQL 18, SQLAlchemy and Jinja2.
@@ -127,7 +129,7 @@
     </ul>
     <p class="text-sm text-muted">
       {{ 'Last data check:' if lang == 'en' else 'Son veri kontrolü:' }} {{ last_checked }} · {{ 'Approved observations:' if lang == 'en' else 'Onaylı gözlem sayısı:' }} {{ observation_count }} ·
-      {{ 'GPU prices:' if lang == 'en' else 'GPU fiyatı:' }} {{ gpu_count }} · API: <a href="/docs">/docs</a>
+      {{ 'GPU prices:' if lang == 'en' else 'GPU fiyatı:' }} {{ gpu_count }} · API: <a href="/api/v1/prices?format=json">{{ 'JSON endpoint' if lang == 'en' else 'JSON ucu' }}</a>
     </p>
   </article>
 </div>

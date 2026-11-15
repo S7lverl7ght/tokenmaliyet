@@ -62,7 +62,7 @@
           <h3 style="font-size:var(--fs-h3)">{{ 'Turkish or English?' if lang == 'en' else 'Türkçe mi, İngilizce mi?' }}</h3>
           <p class="help mt-2">{{ 'What if the same content were written in English — how would token count and cost change?' if lang == 'en' else 'Aynı içeriği İngilizce yazsaydınız token sayısı ve maliyeti ne olurdu?' }}</p>
           <div class="kpis mt-3">
-            <div class="kpi"><div class="k">{{ 'Estimated English tokens' if lang == 'en' else 'Tahmini İngilizce token' }}</div><div class="v" id="enTokens">—</div><div class="n">{{ turkce.ratio }}× daha az</div></div>
+            <div class="kpi"><div class="k">{{ 'Estimated English tokens' if lang == 'en' else 'Tahmini İngilizce token' }}</div><div class="v" id="enTokens">—</div><div class="n">{{ turkce.ratio }}× {{ 'fewer' if lang == 'en' else 'daha az' }}</div></div>
             <div class="kpi"><div class="k">{{ 'Difference' if lang == 'en' else 'Fark' }}</div><div class="v" id="tokenDiff">—</div><div class="n">{{ 'Turkish extra' if lang == 'en' else 'Türkçe fazladan' }}</div></div>
             <div class="kpi"><div class="k">{{ 'Cost difference' if lang == 'en' else 'Maliyet farkı' }}</div><div class="v" id="costDiff">—</div><div class="n">{{ 'same model, not monthly' if lang == 'en' else 'aynı model, aylık değil' }}</div></div>
           </div>

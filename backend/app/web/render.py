@@ -206,8 +206,8 @@ def qs(base: dict, **overrides) -> str:
     return ("?" + urlencode(clean)) if clean else ""
 
 
-_EN_PATHS = {"/fiyatlar", "/karsilastir", "/hesaplayici", "/token-sayaci",
-             "/gpu-maliyetleri", "/uyari", "/hakkinda"}
+_EN_PATHS = {"/fiyatlar", "/karsilastir", "/hesaplayici", "/hesaplayici/ses-maliyeti",
+             "/token-sayaci", "/gpu-maliyetleri", "/uyari", "/hakkinda"}
 
 
 _TRY_PATHS = {"/fiyatlar", "/gpu-maliyetleri"}
@@ -276,11 +276,30 @@ def _hreflang_pairs(path: str, lang: str) -> list[dict]:
     _, cur, base = _parse_path(path)
     if base not in _EN_PATHS:
         return []
-    return [
-        {"lang": "tr", "url": SITE_URL + _build_path("tr", cur, base)},
-        {"lang": "en", "url": SITE_URL + _build_path("en", cur, base)},
-        {"lang": "x-default", "url": SITE_URL + _build_path("tr", cur, base)},
-    ]
+    en_path = _build_path("en", cur, base)
+    tr_path = _build_path("tr", cur, base)
+    pairs = [{"lang": "tr", "url": canonical_url(tr_path)}]
+    # Ingilizce varyanti yalnizca GERCEKTEN varsa bildirilir; olmayan adres hreflang'e yazilmaz.
+    if en_path != tr_path:
+        pairs.append({"lang": "en", "url": canonical_url(en_path)})
+    pairs.append({"lang": "x-default", "url": canonical_url(tr_path)})
+    return pairs
+
+
+def canonical_url(path: str) -> str:
+    """Kanonik adres uretir ve Cloudflare Pages'in dizin bicimine uydurur.
+
+    Neden: Cloudflare Pages her sayfayi dizin olarak sunuyor ve /fiyatlar istegini
+    /fiyatlar/ adresine 308 ile yonlendiriyor. Kanonik etiket /fiyatlar (egik cizgisiz)
+    kaldiginda Google "kanonik adres yonlendiriyor" uyarisi veriyor ve sinyal kayboluyor.
+    Tek kaynak burasi: tum kanonik/sitemap/hreflang adresleri bu fonksiyondan gecer.
+    """
+    raw = (path or "/").split("?")[0].split("#")[0]
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    if raw != "/" and not raw.endswith("/"):
+        raw += "/"
+    return SITE_URL + raw
 
 
 def _pref(value, allowed, default):
@@ -350,7 +369,7 @@ def base_context(db: Session, request, **extra) -> dict:
         "cur_try_url": _cur_url(request, "TRY", lang, _path_base),
         "lang_tr_url": _lang_url(request, "tr", currency, _path_base),
         "lang_en_url": _lang_url(request, "en", currency, _path_base),
-        "canonical": SITE_URL + request.url.path,
+        "canonical": canonical_url(request.url.path),
     }
     ctx.update(extra)
     return ctx

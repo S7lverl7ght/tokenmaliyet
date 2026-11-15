@@ -58,8 +58,11 @@ def test_email_html_escapes_user_input():
 def test_export_writes_real_model_options():
     s = read(ROOT / "scripts" / "export_static.py")
     assert '/api/v1/model-options' in s
-    assert "resp_options.content" in s, "gercek JSON yazilmiyor"
+    # Uclar dongu halinde yaziliyor; her biri icin gercek yanit govdesi kullanilmali.
+    assert "resp_api.content" in s, "gercek JSON yazilmiyor"
     assert '"error":"Statik yayinda API kapali"' not in s, "eski hata stub'i kalmis"
+    # Odeme/fiyat verisi ucu da statik uretilmeli (alt bilgi baglanti veriyor).
+    assert '("prices", "/api/v1/prices")' in s, "/api/v1/prices statik uretilmiyor"
 
 
 def test_token_counter_guards_non_array():

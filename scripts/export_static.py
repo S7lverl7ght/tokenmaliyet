@@ -31,6 +31,7 @@ PAGES = [
     ("/hakkinda", "hakkinda"),
     ("/danismanlik", "danismanlik"),
     ("/gizlilik", "gizlilik"),
+    ("/kullanim-kosullari", "kullanim-kosullari"),
     ("/iletisim", "iletisim"),
     ("/duzeltmeler", "duzeltmeler"),
     ("/uyari", "uyari"),
@@ -82,10 +83,21 @@ def main() -> int:
     from app.web import default_models as dm
     from app.web import queries
 
+    # KIRIK BAGLANTI KORUMASI (15.11.2026 canli testte bulundu):
+    # /fiyatlar tablosunda 50 model baglantisi var ama yalnizca 44 sayfa uretiliyordu;
+    # 17 baglanti 404 donuyordu. Artik ONCE indekslenebilir 60 model, SONRA tabloda
+    # gorunen tum modeller (noindex) uretilir. Boylece statik sitede kirik link kalmaz.
+    written_models: set[str] = set()
     with SessionLocal() as db:
-        count = 0
-        for row in queries.price_rows(db):
-            if not dm.is_indexable(row):
+        all_rows = queries.price_rows(db)
+        # 1) indekslenebilir modeller (sitemap ile ayni kume)
+        ordered = [r for r in all_rows if dm.is_indexable(r)][:60]
+        # 2) tabloda gorunen geri kalan modeller (alias olmayanlar), sayfa 404 vermesin
+        ordered += [r for r in all_rows if not dm.is_indexable(r) and not r.is_alias]
+
+        for row in ordered:
+            key = f"{row.provider_slug}/{row.slug}"
+            if key in written_models:
                 continue
             resp = client.get(f"/modeller/{row.provider_slug}/{row.slug}")
             if resp.status_code != 200:
@@ -93,9 +105,10 @@ def main() -> int:
             target = DIST / "modeller" / row.provider_slug / row.slug / "index.html"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(resp.text, encoding="utf-8")
-            count += 1
-            if count >= 60:
-                break
+            written_models.add(key)
+
+    print(f"[ok] {len(written_models)} model sayfasi uretildi"
+          f" (indekslenebilir: {sum(1 for r in ordered if dm.is_indexable(r))})")
 
     # Programatik GPU detay sayfalari (rapor 4. tur bolum 4: /gpu/<slug>)
     # Onemli: bu sayfalar KENDI canonical'ini ve index iznini almali.
@@ -112,12 +125,6 @@ def main() -> int:
         if resp.status_code != 200:
             continue
         html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
-        # canonical: bu sayfanin kendisi
-        html = html.replace(
-            '<link rel="canonical" href="https://tokenmaliyet.com/gpu-maliyetleri">',
-            f'<link rel="canonical" href="https://tokenmaliyet.com/gpu/{slug}">',
-            1,
-        )
         # robots: indekslenebilir
         html = html.replace(
             '<meta name="robots" content="noindex,nofollow">',
@@ -172,21 +179,19 @@ def main() -> int:
         target = DIST / "karsilastir" / slug / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
         html = resp.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
-        # Her karsilastirma sayfasi KENDI canonical'ini almali (yoksa mukerrer sayilir).
-        html = html.replace(
-            '<link rel="canonical" href="https://tokenmaliyet.com/karsilastir">',
-            f'<link rel="canonical" href="https://tokenmaliyet.com/karsilastir/{slug}">',
-            1,
-        )
         # SEO: her karsilastirma sayfasi KENDI basligini almali.
         import re as _re2
 
-        # Model adlari cok uzun olabiliyor; title 60 karakteri gecmemeli.
-        _an = a.name if len(a.name) <= 22 else a.name[:21] + "…"
-        _bn = b.name if len(b.name) <= 22 else b.name[:21] + "…"
-        cmp_title = f"{_an} vs {_bn} maliyet | TokenMaliyet"
-        if len(cmp_title) > 60:
-            cmp_title = f"{_an} vs {_bn} | TokenMaliyet"
+        # Baslik: okunur ve BENZERSIZ olmali. Once tam slug denenir; 70 karakteri
+        # asarsa her iki ad ortadan kisaltilir (bas + son korunur).
+        cmp_title = f"{a.slug} vs {b.slug} | TokenMaliyet"
+        if len(cmp_title) > 70:
+            cmp_title = f"{a.slug} vs {b.slug}"
+        if len(cmp_title) > 70:
+            cmp_title = f"{_short_slug(a.slug, 30)} vs {_short_slug(b.slug, 30)}"
+        if len(cmp_title) > 70:
+            cmp_title = f"{_short_slug(a.slug, 22)} vs {_short_slug(b.slug, 22)}"
+
         cmp_desc = (
             f"{a.name} ve {b.name} aylik maliyet karsilastirmasi: 100M girdi + "
             f"25M cikti token varsayimiyla USD ve TRY fark."
@@ -291,12 +296,6 @@ def main() -> int:
         prefix = out_dir.relative_to(DIST).as_posix()
         html = resp.text
 
-        # canonical: bu varyantin kendi adresi
-        html = html.replace(
-            f'<link rel="canonical" href="https://tokenmaliyet.com{path}">',
-            f'<link rel="canonical" href="https://tokenmaliyet.com/{prefix}">',
-            1,
-        )
         html = html.replace(
             "<head>",
             '<head>\n<script>window.__STATIC__=true;</script>',
@@ -359,6 +358,7 @@ def main() -> int:
         '<title>TokenMaliyet - AI API maliyet hesaplayici</title>'
         '<meta name="description" content="AI API ve GPU maliyetlerini hesaplayin: '
         '480+ model, 5 saglayici, tarihli TRY kuru. Ucretsiz hesaplayici.">'
+        '<meta name="robots" content="noindex,follow">'
         '<link rel="canonical" href="https://tokenmaliyet.com/hesaplayici/">'
         '<meta http-equiv="refresh" content="0; url=/hesaplayici/">'
         '</head><body><h1>TokenMaliyet</h1>'
@@ -388,18 +388,271 @@ def main() -> int:
     # Onceki hata (rapor 5. tur Hata 2): buraya sabit hata mesaji yaziliyordu;
     # token sayaci list.forEach() cagirinca TypeError aliyor ve fiyatlar
     # sonsuza kadar "yukleniyor" kaliyordu.
+    # API uclari STATIK olarak da uretilmeli.
+    # Gercek hata (15.11.2026 canli test): alt bilgi ve hakkinda sayfasi
+    # /api/v1/prices?format=json adresine baglanti veriyordu ama Cloudflare Pages'te
+    # Python sunucu olmadigi icin bu adres 404 donuyordu. "Ucretsiz JSON" sozu tutmuyordu.
     api_dir = DIST / "api" / "v1"
     api_dir.mkdir(parents=True, exist_ok=True)
-    resp_options = client.get("/api/v1/model-options")
-    if resp_options.status_code == 200:
-        (api_dir / "model-options").write_bytes(resp_options.content)
-        print(f"[api] model-options -> {len(resp_options.content)} bayt JSON")
-    else:
-        (api_dir / "model-options").write_text("[]", encoding="utf-8")
-        print(f"[api] model-options URETILEMEDI ({resp_options.status_code}), bos liste yazildi")
+    API_ENDPOINTS = [
+        ("model-options", "/api/v1/model-options"),
+        ("prices", "/api/v1/prices"),
+        ("fx", "/api/v1/fx?quote=TRY"),
+        ("providers", "/api/v1/providers"),
+    ]
+    for name, url in API_ENDPOINTS:
+        resp_api = client.get(url)
+        if resp_api.status_code == 200:
+            (api_dir / name).write_bytes(resp_api.content)
+            print(f"[api] {name} -> {len(resp_api.content)} bayt JSON")
+        else:
+            (api_dir / name).write_text("[]", encoding="utf-8")
+            print(f"[api] {name} URETILEMEDI ({resp_api.status_code}), bos liste yazildi")
+
+    # --- Ic baglanti normalizasyonu ---
+    # Cloudflare Pages sayfalari /fiyatlar/ biciminde sunuyor ve /fiyatlar istegini
+    # 308 ile yonlendiriyor. Kanonik adresler artik / ile bitiyor; ic baglantilar da
+    # ayni bicimde olmali ki her gezinme gereksiz bir yonlendirme harcamasin.
+    _finalize_pages()
 
     print(f"\nSTATIK EXPORT TAMAM: {written} sayfa -> {DIST}")
     return 0
+
+
+def _short_slug(slug: str, limit: int = 30) -> str:
+    """Slug'i ORTADAN kisaltir: bas ve son korunur.
+
+    Model adlarinda ayirt edici bilgi iki ucta olur:
+      gemini-3.1-flash-lite-image   -> model ailesi basta, tur sonda
+      gemini-2.5-flash-preview-tts  -> "flash"/"pro" basta, "tts" sonda
+    Ortadan kisaltma ikisini de korur; sadece sonda kirpmak "flash"/"pro"
+    ayrimini yok ediyordu (onceki hata).
+    """
+    if len(slug) <= limit:
+        return slug
+    head_len = max(8, limit // 2)
+    tail_len = max(6, limit - head_len - 1)      # 1 = "…"
+    return f"{slug[:head_len]}…{slug[-tail_len:]}"
+
+
+def _dedupe_titles() -> None:
+    """Ayni <title> metnini tasiyan sayfalari GARANTILI bicimde ayirir.
+
+    Neden son gecis: baslik metnini onceden kisaltmak kirilgan; model adlari
+    uzadikca iki farkli cift ayni kisaltmaya dusuyor. Burada once tum basliklar
+    toplanir, GERCEK cakismalar bulunur ve her sayfaya, gruptaki diger
+    sayfalardan AYRISTIGI parcadan turetilen bir ek konur. Son care olarak
+    yolun kisa ozeti eklenir; boylece benzersizlik garanti edilir.
+    """
+    import hashlib
+    import re as _re
+
+    title_re = _re.compile(r"<title>(.*?)</title>", _re.S)
+
+    for _round in range(3):
+        current: dict[Path, str] = {}
+        for p in sorted(DIST.rglob("*.html")):
+            m = title_re.search(p.read_text(encoding="utf-8"))
+            if m:
+                current[p] = m.group(1).strip()
+
+        by_title: dict[str, list[Path]] = {}
+        for p, t in current.items():
+            by_title.setdefault(t, []).append(p)
+
+        groups = {t: ps for t, ps in by_title.items() if len(ps) > 1}
+        if not groups:
+            if _round:
+                print(f"[title] mukerrer baslik kalmadi ({_round} gecis)")
+            return
+
+        fixed = 0
+        for title, paths in groups.items():
+            # Gurubu yollarin token kumeleriyle ayirt et.
+            tokens = {p: set(p.parent.relative_to(DIST).as_posix().replace("/", "-").split("-"))
+                      for p in paths}
+            for p in paths:
+                others = [tokens[q] for q in paths if q is not p]
+                unique_bits = tokens[p] - set().union(*others) if others else set()
+                # Anlamli (sayisal olmayan, kisa olmayan) parcalari tercih et.
+                marker = ""
+                if unique_bits:
+                    good = [w for w in unique_bits if len(w) > 2 and not w.isdigit()]
+                    pick = good or sorted(unique_bits)
+                    marker = "-".join(sorted(pick, key=len, reverse=True)[:2])[:20]
+                if not marker:
+                    rel = p.parent.relative_to(DIST).as_posix()
+                    marker = hashlib.sha1(rel.encode()).hexdigest()[:6]
+                if f"({marker})" in title:
+                    marker = hashlib.sha1(
+                        p.parent.relative_to(DIST).as_posix().encode()).hexdigest()[:6]
+                new_title = f"{title[:50].rstrip(' ·—-')} ({marker})"
+                src = p.read_text(encoding="utf-8")
+                p.write_text(title_re.sub(lambda _m: f"<title>{new_title}</title>", src, count=1),
+                             encoding="utf-8")
+                fixed += 1
+        print(f"[title] {fixed} mukerrer baslik ayirt edildi (gecis {_round + 1})")
+
+
+def _finalize_pages() -> None:
+    """Her uretilen sayfaya KENDI kanonik adresini yazar ve ic baglantilari duzeltir.
+
+    Neden tek gecis: daha once kanonik adresler sayfa basina ayri ayri string
+    degistirmeyle yaziliyordu; bicim degisince ( / ile biten adres ) bu degistirmeler
+    sessizce eslesmiyor ve sayfalar YANLIS kanonik gosteriyordu. Artik kaynak tek:
+    sayfanin kendi cikti yolu.
+    """
+    import re as _re
+
+    base = "https://tokenmaliyet.com"
+    href_re = _re.compile(r'href="(/[^"#?]*)"')
+    can_re = _re.compile(r'<link rel="canonical" href="[^"]*">')
+    og_re = _re.compile(r'<meta property="og:url" content="[^"]*">')
+    og_desc_re = _re.compile(r'<meta property="og:description" content="[^"]*">')
+
+    def fix_href(match):
+        path = match.group(1)
+        if path == "/" or path.endswith("/"):
+            return match.group(0)
+        if path.startswith(("/static/", "/api/", "/functions/")):
+            return match.group(0)
+        last = path.rsplit("/", 1)[-1]
+        if "." in last:
+            return match.group(0)
+        return f'href="{path}/"'
+
+    title_re = _re.compile(r"<title>(.*?)</title>", _re.S)
+    MAX_TITLE = 60
+    SUFFIX = " | TokenMaliyet"
+
+    links_changed = 0
+    canon_changed = 0
+    title_changed = 0
+    for html_file in DIST.rglob("*.html"):
+        rel = html_file.parent.relative_to(DIST).as_posix()
+        # KOK index.html yonlendirme sayfasidir; kanonigi hesaplayiciya isaret eder.
+        if rel == ".":
+            own = f"{base}/hesaplayici/"
+        else:
+            own = f"{base}/{rel}/"
+
+        src = html_file.read_text(encoding="utf-8")
+        new = href_re.sub(fix_href, src)
+
+        # --- Model sayfasi basligi BENZERSIZ olmali ---
+        # Kisa adli iki model (orn. ...-image / ...-preview) 30 karakterde
+        # kisaltilinca ayni basligi uretiyordu -> mukerrer baslik.
+        # Cozum: uzun adlarda basligin sonuna KISA SLUG eki eklenir.
+        if rel.startswith("modeller/"):
+            m_model = title_re.search(new)
+            if m_model:
+                t0 = m_model.group(1).strip()
+                stem0 = t0[: -len(SUFFIX)] if t0.endswith(SUFFIX) else t0
+                slug_tail = rel.rsplit("/", 1)[-1]
+                # Kisaltilmis basliklarda ayirt edici son eki ekle.
+                # 'gemini-3.1-flash-lite-image' ile '...-preview' ayni basliga
+                # kisaliyordu; ayirt eden parca slug'in SON parcasidir.
+                if "…" in stem0:
+                    last_tok = slug_tail.rsplit("-", 1)[-1]
+                    if last_tok and last_tok not in stem0:
+                        room = MAX_TITLE - len(SUFFIX) - len(last_tok) - 4
+                        t1 = f"{stem0[:room].rstrip(' ·—-')} · {last_tok}{SUFFIX}"
+                        new = title_re.sub(f"<title>{t1}</title>", new, count=1)
+                        title_changed += 1
+
+        # --- Baslik kurallari (SEO) ---
+        # 1) 60 karakteri asan baslik Google'da kesilir; model adi kismini kisalt.
+        # 2) /try/ varyantlari ayni basligi tasiyordu -> mukerrer baslik. Para birimi eklenir.
+        m_title = title_re.search(new)
+        if m_title and not rel.startswith("karsilastir"):
+            title = m_title.group(1).strip()
+            original = title
+
+            def _shorten(t: str, budget: int) -> str:
+                """Basligi, anlamli parcalari koruyarak 'budget' karaktere sigdirir."""
+                if len(t) <= budget:
+                    return t
+                stem = t[: -len(SUFFIX)] if t.endswith(SUFFIX) else t
+                # 1) " — <aciklama>" kismini at (ana konu korunur)
+                for sep in (" — ", " – ", " · "):
+                    if sep in stem:
+                        head = stem.split(sep, 1)[0]
+                        if len(head) + len(SUFFIX) <= budget:
+                            return head + SUFFIX
+                # 2) Kelime sinirinda kirp
+                keep = budget - len(SUFFIX) - 1
+                cut = (t[: -len(SUFFIX)] if t.endswith(SUFFIX) else t)[:keep]
+                if " " in cut:
+                    cut = cut.rsplit(" ", 1)[0]
+                return cut.rstrip(" ·—-") + "…" + SUFFIX
+
+            is_try = rel.startswith("try/") or rel.startswith("en/try/")
+            # DIKKAT: sira onemli. Once baslik kisaltilir, SONRA para birimi eki eklenir.
+            # Onceki hata: ek once eklenip sonra kisaltiliyordu; kisaltma " — " ayiricindan
+            # boldugu icin ek de siliniyor ve TRY varyanti USD ile AYNI basligi aliyordu.
+            title = _shorten(title, MAX_TITLE)
+            if is_try and "TRY" not in title:
+                marker = " — TRY"
+                if len(title) + len(marker) <= MAX_TITLE:
+                    title = title.replace(SUFFIX, "") + marker + SUFFIX
+                else:
+                    title = _shorten(title, MAX_TITLE - len(marker)).replace(SUFFIX, "") + marker + SUFFIX
+
+            if title != original:
+                new = title_re.sub(f"<title>{title}</title>", new, count=1)
+                title_changed += 1
+
+        if can_re.search(new):
+            replaced = can_re.sub(f'<link rel="canonical" href="{own}">', new, count=1)
+            if replaced != new:
+                canon_changed += 1
+            new = replaced
+        if og_re.search(new):
+            new = og_re.sub(f'<meta property="og:url" content="{own}">', new, count=1)
+
+        # Description 160 karakteri asarsa kesilir (Google tam gostermiyor).
+        d_re = _re.compile(r'<meta name="description" content="([^"]*)">')
+        m_desc = d_re.search(new)
+        if m_desc and len(m_desc.group(1)) > 160:
+            cut = m_desc.group(1)[:157].rstrip(" ,.;:—-")
+            new = d_re.sub(f'<meta name="description" content="{cut}…">', new, count=1)
+            new = og_desc_re.sub(f'<meta property="og:description" content="{cut}…">', new, count=1)
+
+        if new != src:
+            html_file.write_text(new, encoding="utf-8")
+            links_changed += 1
+    print(f"[link] {links_changed} sayfada baglanti/kanonik guncellendi")
+    print(f"[canonical] {canon_changed} sayfaya kendi kanonik adresi yazildi")
+    print(f"[title] {title_changed} baslik uzunluk/benzersizlik icin guncellendi")
+    _dedupe_titles()
+
+
+def _normalize_internal_links() -> None:
+    """Ic href'leri dizin bicimine cevirir; dosya/API/dis baglantilarina dokunmaz."""
+    import re as _re
+
+    href_re = _re.compile(r'href="(/[^"#?]*)"')
+
+    def fix(match):
+        path = match.group(1)
+        # Dokunulmayacaklar: dis adres, varlik, API, uzantili dosya, kok
+        if path == "/" or path.endswith("/"):
+            return match.group(0)
+        if path.startswith(("/static/", "/api/", "/functions/")):
+            return match.group(0)
+        last = path.rsplit("/", 1)[-1]
+        if "." in last:          # sitemap.xml, robots.txt, og-image.png ...
+            return match.group(0)
+        return f'href="{path}/"'
+
+    changed = 0
+    for html_file in DIST.rglob("*.html"):
+        src = html_file.read_text(encoding="utf-8")
+        new = href_re.sub(fix, src)
+        if new != src:
+            html_file.write_text(new, encoding="utf-8")
+            changed += 1
+    print(f"[link] {changed} HTML dosyasinda ic baglanti / ile bitirildi")
 
 
 if __name__ == "__main__":

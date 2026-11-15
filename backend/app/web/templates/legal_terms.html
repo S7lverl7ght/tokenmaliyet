@@ -1,0 +1,36 @@
+{% extends "legal.html" %}
+{% block body %}
+<h2>{{ 'In short' if lang == 'en' else 'Kısaca' }}</h2>
+<p>{{ 'This site publishes price data for information only. It is free to use and creates no contract, guarantee or advisory relationship. Prices can be wrong or out of date; always check the provider&rsquo;s own pricing page before you commit to spend.' if lang == 'en' else 'Bu site fiyat verisini yalnızca bilgilendirme amacıyla yayımlar. Kullanımı ücretsizdir ve bir sözleşme, garanti veya danışmanlık ilişkisi doğurmaz. Fiyatlar hatalı veya güncelliğini yitirmiş olabilir; harcama kararı vermeden önce her zaman sağlayıcının kendi fiyat sayfasını doğrulayın.' }}</p>
+
+<h2>{{ 'What you may do' if lang == 'en' else 'Neleri yapabilirsiniz?' }}</h2>
+<ul>
+  <li>{{ 'Read, quote and share the pages and the calculator results freely, including commercially, as long as you cite the source.' if lang == 'en' else 'Kaynağı belirttiğiniz sürece sayfaları ve hesaplayıcı sonuçlarını ticari kullanım dahil serbestçe okuyabilir, alıntılayabilir ve paylaşabilirsiniz.' }}</li>
+  <li>{{ 'Query the public JSON endpoints (/api/v1/prices, /api/v1/models, /api/v1/fx) within reasonable limits.' if lang == 'en' else 'Herkese açık JSON uçlarını (/api/v1/prices, /api/v1/models, /api/v1/fx) makul sınırlar içinde sorgulayabilirsiniz.' }}</li>
+  <li>{{ 'Embed a result or a screenshot in your own article.' if lang == 'en' else 'Bir sonucu veya ekran görüntüsünü kendi yazınıza ekleyebilirsiniz.' }}</li>
+</ul>
+
+<h2>{{ 'What you may not do' if lang == 'en' else 'Neleri yapamazsınız?' }}</h2>
+<ul>
+  <li>{{ 'Present the data as your own primary research without attribution.' if lang == 'en' else 'Veriyi kaynak göstermeden kendi özgün araştırmanız gibi sunamazsınız.' }}</li>
+  <li>{{ 'Scrape at a rate that degrades the service, or bypass rate limits and protections.' if lang == 'en' else 'Hizmeti bozacak hızda kazıyamaz, hız sınırlarını ve korumaları atlatamazsınız.' }}</li>
+  <li>{{ 'Resell the data as a standalone feed or dataset without written permission.' if lang == 'en' else 'Veriyi yazılı izin olmadan bağımsız bir akış veya veri kümesi olarak yeniden satamazsınız.' }}</li>
+  <li>{{ 'Use the site to break the law, to mislead, or to send unsolicited bulk messages through the contact form.' if lang == 'en' else 'Siteyi hukuku çiğnemek, yanıltmak veya iletişim formu üzerinden istenmeyen toplu mesaj göndermek için kullanamazsınız.' }}</li>
+</ul>
+
+<h2>{{ 'Who owns what' if lang == 'en' else 'Fikri mülkiyet' }}</h2>
+<p>{{ 'The site design, code, text and the compiled dataset belong to the publisher. Provider names, model names and trademarks belong to their respective owners and are used only to identify the products being compared. This site is not affiliated with, sponsored by or endorsed by any AI provider.' if lang == 'en' else 'Site tasarımı, kodu, metinleri ve derlenmiş veri kümesi yayıncıya aittir. Sağlayıcı adları, model adları ve ticari markalar ilgili sahiplerine aittir ve yalnızca karşılaştırılan ürünleri tanımlamak için kullanılır. Bu site hiçbir AI sağlayıcısıyla bağlantılı, onlar tarafından sponsor edilmiş veya onaylanmış değildir.' }}</p>
+<p>{{ 'Model names may be subject to trademark protection; if you are a rights holder and want a page corrected or removed, write to us and we will act on a verified request.' if lang == 'en' else 'Model adları ticari marka korumasına tabi olabilir. Hak sahibiyseniz ve bir sayfanın düzeltilmesini veya kaldırılmasını istiyorsanız bize yazın; doğrulanmış talebi işleme alırız.' }}</p>
+
+<h2>{{ 'No warranty' if lang == 'en' else 'Garanti yok' }}</h2>
+<p>{{ 'The service is provided “as is”. We make no warranty that the data is accurate, complete or current, that the site will be available without interruption, or that a calculation is fit for any particular purpose. Provider prices change without notice and our collection can fail or lag.' if lang == 'en' else 'Hizmet “olduğu gibi” sunulur. Verinin doğru, eksiksiz veya güncel olduğuna, sitenin kesintisiz erişilebilir olacağına ya da bir hesaplamanın belirli bir amaca uygun olduğuna dair garanti vermiyoruz. Sağlayıcı fiyatları haber verilmeden değişir; toplama işlemi başarısız olabilir veya gecikebilir.' }}</p>
+
+<h2>{{ 'Limitation of liability' if lang == 'en' else 'Sorumluluğun sınırı' }}</h2>
+<p>{{ 'To the extent permitted by law, the publisher is not liable for indirect or consequential loss, lost profit, or business decisions taken on the basis of the data shown here. Your sole remedy for dissatisfaction with the service is to stop using it.' if lang == 'en' else 'Yasaların izin verdiği ölçüde yayıncı; dolaylı veya sonuçsal zararlardan, kâr kaybından ya da burada gösterilen verilere dayanılarak alınan iş kararlarından sorumlu değildir. Hizmetten memnun kalmamanız durumundaki tek çözümünüz kullanımı bırakmaktır.' }}</p>
+
+<h2>{{ 'Changes' if lang == 'en' else 'Değişiklikler' }}</h2>
+<p>{{ 'These terms may change. The date at the top of this page shows the last revision; continued use after a change means you accept the revised terms.' if lang == 'en' else 'Bu koşullar değişebilir. Sayfanın başındaki tarih son güncellemeyi gösterir; değişiklikten sonra kullanıma devam etmeniz güncel koşulları kabul ettiğiniz anlamına gelir.' }}</p>
+
+<h2>{{ 'Contact' if lang == 'en' else 'İletişim' }}</h2>
+<p>{{ 'Questions about these terms:' if lang == 'en' else 'Bu koşullarla ilgili sorular:' }} <a href="/iletisim">{{ contact_email }}</a></p>
+{% endblock %}

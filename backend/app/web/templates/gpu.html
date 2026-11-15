@@ -6,14 +6,14 @@
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">GPU maliyetleri</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'GPU costs' if lang == 'en' else 'GPU maliyetleri' }}</li></ol></nav>
     <h1>{{ t('gpu.title') }}</h1>
     <p class="lede">{{ 'GPU-hour prices from ' if lang == 'en' else '' }}{{ providers|length }}{{ ' providers' if lang == 'en' else ' sağlayıcıdan' }} {{ gpu_count }}{{ ' GPU-hour prices. Prices are read from official APIs and' if lang == 'en' else ' GPU-saat fiyatı. Fiyatlar resmî API ve' }}
       {{ 'pricing pages; every row carries its source and observation time.</p>'|safe if lang == 'en' else 'fiyat sayfalarından okunur; her satırda kaynak ve gözlem zamanı bulunur.</p>'|safe }}
     <div class="meta">
       <span>{{ t('footer.last_check') }}: <strong>{{ last_checked }}</strong></span>
-      <span>Birim: <strong>USD / GPU-saat</strong></span>
-      <span>Kur: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong></span>
+      <span>{{ 'Unit' if lang == 'en' else 'Birim' }}: <strong>{{ 'USD / GPU-hour' if lang == 'en' else 'USD / GPU-saat' }}</strong></span>
+      <span>{{ 'Rate' if lang == 'en' else 'Kur' }}: 1 USD = <strong>{{ fx_rate|tl(3) }} TRY</strong></span>
     </div>
   </header>
 
@@ -122,17 +122,17 @@
 
   <section class="grid12 mt-5">
     <div style="grid-column:span 7" class="surface surface-pad">
-      <h2 style="font-size:var(--fs-h3)">Kaynaklar</h2>
+      <h2 style="font-size:var(--fs-h3)">{{ 'Sources' if lang == 'en' else 'Kaynaklar' }}</h2>
       <div class="table-wrap mt-3">
         <table class="prices" style="table-layout:auto">
           <caption class="sr-only">{{ 'GPU providers and price ranges' if lang == 'en' else 'GPU sağlayıcıları ve fiyat aralıkları' }}</caption>
-          <thead><tr><th scope="col">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th><th scope="col">Tip</th><th scope="col" class="is-num">Kalem</th>
+          <thead><tr><th scope="col">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th><th scope="col">{{ 'Type' if lang == 'en' else 'Tip' }}</th><th scope="col" class="is-num">{{ 'Items' if lang == 'en' else 'Kalem' }}</th>
             <th scope="col" class="is-num">{{ 'Lowest' if lang == 'en' else 'En düşük' }}</th><th scope="col" class="is-num">{{ 'Highest' if lang == 'en' else 'En yüksek' }}</th></tr></thead>
           <tbody>
           {% for p in providers %}
             <tr>
               <td><a href="{{ p.url }}" target="_blank" rel="noopener nofollow">{{ p.name }} ↗</a></td>
-              <td class="text-sm">{{ 'Pazaryeri' if p.kind == 'marketplace' else 'Bulut' }}</td>
+              <td class="text-sm">{% if p.kind == 'marketplace' %}{{ 'Marketplace' if lang == 'en' else 'Pazaryeri' }}{% else %}{{ 'Cloud' if lang == 'en' else 'Bulut' }}{% endif %}</td>
               <td class="num">{{ p.count }}</td>
               <td class="num">{{ p.min|tl_dyn }} $</td>
               <td class="num">{{ p.max|tl_dyn }} $</td>
@@ -158,7 +158,7 @@
       </ul>
       <p class="help mt-4">{{ 'Tax, egress traffic and storage are not included. GPU-hour prices are never' if lang == 'en' else 'Vergi, çıkış trafiği ve depolama dahil değildir. GPU-saat fiyatı token fiyatıyla' }}
         {{ 'mixed into the same table as token prices.' if lang == 'en' else 'aynı tabloda karıştırılmaz.' }}</p>
-      <p class="mt-4"><a class="btn btn-secondary" href="/hesaplayici">Token maliyeti hesapla</a></p>
+      <p class="mt-4"><a class="btn btn-secondary" href="/hesaplayici">{{ 'Calculate token cost' if lang == 'en' else 'Token maliyeti hesapla' }}</a></p>
     </aside>
   </section>
   {% endif %}

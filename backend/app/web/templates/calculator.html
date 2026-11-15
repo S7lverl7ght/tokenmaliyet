@@ -23,10 +23,10 @@
       <div class="form-grid">
                 <div class="field">
           <label for="from-q">{{ 'Current model' if lang == 'en' else 'Mevcut model' }}</label>
-          <div class="picker" data-picker>
+          <div class="picker" data-picker data-empty="{{ 'No matching model' if lang == 'en' else 'Eşleşen model yok' }}">
             <input type="text" id="from-q" class="picker-input" autocomplete="off" role="combobox"
                    aria-expanded="false" aria-controls="from-list" aria-autocomplete="list"
-                   placeholder="Model adı yazın…"
+                   placeholder="{{ 'Type a model name…' if lang == 'en' else 'Model adı yazın…' }}"
                    data-value-input="from" data-current="{{ f['from'] }}">
             <input type="hidden" id="from" name="from" value="{{ f['from'] }}">
             <ul class="picker-list" id="from-list" role="listbox" hidden></ul>
@@ -34,10 +34,10 @@
         </div>
         <div class="field">
           <label for="to-q">{{ 'Alternative model' if lang == 'en' else 'Alternatif model' }}</label>
-          <div class="picker" data-picker>
+          <div class="picker" data-picker data-empty="{{ 'No matching model' if lang == 'en' else 'Eşleşen model yok' }}">
             <input type="text" id="to-q" class="picker-input" autocomplete="off" role="combobox"
                    aria-expanded="false" aria-controls="to-list" aria-autocomplete="list"
-                   placeholder="Model adı yazın…"
+                   placeholder="{{ 'Type a model name…' if lang == 'en' else 'Model adı yazın…' }}"
                    data-value-input="to" data-current="{{ f['to'] }}">
             <input type="hidden" id="to" name="to" value="{{ f['to'] }}">
             <ul class="picker-list" id="to-list" role="listbox" hidden></ul>
@@ -55,7 +55,7 @@
                  aria-describedby="in-help{% if errors.get('in') %} in-err{% endif %}"
                  {% if errors.get('in') %}aria-invalid="true"{% endif %}>
           <span class="help-text" id="in-help">{{ 'Tokens per month' if lang == 'en' else 'Aylık token' }}</span>
-          <div class="chip-row" data-chips="inTok" aria-label="Hızlı girdi token seçimi">
+          <div class="chip-row" data-chips="inTok" aria-label="{{ 'Quick input token selection' if lang == 'en' else 'Hızlı girdi token seçimi' }}">
             {% for v, label in [('1000000','1M'),('10000000','10M'),('50000000','50M'),('100000000','100M'),('500000000','500M'),('1000000000','1B')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
             {% endfor %}
@@ -68,7 +68,7 @@
                  aria-describedby="out-help{% if errors.get('out') %} out-err{% endif %}"
                  {% if errors.get('out') %}aria-invalid="true"{% endif %}>
           <span class="help-text" id="out-help">{{ 'Tokens per month' if lang == 'en' else 'Aylık token' }}</span>
-          <div class="chip-row" data-chips="outTok" aria-label="Hızlı çıktı token seçimi">
+          <div class="chip-row" data-chips="outTok" aria-label="{{ 'Quick output token selection' if lang == 'en' else 'Hızlı çıktı token seçimi' }}">
             {% for v, label in [('1000000','1M'),('5000000','5M'),('10000000','10M'),('25000000','25M'),('50000000','50M')] %}
             <button type="button" class="chip" data-value="{{ v }}">{{ label }}</button>
             {% endfor %}
@@ -94,7 +94,9 @@
           {% if errors.get('cache') %}<span class="error-text" id="cache-err">{{ errors['cache'] }}</span>{% endif %}
         </div>
       </div>
-      <p class="help mt-3" id="formSummary" aria-live="polite"></p>
+      <p class="help mt-3" id="formSummary" aria-live="polite"
+         data-sep="{{ ' input + ' if lang == 'en' else ' girdi + ' }}"
+         data-suffix="{{ ' output tokens' if lang == 'en' else ' çıktı token' }}"></p>
       <p class="mt-4"><button class="btn" type="submit">{{ t('calc.calc') }}</button>
         <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">{{ 'Reset fields' if lang == 'en' else 'Alanları sıfırla' }}</a></p>
     </fieldset>
@@ -130,16 +132,18 @@
         <div class="n">{{ t('calc.pricier') }}</div>
       </div>
       {% else %}
-      <div class="result"><div class="k">Fark</div><div class="v" data-role="pct">%0,0</div><div class="n">{{ t('calc.same') }}</div></div>
+      <div class="result"><div class="k">{{ 'Difference' if lang == 'en' else 'Fark' }}</div><div class="v" data-role="pct">%0,0</div><div class="n">{{ t('calc.same') }}</div></div>
       {% endif %}
     </div>
     {% if result.tr_mult and result.tr_mult > 1 %}
     <div class="notice notice-info mt-3" role="note">
       <div>
         <strong>{{ 'Turkish content assumption:' if lang == 'en' else 'Türkçe içerik varsayımı:' }} {{ result.tr_mult|tl(2) }}×</strong> —
-        <em>her iki modelin</em> maliyeti de aynı Türkçe token çarpanıyla hesaplandı
+        {% if lang == 'en' %}the cost of <em>both models</em> was calculated with the same Turkish token multiplier
+        (the same content uses about {{ result.tr_mult|tl(2) }}× more tokens in Turkish).
+        This is an estimate; switch the text language above for an English comparison.{% else %}<em>her iki modelin</em> maliyeti de aynı Türkçe token çarpanıyla hesaplandı
         (aynı içerik Türkçe'de yaklaşık {{ result.tr_mult|tl(2) }}× daha fazla token harcar).
-        Bu bir tahmindir; İngilizce karşılaştırması için yukarıdan dili değiştirin.
+        Bu bir tahmindir; İngilizce karşılaştırması için yukarıdan dili değiştirin.{% endif %}
       </div>
     </div>
     {% endif %}
@@ -244,7 +248,7 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
       if(!hits.length){
         var empty = document.createElement("li");
         empty.className = "picker-empty";
-        empty.textContent = "Eşleşen model yok";
+        empty.textContent = root.dataset.empty || "";
         list.appendChild(empty);
       } else {
         hits.forEach(function(o, idx){
@@ -346,7 +350,9 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
     if(!i || !o || !out) return;
     var iv = Number(String(i.value||"").replace(/[^\d]/g,"")) || 0;
     var ov = Number(String(o.value||"").replace(/[^\d]/g,"")) || 0;
-    out.textContent = shortNum(iv) + " girdi + " + shortNum(ov) + " çıktı token";
+    var _sep = out.dataset.sep || " + ";
+    var _suffix = out.dataset.suffix || "";
+    out.textContent = shortNum(iv) + _sep + shortNum(ov) + _suffix;
   }
   ["inTok","outTok"].forEach(function(id){
     var el = document.getElementById(id);

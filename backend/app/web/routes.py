@@ -19,8 +19,8 @@ from . import default_models as web_defaults
 from . import queries
 from ..collectors import COLLECTORS
 from .affiliate import with_affiliate
-from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, configure,
-                     price_value, turkce_multiplier)
+from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, canonical_url,
+                     configure, price_value, turkce_multiplier)
 
 router = APIRouter()
 configure()
@@ -159,7 +159,7 @@ def prices_page(
         base_q=base_q,
         active_filters=active,
     )
-    ctx["canonical"] = SITE_URL + "/fiyatlar"
+    ctx["canonical"] = canonical_url("/fiyatlar")
     # Filtre kombinasyonlari indekslenmesin (kilavuz: ince/tekrarlanan URL kirliligi).
     # Kilavuz: filtre/sayfa parametreleri indekslenmesin. Istenen sayfa (kisitlanmadan once)
     # esas alinir; aksi halde olmayan sayfa istegi indekslenebilir gorunur.
@@ -187,8 +187,9 @@ def model_page(provider_slug: str, slug: str, request: Request, db: Session = De
 
     # Benzer modeller: ayni saglayicida, girdi fiyati en yakin 5 model
     base_val = price_value(primary.dim("input"))[0]
+    # Alias kayitlarin kendi sayfasi yok (mark_aliases) -> listeye girmemeli, yoksa 404.
     pool = [r for r in queries.price_rows(db, provider_slug=provider_slug)
-            if r.slug != slug and r.has_tokens]
+            if r.slug != slug and r.has_tokens and not r.is_alias]
     if base_val is not None:
         def _dist(r):
             v = price_value(r.dim("input"))[0]
@@ -196,10 +197,46 @@ def model_page(provider_slug: str, slug: str, request: Request, db: Session = De
         pool.sort(key=_dist)
     similar = pool[:5]
 
+    # --- OZGUN ICERIK (thin content korumasi) ---
+    # Her model sayfasina YALNIZCA O MODELE ait, veriden hesaplanan bilgiler konur:
+    # aylik maliyet ornekleri, saglayici icindeki fiyat konumu, onbellek tasarrufu.
+    # Sablon metin degil; sayilar veritabanindan gelir (uydurma yok).
+    _in = price_value(primary.dim("input"))[0]
+    _out = price_value(primary.dim("output"))[0]
+    _cache = price_value(primary.dim("cache_read"))[0]
+
+    monthly = []
+    if _in is not None and _out is not None:
+        for tin, tout in ((1_000_000, 250_000), (10_000_000, 2_500_000), (100_000_000, 25_000_000)):
+            cost = (tin / 1_000_000) * _in + (tout / 1_000_000) * _out
+            monthly.append({"in": tin, "out": tout, "usd": cost,
+                            "try": cost * float(fx.rate) if (fx := queries.get_fx(db)) else None})
+
+    # Saglayici ici fiyat konumu: ayni saglayicida kac model daha pahali/ucuz?
+    _peers = [r for r in queries.price_rows(db, provider_slug=primary.provider_slug)
+              if r.has_tokens and not r.is_alias]
+    _pin = [price_value(r.dim("input"))[0] for r in _peers]
+    _pin = [p for p in _pin if p is not None]
+    position = None
+    if _in is not None and len(_pin) > 1:
+        cheaper = sum(1 for p in _pin if p < _in)
+        position = {"total": len(_pin), "cheaper": cheaper,
+                    "pricier": len(_pin) - cheaper - 1,
+                    "rank": cheaper + 1,
+                    "median": sorted(_pin)[len(_pin) // 2]}
+
+    # Onbellek tasarrufu: cache_read fiyati varsa yuzde kazanc
+    cache_saving = None
+    if _in and _cache is not None and _cache < _in:
+        cache_saving = round((1 - _cache / _in) * 100)
+
     labels = queries.DIMENSIONS
     ctx = base_context(
         db, request, nav="fiyatlar",
         primary=primary,
+        monthly=monthly,
+        position=position,
+        cache_saving=cache_saving,
         variants=variants,
         provider_label=PROVIDER_LABELS.get(primary.provider_slug, primary.provider_name),
         dimension_labels=labels,
@@ -207,7 +244,7 @@ def model_page(provider_slug: str, slug: str, request: Request, db: Session = De
         history_rows=history_rows,
         similar=similar,
     )
-    ctx["canonical"] = f"{SITE_URL}/modeller/{primary.provider_slug}/{primary.slug}"
+    ctx["canonical"] = canonical_url(f"/modeller/{primary.provider_slug}/{primary.slug}")
     # Indekslenmeyen model sayfalari: kullaniciya acik, arama motoruna kapali.
     ctx["noindex"] = not web_defaults.is_indexable(primary)
     return TEMPLATES.TemplateResponse(request, "model.html", ctx)
@@ -239,7 +276,10 @@ def _model_options(rows: list[queries.PriceRow], direct_only: bool = False) -> l
     JS kapaliysa uygulama yine dogrudan API modelleriyle calisir.
     """
     options = []
-    pool = [x for x in rows if x.has_tokens and (x.channel == "direct" or not direct_only)]
+    # Alias ('~...-latest') kayitlari secenek listesinde de gorunmemeli:
+    # sayfalari yok ve ayni fiyati tasiyan gercek kayit zaten listede.
+    pool = [x for x in rows
+            if x.has_tokens and not x.is_alias and (x.channel == "direct" or not direct_only)]
     for r in sorted(pool, key=lambda x: (x.provider_slug, x.name)):
         label = f"{PROVIDER_LABELS.get(r.provider_slug, r.provider_slug)} · {r.name}"
         if r.variant:
@@ -440,8 +480,12 @@ def calculator_page(
             for s in SCENARIOS
         ],
     )
-    # Ana sayfa hesaplayici oldugu icin canonical "/" (mukerrer icerik onlenir).
-    ctx["canonical"] = SITE_URL + "/"
+    # Kanonik adres SAYFANIN KENDISI olmali (dile duyarli).
+    # Onceki hata: burada sabit "/" yaziyordu; bu yuzden /en/hesaplayici sayfasi da
+    # Turkce ana sayfayi kanonik gosteriyordu -> Ingilizce sayfa indekslenemiyordu.
+    # request.url.path sorgu dizesi tasimaz; bu yuzden /en/hesaplayici kendi adresini,
+    # /hesaplayici de kendi adresini alir. Ikisi de query'siz oldugu icin mukerrerlik yok.
+    ctx["canonical"] = canonical_url(request.url.path)
     ctx["noindex"] = user_selected
     return TEMPLATES.TemplateResponse(request, "calculator.html", ctx)
 
@@ -485,7 +529,7 @@ def media_cost_page(
 
     ctx = base_context(db, request, nav="hesaplayici",
                        grup=group, miktar=raw, birim=unit_labels[group], rows=rows)
-    ctx["canonical"] = SITE_URL + "/hesaplayici/ses-maliyeti"
+    ctx["canonical"] = canonical_url("/hesaplayici/ses-maliyeti")
     return TEMPLATES.TemplateResponse(request, "ses_maliyeti.html", ctx)
 
 
@@ -609,7 +653,7 @@ def compare_page(
            "cache": "0", "dil": "tr"},
         base_q={"models": chosen, "in": tokens_in, "out": tokens_out, "dil": dil},
     )
-    ctx["canonical"] = SITE_URL + "/karsilastir"
+    ctx["canonical"] = canonical_url("/karsilastir")
     ctx["noindex"] = False   # varsayilan ornek her zaman ayni; indekslenebilir
     return TEMPLATES.TemplateResponse(request, "compare.html", ctx)
 
@@ -621,7 +665,7 @@ def token_counter(request: Request, db: Session = Depends(get_session)):
     _counter = web_defaults.pick(rows, web_defaults.PREFERRED_COUNTER)
     ctx = base_context(db, request, nav="token", options=options,
                        default_model=web_defaults.key(_counter) if _counter else "")
-    ctx["canonical"] = SITE_URL + "/token-sayaci"
+    ctx["canonical"] = canonical_url("/token-sayaci")
     return TEMPLATES.TemplateResponse(request, "token_sayaci.html", ctx)
 
 
@@ -730,7 +774,7 @@ def gpu_page(
         f={"provider": provider, "kind": kind, "sort": sort},
         provider_options=sorted({p["slug"]: p["name"] for p in providers}.items()),
     )
-    ctx["canonical"] = SITE_URL + "/gpu-maliyetleri"
+    ctx["canonical"] = canonical_url("/gpu-maliyetleri")
     # SEO: yalnizca KULLANICININ actigi filtre/siralama noindex yapar.
     ctx["noindex"] = bool(provider or kind or family or sort != "vram")
     if os.getenv("SEO_DEBUG"):
@@ -779,7 +823,7 @@ CORRECTIONS: list[dict] = [
 def _legal(db, request, template: str, title: str, desc: str, **extra):
     ctx = base_context(db, request, nav="legal", page_title=title, page_desc=desc,
                        contact_email=CONTACT_EMAIL, **extra)
-    ctx["canonical"] = SITE_URL + request.url.path
+    ctx["canonical"] = canonical_url(request.url.path)
     return TEMPLATES.TemplateResponse(request, template, ctx)
 
 
@@ -787,6 +831,13 @@ def _legal(db, request, template: str, title: str, desc: str, **extra):
 def privacy_page(request: Request, db: Session = Depends(get_session)):
     return _legal(db, request, "legal_privacy.html", "Gizlilik ve KVKK aydınlatma",
                   "Hangi veriler işleniyor, çerez kullanımı, KVKK kapsamındaki haklarınız ve sorumluluk reddi.")
+
+
+@router.get("/kullanim-kosullari", response_class=HTMLResponse, include_in_schema=False)
+def terms_page(request: Request, db: Session = Depends(get_session)):
+    """Kullanim kosullari - AdSense ve genel yayin icin zorunlu yasal sayfa."""
+    return _legal(db, request, "legal_terms.html", "Kullanım koşulları",
+                  "Verinin kullanım izni, garanti reddi, sorumluluk sınırı ve fikri mülkiyet koşulları.")
 
 
 CHANNEL_LABELS_EN = {"direct": "Direct API", "marketplace": "Marketplace"}
@@ -804,7 +855,7 @@ CONTACT_TOPICS = [
 def _contact_ctx(db, request, form=None, errors=None):
     ctx = base_context(db, request, nav="iletisim")
     ctx.update({
-        "canonical": SITE_URL + "/iletisim",
+        "canonical": canonical_url("/iletisim"),
         "topics": CONTACT_TOPICS,
         "form": form or {"name": "", "email": "", "topic": "duzeltme", "message": ""},
         "errors": errors or {},
@@ -881,7 +932,7 @@ def turkce_token_page(request: Request, db: Session = Depends(get_session)):
     rows = queries.price_rows(db)
     options = _model_options(rows, direct_only=True)
     ctx = base_context(db, request, nav="token", data=_turkce_data(), options=options)
-    ctx["canonical"] = SITE_URL + "/turkce-token-maliyeti"
+    ctx["canonical"] = canonical_url("/turkce-token-maliyeti")
     return TEMPLATES.TemplateResponse(request, "turkce_token.html", ctx)
 
 
@@ -946,7 +997,7 @@ def changes_page(request: Request, days: int = 30, db: Session = Depends(get_ses
 
     ctx = base_context(db, request, nav="degisiklikler",
                        changes=changes[:60], corrections=CORRECTIONS, days=days)
-    ctx["canonical"] = SITE_URL + "/degisiklikler"
+    ctx["canonical"] = canonical_url("/degisiklikler")
     return TEMPLATES.TemplateResponse(request, "degisiklikler.html", ctx)
 
 
@@ -1027,7 +1078,7 @@ def subscribe_alert(
         form={"email": email, "target": target, "target_label": target_label,
               "direction": direction, "threshold_pct": threshold_pct},
     )
-    ctx["canonical"] = SITE_URL + "/uyari"
+    ctx["canonical"] = canonical_url("/uyari")
     ctx["noindex"] = True
     return TEMPLATES.TemplateResponse(request, "uyari.html", ctx)
 
@@ -1045,7 +1096,7 @@ def alert_page(request: Request, target: str = "", label: str = "", db: Session 
         form={"email": "", "target": target, "target_label": label,
               "direction": "down", "threshold_pct": "10"},
     )
-    ctx["canonical"] = SITE_URL + "/uyari"
+    ctx["canonical"] = canonical_url("/uyari")
     ctx["noindex"] = True
     return TEMPLATES.TemplateResponse(request, "uyari.html", ctx)
 
@@ -1057,7 +1108,7 @@ def guide_index(request: Request, db: Session = Depends(get_session)):
     from .content.guides import GUIDES
 
     ctx = base_context(db, request, nav="rehber", guides=GUIDES)
-    ctx["canonical"] = SITE_URL + "/rehber"
+    ctx["canonical"] = canonical_url("/rehber")
     return TEMPLATES.TemplateResponse(request, "guide_index.html", ctx)
 
 
@@ -1139,7 +1190,7 @@ def guide_page(slug: str, request: Request, db: Session = Depends(get_session)):
                        gpu_samples=gpu_samples, api_equivalent=api_equivalent,
                        api_samples=[r for r in rows if r.channel == "direct"][:10],
                        cheapest=cheapest)
-    ctx["canonical"] = f"{SITE_URL}/rehber/{slug}"
+    ctx["canonical"] = canonical_url(f"/rehber/{slug}")
     ctx["noindex"] = False
     return TEMPLATES.TemplateResponse(request, "rehber/" + slug + ".html", ctx)
 
@@ -1188,7 +1239,7 @@ def about_page(request: Request, db: Session = Depends(get_session)):
     ctx = base_context(db, request, nav="hakkinda", sources=sources,
                        observation_count=observation_count, gpu_count=gpu_count,
                        contact_email=CONTACT_EMAIL, stale_days=queries.STALE_DAYS)
-    ctx["canonical"] = SITE_URL + "/hakkinda"
+    ctx["canonical"] = canonical_url("/hakkinda")
     return TEMPLATES.TemplateResponse(request, "about.html", ctx)
 
 
@@ -1275,10 +1326,12 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     )
     lastmod = (last_obs.date().isoformat() if last_obs else _dt.date.today().isoformat())
 
+    # DIKKAT: kok adres "/" sitemap'e GIRMEZ. Cloudflare Pages'te "/" 301 ile
+    # /hesaplayici/ adresine gidiyor; sitemap'te yonlendiren adres bulunmamali.
     urls: list[str] = [
-        "/", "/hesaplayici", "/hesaplayici/ses-maliyeti", "/fiyatlar", "/karsilastir", "/token-sayaci",
+        "/hesaplayici", "/hesaplayici/ses-maliyeti", "/fiyatlar", "/karsilastir", "/token-sayaci",
         "/danismanlik", "/gpu-maliyetleri", "/rehber", "/hakkinda",
-        "/gizlilik", "/iletisim", "/duzeltmeler",
+        "/gizlilik", "/kullanim-kosullari", "/iletisim", "/duzeltmeler",
         "/turkce-token-maliyeti", "/degisiklikler",
     ]
     urls += [f"/rehber/{g.slug}" for g in GUIDES]
@@ -1312,7 +1365,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     ]
     for path in urls:
         body.append(
-            f"<url><loc>{SITE_URL}{path}</loc>"
+            f"<url><loc>{canonical_url(path)}</loc>"
             f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
         )
 
@@ -1322,7 +1375,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     for fam in fams:
         slug = fam.lower().replace(" ", "-")
         body.append(
-            f"<url><loc>{SITE_URL}/gpu/{slug}</loc>"
+            f"<url><loc>{canonical_url(f'/gpu/{slug}')}</loc>"
             f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
         )
 
@@ -1340,7 +1393,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     for _a, _b in _it.islice(_it.combinations(_pop, 2), 20):
         _slug = f"{_a.slug}-vs-{_b.slug}".replace("/", "-").lower()[:120]
         body.append(
-            f"<url><loc>{SITE_URL}/karsilastir/{_slug}</loc>"
+            f"<url><loc>{canonical_url(f'/karsilastir/{_slug}')}</loc>"
             f"<lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq></url>"
         )
 
@@ -1352,7 +1405,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
 def consulting_page(request: Request, db: Session = Depends(get_session)):
     """B2B maliyet denetimi hizmet sayfasi (rapor 5. tur P2-1)."""
     ctx = base_context(db, request, nav="danismanlik")
-    ctx["canonical"] = SITE_URL + "/danismanlik"
+    ctx["canonical"] = canonical_url("/danismanlik")
     return TEMPLATES.TemplateResponse(request, "danismanlik.html", ctx)
 
 

@@ -25,9 +25,16 @@ def test_home_redirects_to_calculator():
     assert m.group(1) == "/hesaplayici", f"ana sayfa {m.group(1)}'e gidiyor, hesaplayici olmali"
 
 
-def test_calculator_canonical_is_home():
+def test_calculator_canonical_is_self():
+    """Kanonik adres sayfanin KENDISI olmali (dile duyarli).
+
+    Onceki hata: canonical sabit "/" yaziliyordu; bu yuzden /en/hesaplayici de
+    Turkce ana sayfayi kanonik gosteriyordu ve Ingilizce sayfa indekslenemiyordu.
+    """
     src = ROUTES.read_text(encoding="utf-8")
-    assert 'ctx["canonical"] = SITE_URL + "/"' in src, "hesaplayici canonical '/' olmali"
+    assert 'ctx["canonical"] = canonical_url(request.url.path)' in src, \
+        "hesaplayici kanonigi kendi yolundan turetilmeli"
+    assert 'ctx["canonical"] = SITE_URL + "/"' not in src, "sabit kok kanonik kalmamali"
 
 
 def test_sitemap_starts_with_home():

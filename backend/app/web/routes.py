@@ -269,16 +269,38 @@ def _find(rows: list[queries.PriceRow], key: str) -> queries.PriceRow | None:
 
 # Inceleme raporu: bos forma bakan kullaniciyi hizli sonuca goturen hazir senaryolar.
 SCENARIOS = [
-    {"label": "Destek botu (küçük)", "inp": "45000000", "out": "12000000",
-     "note": "Günde ~2.000 sohbet, sohbet başına 750 girdi + 200 çıktı token"},
-    {"label": "Kod asistanı", "inp": "90000000", "out": "27000000",
-     "note": "10 geliştirici, günde ~300 istek, uzun bağlam"},
-    {"label": "Doküman özetleme", "inp": "180000000", "out": "24000000",
-     "note": "Günde 500 dosya, uzun girdi ve kısa çıktı"},
-    {"label": "İçerik üretimi", "inp": "24000000", "out": "48000000",
-     "note": "Günde 200 blog yazısı, kısa girdi ve uzun çıktı"},
-    {"label": "RAG / arama", "inp": "300000000", "out": "15000000",
-     "note": "Günde 10.000 sorgu, 5 belge bağlamı"},
+    {
+        "label": {"tr": "Destek botu (küçük)", "en": "Support bot (small)"},
+        "note": {
+            "tr": "Günde ~2.000 sohbet, sohbet başına 750 girdi + 200 çıktı token",
+            "en": "~2,000 chats/day, 750 input + 200 output tokens per chat",
+        },
+        "inp": "45000000", "out": "12000000",
+    },
+    {
+        "label": {"tr": "Kod asistanı", "en": "Code assistant"},
+        "note": {
+            "tr": "10 geliştirici, günde ~300 istek, uzun bağlam",
+            "en": "10 developers, ~300 requests/day, long context",
+        },
+        "inp": "90000000", "out": "27000000",
+    },
+    {
+        "label": {"tr": "Doküman özetleme", "en": "Document summarisation"},
+        "note": {
+            "tr": "Günde 500 dosya, uzun girdi ve kısa çıktı",
+            "en": "500 documents/day, long input and short output",
+        },
+        "inp": "180000000", "out": "24000000",
+    },
+    {
+        "label": {"tr": "İçerik üretimi", "en": "Content generation"},
+        "note": {
+            "tr": "Ayda ~1.500 uzun metin, dengeli girdi/çıktı",
+            "en": "~1,500 long texts/month, balanced input/output",
+        },
+        "inp": "120000000", "out": "120000000",
+    },
 ]
 
 
@@ -293,6 +315,7 @@ def calculator_page(
     dil: str = Query("tr"),
     db: Session = Depends(get_session),
 ):
+    _lang = base_context(db, request).get("lang", "tr")
     rows = queries.price_rows(db)
     options = _model_options(rows, direct_only=False)
     if not options:
@@ -406,7 +429,15 @@ def calculator_page(
            "cache": cache, "dil": dil},
         errors=errors,
         result=result,
-        scenarios=SCENARIOS,
+        scenarios=[
+            {
+                "label": s["label"].get(_lang, s["label"]["tr"]) if isinstance(s["label"], dict) else s["label"],
+                "note": s["note"].get(_lang, s["note"]["tr"]) if isinstance(s["note"], dict) else s["note"],
+                "inp": s["inp"],
+                "out": s["out"],
+            }
+            for s in SCENARIOS
+        ],
     )
     # Ana sayfa hesaplayici oldugu icin canonical "/" (mukerrer icerik onlenir).
     ctx["canonical"] = SITE_URL + "/"
@@ -427,6 +458,8 @@ def compare_page(
 ):
     rows = queries.price_rows(db)
     options = _model_options(rows, direct_only=True)
+    # Kanal etiketi dile gore (EN sayfada Turkce etiket kaliyordu).
+    _lang = base_context(db, request).get("lang", "tr")
     chosen = [m for m in models if m][:4]
     error = None
     cards: list[dict] = []
@@ -508,7 +541,11 @@ def compare_page(
                         "provider_slug": bd.model.provider,
                         "slug": bd.model.slug,
                         "provider_label": PROVIDER_LABELS.get(bd.model.provider, row.provider_name),
-                        "channel_label": "Doğrudan API" if row.channel == "direct" else "Pazaryeri",
+                        "channel_label": (
+                            CHANNEL_LABELS_EN["direct"] if row.channel == "direct" else CHANNEL_LABELS_EN["marketplace"]
+                        ) if _lang == "en" else (
+                            "Doğrudan API" if row.channel == "direct" else "Pazaryeri"
+                        ),
                         "in_price": bd.model.input_per_1m,
                         "out_price": bd.model.output_per_1m,
                         "month_usd": bd.total_usd,
@@ -709,6 +746,8 @@ def privacy_page(request: Request, db: Session = Depends(get_session)):
     return _legal(db, request, "legal_privacy.html", "Gizlilik ve KVKK aydınlatma",
                   "Hangi veriler işleniyor, çerez kullanımı, KVKK kapsamındaki haklarınız ve sorumluluk reddi.")
 
+
+CHANNEL_LABELS_EN = {"direct": "Direct API", "marketplace": "Marketplace"}
 
 CONTACT_TOPICS = [
     ("danismanlik", "AI Maliyet Denetimi / Danışmanlık"),
@@ -1068,7 +1107,12 @@ def about_page(request: Request, db: Session = Depends(get_session)):
     from sqlalchemy import func as sqlfunc
     from ..models import DataSource, GpuPrice, PriceObservation, Provider
 
-    method_labels = {"http_json": "Resmî JSON API", "http_html": "Resmî fiyat sayfası (HTML)"}
+    _is_en = (base_context(db, request).get("lang") == "en")
+    method_labels = (
+        {"http_json": "Official JSON API", "http_html": "Official pricing page (HTML)"}
+        if _is_en
+        else {"http_json": "Resmî JSON API", "http_html": "Resmî fiyat sayfası (HTML)"}
+    )
     src_rows = db.execute(
         sselect(DataSource).where(DataSource.is_official.is_(True)).order_by(DataSource.provider_id)
     ).scalars().all()

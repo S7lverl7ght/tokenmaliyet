@@ -31,14 +31,14 @@
         <h2 id="fiyatlar-baslik" style="font-size:var(--fs-h3)">Fiyat kalemleri</h2>
         <div class="table-wrap mt-4">
           <table class="prices" style="table-layout:auto">
-            <caption class="sr-only">{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı</caption>
+            <caption class="sr-only">{{ '{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı' if lang == 'en' else '{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı' }}</caption>
             <thead>
               <tr>
                 <th scope="col">Kalem</th>
-                <th scope="col">Dönem / dilim</th>
+                <th scope="col">{{ 'Dönem / dilim' if lang == 'en' else 'Dönem / dilim' }}</th>
                 <th scope="col" class="is-num">Kaynak fiyat</th>
-                <th scope="col" class="is-num">TRY karşılığı</th>
-                <th scope="col">Geçerlilik</th>
+                <th scope="col" class="is-num">{{ 'TRY karşılığı' if lang == 'en' else 'TRY karşılığı' }}</th>
+                <th scope="col">{{ 'Geçerlilik' if lang == 'en' else 'Geçerlilik' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +102,7 @@
 
     <aside style="grid-column:span 4" class="stack-4">
       <div class="surface surface-pad">
-        <h2 style="font-size:var(--fs-h3)">Bu modeli karşılaştır</h2>
+        <h2 style="font-size:var(--fs-h3)">{{ 'Bu modeli karşılaştır' if lang == 'en' else 'Bu modeli karşılaştır' }}</h2>
         <p class="help mt-2">Aylık token hacminizi girip başka bir modelle maliyet farkını görün.</p>
         <p class="mt-4">
           <a class="btn" href="/hesaplayici?from={{ primary.provider_slug }}%7C{{ primary.slug }}">Hesaplayıcıya ekle</a>
@@ -111,7 +111,7 @@
       </div>
 
       <div class="surface surface-pad">
-        <h2 style="font-size:var(--fs-h3)">Kaynak ve güven</h2>
+        <h2 style="font-size:var(--fs-h3)">{{ 'Kaynak ve güven' if lang == 'en' else 'Kaynak ve güven' }}</h2>
         <dl style="display:grid;grid-template-columns:auto 1fr;gap:8px var(--sp-3);margin:var(--sp-3) 0 0;font-size:var(--fs-sm)">
           <dt class="text-muted">Kaynak</dt>
           <dd style="margin:0;text-align:right"><a href="{{ primary.source_url }}" target="_blank" rel="noopener nofollow">Bağlantı ↗</a></dd>
@@ -129,7 +129,7 @@
 
       {% if history_rows %}
       <div class="surface surface-pad">
-        <h2 style="font-size:var(--fs-h3)">Fiyat geçmişi</h2>
+        <h2 style="font-size:var(--fs-h3)">{{ 'Fiyat geçmişi' if lang == 'en' else 'Fiyat geçmişi' }}</h2>
         <ul style="list-style:none;padding:0;margin:var(--sp-3) 0 0;display:grid;gap:var(--sp-2);font-size:var(--fs-sm)">
           {% for h in history_rows %}
           <li class="flex items-center gap-2" style="justify-content:space-between">

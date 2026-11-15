@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% set nav = 'token' %}
-{% block title %}Token sayacı — metnin kaç token olduğunu hesapla | {{ site_name }}{% endblock %}
-{% block description %}Metninizi yapıştırın, token sayısını görün; seçtiğiniz modelin o token sayısındaki girdi/çıktı maliyetini hesaplayın.{% endblock %}
+{% block title %}{{ 'Token counter — count how many tokens your text is' if lang == 'en' else 'Token sayacı — metnin kaç token olduğunu hesapla' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'Paste your text, see the token count, and calculate what that many tokens would cost as input or output on the model you pick.' if lang == 'en' else 'Metninizi yapıştırın, token sayısını görün; seçtiğiniz modelin o token sayısındaki girdi/çıktı maliyetini hesaplayın.' }}{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width:1080px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Token sayacı</li></ol></nav>
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Token counter' if lang == 'en' else 'Token sayacı' }}</li></ol></nav>
     <h1>{{ t('tok.title') }}</h1>
     <p class="lede">{{ 'Paste your text to see the token count and what it costs on the model you pick.' if lang == 'en' else 'Metninizi yapıştırın; token sayısını ve seçtiğiniz modeldeki maliyetini görün.' }}
       {{ 'The counter runs in your browser — your text is <strong>never sent</strong> to the server.</p>'|safe if lang == 'en' else 'Sayaç tarayıcınızda çalışır — metniniz sunucuya <strong>gönderilmez</strong>.</p>'|safe }}
@@ -19,25 +19,33 @@
           <label for="text">Metin</label>
           <textarea id="text" rows="12" style="width:100%;font:inherit;padding:12px;border-radius:var(--r-sm);border:1px solid var(--border-strong);resize:vertical"
             placeholder="{{ 'Paste your text here…' if lang == 'en' else 'Buraya metninizi yapıştırın…' }}" aria-describedby="text-help"></textarea>
-          <span class="help-text" id="text-help">Yapıştırınca sayım otomatik güncellenir. Metin cihazınızdan çıkmaz.</span>
+          <span class="help-text" id="text-help">{{ 'The count updates as you paste. Your text never leaves your device.' if lang == 'en' else 'Yapıştırınca sayım otomatik güncellenir. Metin cihazınızdan çıkmaz.' }}</span>
         </div>
         <div class="flex gap-2 mt-3 wrap">
           <button type="button" class="btn btn-secondary" id="clear">Temizle</button>
-          <button type="button" class="btn btn-secondary" id="sample">Örnek metin</button>
+          <button type="button" class="btn btn-secondary" id="sample">{{ 'Sample text' if lang == 'en' else 'Örnek metin' }}</button>
         </div>
       </div>
 
       <div class="surface surface-pad mt-4">
-        <h2 style="font-size:var(--fs-h3)">Sayım sonucu</h2>
+        <h2 style="font-size:var(--fs-h3)">{{ 'Count result' if lang == 'en' else 'Sayım sonucu' }}</h2>
         <div class="kpis mt-3">
-          <div class="kpi"><div class="k">Yaklaşık token</div><div class="v" id="tokEstimate">0</div><div class="n">BPE tabanlı tahmin</div></div>
-          <div class="kpi"><div class="k">Kelime</div><div class="v" id="words">0</div><div class="n">boşlukla ayrılmış</div></div>
-          <div class="kpi"><div class="k">Karakter</div><div class="v" id="chars">0</div><div class="n">boşluklar dahil</div></div>
+          <div class="kpi"><div class="k">{{ 'Approximate tokens' if lang == 'en' else 'Yaklaşık token' }}</div><div class="v" id="tokEstimate">0</div><div class="n">{{ 'BPE-based estimate' if lang == 'en' else 'BPE tabanlı tahmin' }}</div></div>
+          <div class="kpi"><div class="k">{{ 'Words' if lang == 'en' else 'Kelime' }}</div><div class="v" id="words">0</div><div class="n">{{ 'space-separated' if lang == 'en' else 'boşlukla ayrılmış' }}</div></div>
+          <div class="kpi"><div class="k">{{ 'Characters' if lang == 'en' else 'Karakter' }}</div><div class="v" id="chars">0</div><div class="n">{{ 'spaces included' if lang == 'en' else 'boşluklar dahil' }}</div></div>
         </div>
         <details class="disclosure mt-4">
-          <summary>Nasıl hesaplanıyor? (ölçülmüş yöntem)</summary>
+          <summary>{{ 'How is it calculated? (measured method)' if lang == 'en' else 'Nasıl hesaplanıyor? (ölçülmüş yöntem)' }}</summary>
           <div class="body">
-            <p>Bu sayaç tarayıcıda, <strong>karakter tabanlı bir tahmin</strong> kullanır:
+            {% if lang == 'en' %}<p>This counter uses a <strong>character-based estimate</strong> in your browser:
+      <code>tokens ≈ (characters / 4) + (Turkish characters × 0.35) + (punctuation × 0.15)</code>.</p>
+      <p><strong>Expected deviation:</strong> roughly <strong>±15%</strong> versus real tokenizers for Latin
+      languages, and <strong>−10% to −30%</strong> for Turkish
+      (i.e. the real token count is usually <em>higher</em> than the estimate).</p>
+      <p>The Turkish measurement was made with the real tokenizer over {{ turkce.samples }} sentence pairs —
+      Turkish spends <strong>{{ turkce.ratio }}×</strong> the tokens of English for the same content
+      (range {{ turkce.range.min }}–{{ turkce.range.max }}×).
+      <a href="/turkce-token-maliyeti">Full measurement</a></p>{% else %}<p>Bu sayaç tarayıcıda, <strong>karakter tabanlı bir tahmin</strong> kullanır:
                <code data-estimate-formula></code></p>
             <p><strong>Beklenen sapma:</strong> gerçek tokenizer'lara göre Latin dilleri için
                yaklaşık <strong>±%15</strong>, Türkçe için <strong>−%10 ile −%30</strong> arasında
@@ -46,17 +54,17 @@
                yapıldı — Türkçe, aynı içerik için İngilizce'nin
                <strong>{{ turkce.ratio }}×</strong> token'ını harcıyor
                (aralık {{ turkce.range.min }}–{{ turkce.range.max }}×).
-               <a href="/turkce-token-maliyeti">Ölçümün tamamı</a></p>
+               <a href="/turkce-token-maliyeti">{{ 'Full measurement' if lang == 'en' else 'Ölçümün tamamı' }}</a></p>{% endif %}
           </div>
         </details>
 
         <div class="mt-4" id="trEnBlock" hidden style="border-top:1px solid var(--border);padding-top:var(--sp-4)">
-          <h3 style="font-size:var(--fs-h3)">Türkçe mi, İngilizce mi?</h3>
-          <p class="help mt-2">Aynı içeriği İngilizce yazsaydınız token sayısı ve maliyeti ne olurdu?</p>
+          <h3 style="font-size:var(--fs-h3)">{{ 'Turkish or English?' if lang == 'en' else 'Türkçe mi, İngilizce mi?' }}</h3>
+          <p class="help mt-2">{{ 'What if the same content were written in English — how would token count and cost change?' if lang == 'en' else 'Aynı içeriği İngilizce yazsaydınız token sayısı ve maliyeti ne olurdu?' }}</p>
           <div class="kpis mt-3">
-            <div class="kpi"><div class="k">Tahmini İngilizce token</div><div class="v" id="enTokens">—</div><div class="n">{{ turkce.ratio }}× daha az</div></div>
-            <div class="kpi"><div class="k">Fark</div><div class="v" id="tokenDiff">—</div><div class="n">Türkçe fazladan</div></div>
-            <div class="kpi"><div class="k">Maliyet farkı</div><div class="v" id="costDiff">—</div><div class="n">aynı model, aylık değil</div></div>
+            <div class="kpi"><div class="k">{{ 'Estimated English tokens' if lang == 'en' else 'Tahmini İngilizce token' }}</div><div class="v" id="enTokens">—</div><div class="n">{{ turkce.ratio }}× daha az</div></div>
+            <div class="kpi"><div class="k">{{ 'Difference' if lang == 'en' else 'Fark' }}</div><div class="v" id="tokenDiff">—</div><div class="n">{{ 'Turkish extra' if lang == 'en' else 'Türkçe fazladan' }}</div></div>
+            <div class="kpi"><div class="k">{{ 'Cost difference' if lang == 'en' else 'Maliyet farkı' }}</div><div class="v" id="costDiff">—</div><div class="n">{{ 'same model, not monthly' if lang == 'en' else 'aynı model, aylık değil' }}</div></div>
           </div>
         </div>
       </div>
@@ -64,29 +72,29 @@
 
     <aside style="grid-column:span 5">
       <div class="surface surface-pad">
-        <h2 style="font-size:var(--fs-h3)">Bu metnin maliyeti</h2>
+        <h2 style="font-size:var(--fs-h3)">{{ 'Cost of this text' if lang == 'en' else 'Bu metnin maliyeti' }}</h2>
         <div class="field mt-3">
-          <label for="model">Model</label>
+          <label for="model">{{ 'Model' if lang == 'en' else 'Model' }}</label>
           <select id="model" name="model" data-model-options data-default-model="{{ default_model }}">
             {% for o in options %}<option value="{{ o.value }}" {% if o.dim_in is defined %}data-in="{{ o.dim_in }}" data-out="{{ o.dim_out }}"{% endif %}>{{ o.label }}</option>{% endfor %}
           </select>
         </div>
         <div class="field mt-3">
-          <label for="kind">Metin ne olarak kullanılacak?</label>
+          <label for="kind">{{ 'How will the text be used?' if lang == 'en' else 'Metin ne olarak kullanılacak?' }}</label>
           <select id="kind">
-            <option value="input">Girdi (prompt) olarak gönderilecek</option>
-            <option value="output">Çıktı (üretilecek cevap) olarak</option>
+            <option value="input">{{ 'Sent as input (prompt)' if lang == 'en' else 'Girdi (prompt) olarak gönderilecek' }}</option>
+            <option value="output">{{ 'As output (generated answer)' if lang == 'en' else 'Çıktı (üretilecek cevap) olarak' }}</option>
           </select>
         </div>
         <div class="result-grid mt-4" style="grid-template-columns:1fr">
           <div class="result" id="costBox">
             <div class="k" id="costLabel">Maliyet</div>
             <div class="v" id="cost">—</div>
-            <div class="n" id="costNote">Metin girildiğinde hesaplanır</div>
+            <div class="n" id="costNote">{{ 'Calculated once text is entered' if lang == 'en' else 'Metin girildiğinde hesaplanır' }}</div>
           </div>
         </div>
-        <p class="help mt-3">Fiyatlar onaylı kaynaklardan gelir; liste fiyatıdır, vergi dahil değildir.</p>
-        <p class="mt-3"><a class="btn btn-secondary" href="/hesaplayici">Aylık maliyet hesaplayıcı</a></p>
+        <p class="help mt-3">{{ 'Prices come from verified sources; they are list prices, excluding tax.' if lang == 'en' else 'Fiyatlar onaylı kaynaklardan gelir; liste fiyatıdır, vergi dahil değildir.' }}</p>
+        <p class="mt-3"><a class="btn btn-secondary" href="/hesaplayici">{{ 'Monthly cost calculator' if lang == 'en' else 'Aylık maliyet hesaplayıcı' }}</a></p>
       </div>
     </aside>
   </div>
@@ -121,6 +129,16 @@
     var base = text.length/4;
     var words = (text.match(/\S+/g)||[]).length;
     var trChars = (text.match(/[çğıöşüÇĞİÖŞÜ]/g)||[]).length;
+  var L = {
+    loading: "{{ 'Loading price…' if lang == 'en' else 'Fiyat bilgisi yükleniyor…' }}",
+    enterText: "{{ 'Calculated once text is entered' if lang == 'en' else 'Metin girildiğinde hesaplanır' }}",
+    noPrice: "{{ 'No price for this model' if lang == 'en' else 'Bu model için fiyat yok' }}",
+    inputCost: "{{ 'Input' if lang == 'en' else 'Girdi' }}",
+    outputCost: "{{ 'Output' if lang == 'en' else 'Çıktı' }}",
+    costSuffix: "{{ ' cost' if lang == 'en' else ' maliyeti' }}",
+    formula: "{{ 'tokens ≈ (characters / 4) + (Turkish characters × 0.35) + (punctuation × 0.15)' if lang == 'en' else 'token ≈ (karakter / 4) + (Türkçe karakter × 0,35) + (noktalama × 0,15)' }}",
+    sample: "{{ 'Hello, the prices of AI models vary from provider to provider. This text is a sample paragraph written to show how the token counter works. Because it is in English, the estimate is close to the real count.' if lang == 'en' else 'Merhaba, yapay zeka modellerinin fiyatları sağlayıcıdan sağlayıcıya değişiyor. Bu metin, token sayacının nasıl çalıştığını göstermek için hazırlanmış örnek bir paragraftır. Türkçe karakterler içerdiği için token tahmini biraz daha yüksek çıkacaktır.' }}"
+  };
     var punct = (text.match(/[.,;:!?()\[\]"'—–]/g)||[]).length;
     var est = base + trChars*0.35 + punct*0.15;
     return Math.max(words, Math.round(est));
@@ -139,13 +157,13 @@
     var which = kind.value;
     if(!p || !tokens){ 
       elCost.textContent='—'; 
-      elNote.textContent = tokens ? 'Fiyat bilgisi yükleniyor…' : 'Metin girildiğinde hesaplanır';
+      elNote.textContent = tokens ? L.loading : L.enterText;
       return;
     }
     var unit = which==='input' ? p.in : p.out;
-    if(unit==null){ elCost.textContent='—'; elNote.textContent='Bu model için fiyat yok'; updateCompare(tokens, null); return; }
+    if(unit==null){ elCost.textContent='—'; elNote.textContent=L.noPrice; updateCompare(tokens, null); return; }
     var usd = tokens/1e6*unit;
-    elLabel.textContent = (which==='input'?'Girdi':'Çıktı') + ' maliyeti';
+    elLabel.textContent = (which==='input'?L.inputCost:L.outputCost) + L.costSuffix;
     lastUsd = usd;
     lastUsd = usd;
     elCost.textContent = usd.toLocaleString('tr-TR',{minimumFractionDigits:6, maximumFractionDigits:6}) + ' USD';
@@ -168,16 +186,14 @@
   }
 
   var f = document.querySelector('[data-estimate-formula]');
-  if(f) f.textContent = 'token ≈ (karakter / 4) + (Türkçe karakter × 0,35) + (noktalama × 0,15)';
+  if(f) f.textContent = L.formula;
   var lastUsd = null;
   ta.addEventListener('input', recalc);
   modelSel.addEventListener('change', recalc);
   kind.addEventListener('change', recalc);
   document.getElementById('clear').addEventListener('click', function(){ ta.value=''; recalc(); ta.focus(); });
   document.getElementById('sample').addEventListener('click', function(){
-    ta.value = 'Merhaba, yapay zeka modellerinin fiyatları sağlayıcıdan sağlayıcıya değişiyor. '
-      + 'Bu metin, token sayacının nasıl çalıştığını göstermek için hazırlanmış örnek bir paragraftır. '
-      + 'Türkçe karakterler içerdiği için token tahmini biraz daha yüksek çıkacaktır.';
+    ta.value = L.sample;
     recalc(); ta.focus();
   });
   loadPrices(); recalc();

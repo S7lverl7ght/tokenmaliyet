@@ -17,15 +17,15 @@
   {% if message %}<div class="notice notice-info" role="status">{{ message }}</div>{% endif %}
 
   <section class="surface" aria-labelledby="kuyruk">
-    <h2 id="kuyruk" class="sr-only">Bekleyen gözlemler</h2>
+    <h2 id="kuyruk" class="sr-only">{{ 'Bekleyen gözlemler' if lang == 'en' else 'Bekleyen gözlemler' }}</h2>
     {% if pending %}
     <div class="table-wrap">
       <table class="prices" style="table-layout:auto">
-        <caption class="sr-only">Onay bekleyen fiyat gözlemleri</caption>
+        <caption class="sr-only">{{ 'Onay bekleyen fiyat gözlemleri' if lang == 'en' else 'Onay bekleyen fiyat gözlemleri' }}</caption>
         <thead><tr>
-          <th scope="col">#</th><th scope="col">Sağlayıcı</th><th scope="col">Model</th>
+          <th scope="col">#</th><th scope="col">{{ 'Sağlayıcı' if lang == 'en' else 'Sağlayıcı' }}</th><th scope="col">Model</th>
           <th scope="col">Kalem</th><th scope="col" class="is-num">Fiyat</th>
-          <th scope="col">Gözlem</th><th scope="col">Kontroller</th><th scope="col">İşlem</th>
+          <th scope="col">{{ 'Gözlem' if lang == 'en' else 'Gözlem' }}</th><th scope="col">Kontroller</th><th scope="col">{{ 'İşlem' if lang == 'en' else 'İşlem' }}</th>
         </tr></thead>
         <tbody>
         {% for r in pending %}
@@ -58,16 +58,16 @@
       </table>
     </div>
     {% else %}
-    <div class="empty"><h3>Kuyruk boş</h3><p>Bekleyen gözlem yok. Toplama çalıştıktan sonra burada görünür.</p></div>
+    <div class="empty"><h3>{{ 'Kuyruk boş' if lang == 'en' else 'Kuyruk boş' }}</h3><p>Bekleyen gözlem yok. Toplama çalıştıktan sonra burada görünür.</p></div>
     {% endif %}
   </section>
 
   <section class="surface surface-pad mt-5">
-    <h2 style="font-size:var(--fs-h3)">Kaynak sağlığı</h2>
+    <h2 style="font-size:var(--fs-h3)">{{ 'Kaynak sağlığı' if lang == 'en' else 'Kaynak sağlığı' }}</h2>
     <div class="table-wrap mt-3">
       <table class="prices" style="table-layout:auto">
-        <thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Son çalışma</th><th scope="col">Durum</th>
-          <th scope="col" class="is-num">Görülen</th><th scope="col">Not</th></tr></thead>
+        <thead><tr><th scope="col">{{ 'Sağlayıcı' if lang == 'en' else 'Sağlayıcı' }}</th><th scope="col">{{ 'Son çalışma' if lang == 'en' else 'Son çalışma' }}</th><th scope="col">Durum</th>
+          <th scope="col" class="is-num">{{ 'Görülen' if lang == 'en' else 'Görülen' }}</th><th scope="col">Not</th></tr></thead>
         <tbody>
         {% for run in runs %}
         <tr>

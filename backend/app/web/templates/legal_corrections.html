@@ -4,7 +4,7 @@
 <p>Yanlış bir sayı yayımlandığında sessizce değiştirmiyoruz. Eski değer, yeni değer ve tarih burada
 kayıt altında kalır. Bu, sitenin tek varlığı olan güvenin korunması içindir.</p>
 
-<h2>Kayıt</h2>
+<h2>{{ 'Kayıt' if lang == 'en' else 'Kayıt' }}</h2>
 {% if corrections %}
 <table>
   <thead><tr><th>Tarih</th><th>Model / kalem</th><th>Eski</th><th>Yeni</th><th>Neden</th></tr></thead>
@@ -24,7 +24,7 @@ kayıt altında kalır. Bu, sitenin tek varlığı olan güvenin korunması içi
 <p class="text-muted">Henüz yayımlanmış bir düzeltme kaydı yok.</p>
 {% endif %}
 
-<h2>Nasıl çalışıyor?</h2>
+<h2>{{ 'Nasıl çalışıyor?' if lang == 'en' else 'Nasıl çalışıyor?' }}</h2>
 <p>Bot her çalıştığında fiyatlar kaynaktan yeniden okunur. Değişim %30'u aşarsa otomatik onay
 uygulanmaz, kayıt insan incelemesine düşer. Ayrıca çıktı/girdi oranı aykırı olan satırlar
 (ör. birim dönüşüm hatası) yayına çıkmaz.</p>

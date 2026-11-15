@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Fiyat uyarısı — {{ form.target_label or 'AI API fiyatları' }} | {{ site_name }}{% endblock %}
-{% block description %}Bir modelin veya GPU ailesinin fiyatı değiştiğinde e-posta ile haber veriyoruz. Ücretsiz, çift onaylı, tek tıkla iptal.{% endblock %}
+{% block title %}{{ 'Price alert' if lang == 'en' else 'Fiyat uyarısı' }} — {{ form.target_label or ('AI API prices' if lang == 'en' else 'AI API fiyatları') }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'We email you when the price of a model or GPU family changes. Free, double opt-in, one-click unsubscribe.' if lang == 'en' else 'Bir modelin veya GPU ailesinin fiyatı değiştiğinde e-posta ile haber veriyoruz. Ücretsiz, çift onaylı, tek tıkla iptal.' }}{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width:640px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Fiyat uyarısı</li></ol></nav>
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Price alert' if lang == 'en' else 'Fiyat uyarısı' }}</li></ol></nav>
     <h1>{{ t('alert.title') }}</h1>
-    <p class="lede">{% if form.target_label %}<strong>{{ form.target_label }}</strong> için {% endif %}fiyat
-      değiştiğinde e-posta gönderelim. Ücretsiz; istediğiniz an tek tıkla iptal edebilirsiniz.</p>
+    <p class="lede">{% if form.target_label %}<strong>{{ form.target_label }}</strong> {{ 'for' if lang == 'en' else 'için' }} {% endif %}{{ 'we will email you when the price changes. Free; cancel any time with one click.' if lang == 'en' else 'fiyat değiştiğinde e-posta gönderelim. Ücretsiz; istediğiniz an tek tıkla iptal edebilirsiniz.' }}</p>
+
   </header>
 
   {% if submitted %}
@@ -22,7 +22,7 @@
       {% endif %}
     </div>
   </div>
-  <p class="mt-4"><a class="btn btn-secondary" href="/fiyatlar">Fiyat listesine dön</a></p>
+  <p class="mt-4"><a class="btn btn-secondary" href="/fiyatlar">{{ 'Back to the price list' if lang == 'en' else 'Fiyat listesine dön' }}</a></p>
   {% else %}
 
   <form class="surface surface-pad" method="post" action="/uyari" novalidate id="alertForm" data-api="/api/uyari">
@@ -32,16 +32,16 @@
       <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" required
              aria-describedby="email-help{% if errors.get('email') %} email-err{% endif %}"
              {% if errors.get('email') %}aria-invalid="true"{% endif %}>
-      <span class="help-text" id="email-help">Yalnızca fiyat uyarısı için kullanılır; üçüncü taraflarla paylaşılmaz.</span>
+      <span class="help-text" id="email-help">{{ 'Used only for price alerts; never shared with third parties.' if lang == 'en' else 'Yalnızca fiyat uyarısı için kullanılır; üçüncü taraflarla paylaşılmaz.' }}</span>
       {% if errors.get('email') %}<span class="error-text" id="email-err">{{ errors['email'] }}</span>{% endif %}
     </div>
 
     <div class="field mt-4">
       <label for="threshold">{{ t('alert.threshold') }}</label>
       <select id="threshold" name="threshold_pct">
-        <option value="5" {% if form.threshold_pct == '5' %}selected{% endif %}>%5 veya daha fazla değişince</option>
-        <option value="10" {% if form.threshold_pct == '10' %}selected{% endif %}>%10 veya daha fazla değişince</option>
-        <option value="20" {% if form.threshold_pct == '20' %}selected{% endif %}>%20 veya daha fazla değişince</option>
+        <option value="5" {% if form.threshold_pct == '5' %}selected{% endif %}>{{ '%5 or more change' if lang == 'en' else '%5 veya daha fazla değişince' }}</option>
+        <option value="10" {% if form.threshold_pct == '10' %}selected{% endif %}>{{ '%10 or more change' if lang == 'en' else '%10 veya daha fazla değişince' }}</option>
+        <option value="20" {% if form.threshold_pct == '20' %}selected{% endif %}>{{ '%20 or more change' if lang == 'en' else '%20 veya daha fazla değişince' }}</option>
       </select>
     </div>
 
@@ -49,8 +49,8 @@
       <label for="direction">{{ t('alert.direction') }}</label>
       <select id="direction" name="direction">
         <option value="down" {% if form.direction == 'down' %}selected{% endif %}>Sadece ucuzlarsa</option>
-        <option value="up" {% if form.direction == 'up' %}selected{% endif %}>Sadece pahalanırsa</option>
-        <option value="any" {% if form.direction == 'any' %}selected{% endif %}>Her iki yönde</option>
+        <option value="up" {% if form.direction == 'up' %}selected{% endif %}>{{ 'Only when it gets more expensive' if lang == 'en' else 'Sadece pahalanırsa' }}</option>
+        <option value="any" {% if form.direction == 'any' %}selected{% endif %}>{{ 'In both directions' if lang == 'en' else 'Her iki yönde' }}</option>
       </select>
     </div>
 
@@ -58,14 +58,18 @@
     <input type="hidden" name="target_label" value="{{ form.target_label }}">
 
     <div class="field mt-4">
-      <label style="display:flex;gap:var(--sp-2);align-items:flex-start;text-transform:none;letter-spacing:0;font-size:var(--fs-sm);font-weight:400;color:var(--ink)">
+      {% if lang == 'en' %}<label class="check">
+        <input type="checkbox" name="consent" value="on" {% if form.consent %}checked{% endif %} required>
+        <span>I have read <a href="/gizlilik">the privacy notice</a> and give my <strong>explicit consent</strong>
+        to the processing of my email address for price alerts. I do not consent to commercial electronic messages.</span>
+      </label>{% else %}<label style="display:flex;gap:var(--sp-2);align-items:flex-start;text-transform:none;letter-spacing:0;font-size:var(--fs-sm);font-weight:400;color:var(--ink)">
         <input type="checkbox" name="consent" value="on" style="width:auto;min-height:auto;margin-top:3px"
                {% if errors.get('consent') %}aria-invalid="true"{% endif %}>
         <span>
-          <a href="/gizlilik">Aydınlatma metnini</a> okudum; e-posta adresimin fiyat uyarısı amacıyla
+          <a href="/gizlilik">{{ 'the privacy notice' if lang == 'en' else 'Aydınlatma metnini' }}</a> okudum; e-posta adresimin fiyat uyarısı amacıyla
           işlenmesine <strong>açık rıza</strong> veriyorum. Ticari elektronik ileti onayı vermiyorum.
         </span>
-      </label>
+      </label>{% endif %}
       {% if errors.get('consent') %}<span class="error-text">{{ errors['consent'] }}</span>{% endif %}
     </div>
 
@@ -75,14 +79,14 @@
       <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"
            data-theme="auto" data-language="{{ 'en' if lang == 'en' else 'tr' }}"></div>
       <noscript>
-        <p class="help-text">Bot koruması için JavaScript gerekir.</p>
+        <p class="help-text">{{ 'JavaScript is required for bot protection.' if lang == 'en' else 'Bot koruması için JavaScript gerekir.' }}</p>
       </noscript>
     </div>
 
-    <p class="mt-4"><button class="btn" type="submit">Uyarı kaydı oluştur</button></p>
+    <p class="mt-4"><button class="btn" type="submit">{{ 'Create alert' if lang == 'en' else 'Uyarı kaydı oluştur' }}</button></p>
     <p class="help mt-3">
-      Çift onay kullanıyoruz: kayıttan sonra gönderilen bağlantıyı onaylamadan hiçbir e-posta göndermiyoruz.
-      Onay metni sürümü: <code>{{ form.target or 'v1' }}</code> — KVKK uyumlu, tek tıkla iptal.
+      {{ 'We use double opt-in: we send no email until you confirm the link sent after signup.' if lang == 'en' else 'Çift onay kullanıyoruz: kayıttan sonra gönderilen bağlantıyı onaylamadan hiçbir e-posta göndermiyoruz.' }}
+      {{ 'Consent text version:' if lang == 'en' else 'Onay metni sürümü:' }} <code>{{ form.target or 'v1' }}</code> {{ '— privacy compliant, one-click cancel.' if lang == 'en' else '— KVKK uyumlu, tek tıkla iptal.' }}
     </p>
   </form>
   {% endif %}

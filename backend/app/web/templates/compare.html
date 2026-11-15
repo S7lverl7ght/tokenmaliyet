@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% set nav = 'karsilastir' %}
-{% block title %}Model karşılaştırma — maliyet{% if selected %} · {{ selected|length }} model{% endif %} | {{ site_name }}{% endblock %}
+{% block title %}{{ 'Model comparison — cost' if lang == 'en' else 'Model karşılaştırma — maliyet' }}{% if selected %} · {{ selected|length }} {{ 'models' if lang == 'en' else 'model' }}{% endif %} | {{ site_name }}{% endblock %}
 {% block description %}2 ile 4 AI modelini aynı token hacmiyle karşılaştırın. Aylık USD ve TRY maliyeti, birim fiyatlar ve fark. Kalite/gecikme ölçülmez.{% endblock %}
 
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Karşılaştır</li></ol></nav>
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">{{ 'Compare' if lang == 'en' else 'Karşılaştır' }}</li></ol></nav>
     <h1>{{ 'Compare models' if lang == 'en' else 'Modelleri karşılaştır' }}</h1>
     <p class="lede">{{ 'Pick 2–4 models and see the monthly cost side by side for the same token volume.' if lang == 'en' else '2–4 model seçin; aynı token hacmiyle aylık maliyeti yan yana görün.' }}
       {{ 'This comparison is <strong>cost only</strong>: quality, speed and context window are not measured.</p>'|safe if lang == 'en' else 'Bu karşılaştırma <strong>yalnızca maliyettir</strong>: kalite, hız ve bağlam penceresi ölçülmemiştir.</p>'|safe }}
@@ -14,13 +14,13 @@
 
   <form class="surface surface-pad" method="get" action="/karsilastir">
     <fieldset class="fieldset">
-      <legend>Karşılaştırılacak modeller (2–4)</legend>
+      <legend>{{ 'Models to compare (2–4)' if lang == 'en' else 'Karşılaştırılacak modeller (2–4)' }}</legend>
       <div class="form-grid">
         {% for i in range(4) %}
         <div class="field">
-          <label for="m{{ i }}">{{ i+1 }}. model{% if i >= 2 %} <span class="text-muted">(isteğe bağlı)</span>{% endif %}</label>
+          <label for="m{{ i }}">{{ i+1 }}. {{ 'model' if lang == 'en' else 'model' }}{% if i >= 2 %} <span class="text-muted">{{ '(optional)' if lang == 'en' else '(isteğe bağlı)' }}</span>{% endif %}</label>
           <select id="m{{ i }}" name="models" data-model-options {% if i < 2 and selected|length > i %}data-default-model="{{ selected[i] }}"{% endif %}>
-            <option value="">— seçin —</option>
+            <option value="">{{ '— select —' if lang == 'en' else '— seçin —' }}</option>
             {% for opt in options %}
             <option value="{{ opt.value }}" {% if selected|length > i and selected[i] == opt.value %}selected{% endif %}>{{ opt.label }}</option>
             {% endfor %}
@@ -30,22 +30,22 @@
         <div class="field">
           <label for="dil">{{ t('cmp.text_lang') }}</label>
           <select id="dil" name="dil">
-            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>Türkçe — {{ turkce.ratio|tl(2) }}× token</option>
-            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>İngilizce — 1,00×</option>
+            <option value="tr" {% if f.dil != 'en' %}selected{% endif %}>{{ 'Turkish' if lang == 'en' else 'Türkçe' }} — {{ turkce.ratio|tl(2) }}× {{ 'tokens' if lang == 'en' else 'token' }}</option>
+            <option value="en" {% if f.dil == 'en' %}selected{% endif %}>{{ 'English' if lang == 'en' else 'İngilizce' }} — 1.00×</option>
           </select>
-          <span class="help-text">Türkçe metin aynı içerik için {{ turkce.ratio|tl(2) }}× daha fazla token harcar; çarpan her iki modele uygulanır.</span>
+          <span class="help-text">{{ 'Turkish text spends' if lang == 'en' else 'Türkçe metin aynı içerik için' }} {{ turkce.ratio|tl(2) }}× {{ 'more tokens for the same content; the multiplier applies to both models.' if lang == 'en' else 'daha fazla token harcar; çarpan her iki modele uygulanır.' }}</span>
         </div>
         <div class="field">
-          <label for="cin">Aylık girdi token</label>
+          <label for="cin">{{ 'Monthly input tokens' if lang == 'en' else 'Aylık girdi token' }}</label>
           <input id="cin" name="in" type="text" inputmode="numeric" value="{{ f['in'] }}">
         </div>
         <div class="field">
-          <label for="cout">Aylık çıktı token</label>
+          <label for="cout">{{ 'Monthly output tokens' if lang == 'en' else 'Aylık çıktı token' }}</label>
           <input id="cout" name="out" type="text" inputmode="numeric" value="{{ f['out'] }}">
         </div>
       </div>
-      <p class="mt-4"><button class="btn" type="submit">Karşılaştır</button>
-        <a class="btn btn-secondary" href="/karsilastir" style="margin-left:var(--sp-2)">Sıfırla</a></p>
+      <p class="mt-4"><button class="btn" type="submit">{{ 'Compare' if lang == 'en' else 'Karşılaştır' }}</button>
+        <a class="btn btn-secondary" href="/karsilastir" style="margin-left:var(--sp-2)">{{ 'Reset' if lang == 'en' else 'Sıfırla' }}</a></p>
     </fieldset>
   </form>
 
@@ -56,11 +56,11 @@
   {% if cards %}
   <section class="mt-5" aria-labelledby="sonuc-baslik">
     <h2 id="sonuc-baslik" style="font-size:var(--fs-h3)">
-      Sonuç · {{ f['in'] }} girdi + {{ f['out'] }} çıktı token/ay
+      {{ 'Result' if lang == 'en' else 'Sonuç' }} · {{ f['in'] }} {{ 'input +' if lang == 'en' else 'girdi +' }} {{ f['out'] }} {{ 'output tokens/month' if lang == 'en' else 'çıktı token/ay' }}
       {% if f.dil == 'en' %}
-      <span class="badge badge-neutral">İngilizce · çarpan yok</span>
+      <span class="badge badge-neutral">{{ 'English · no multiplier' if lang == 'en' else 'İngilizce · çarpan yok' }}</span>
       {% else %}
-      <span class="badge badge-info">Türkçe içerik varsayımı · {{ turkce.ratio|tl(2) }}× (tahmin)</span>
+      <span class="badge badge-info">{{ 'Turkish content assumption' if lang == 'en' else 'Türkçe içerik varsayımı' }} · {{ turkce.ratio|tl(2) }}× {{ '(estimate)' if lang == 'en' else '(tahmin)' }}</span>
       {% endif %}
     </h2>
     <div class="compare-grid mt-3">
@@ -87,7 +87,7 @@
     </div>
 
     <figure class="mt-4 compare-bar-chart" style="margin:0">
-      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">Aylık maliyet (USD, aynı token hacmi)</figcaption>
+      <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">{{ 'Monthly cost (USD, same token volume)' if lang == 'en' else 'Aylık maliyet (USD, aynı token hacmi)' }}</figcaption>
       <div style="display:grid;gap:var(--sp-2)">
         {% for c in cards %}
         <div>
@@ -104,14 +104,15 @@
     </figure>
 
     <details class="disclosure mt-4">
-      <summary>Formül ve varsayımlar</summary>
+      <summary>{{ 'Formula and assumptions' if lang == 'en' else 'Formül ve varsayımlar' }}</summary>
       <div class="body">
-        <p class="formula">maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)</p>
+        <p class="formula">{{ 'cost = (input_tokens / 1,000,000 × input_price) + (output_tokens / 1,000,000 × output_price)' if lang == 'en' else 'maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)' }}</p>
         <ul>
-          <li>Fiyatlar liste fiyatıdır; vergi, cache ve batch indirimleri dahil değildir.</li>
-          <li>TRY karşılığı 1 USD = {{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }}){% endif %} kuru ile hesaplanır.</li>
-          <li>Kalite, gecikme, bağlam penceresi veya çıktı tutarlılığı karşılaştırılmamıştır.
-              Daha ucuz model "daha iyi" anlamına gelmez.</li>
+          <li>{{ 'Prices are list prices; tax, cache and batch discounts are not included.' if lang == 'en' else 'Fiyatlar liste fiyatıdır; vergi, cache ve batch indirimleri dahil değildir.' }}</li>
+          <li>{{ 'TRY equivalent is calculated at 1 USD =' if lang == 'en' else 'TRY karşılığı 1 USD =' }} {{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }}){% endif %} {{ 'exchange rate.' if lang == 'en' else 'kuru ile hesaplanır.' }}</li>
+          {% if lang == 'en' %}<li>Quality, latency, context window or output consistency are not compared.
+        A cheaper model does not mean a better one.</li>{% else %}<li>Kalite, gecikme, bağlam penceresi veya çıktı tutarlılığı karşılaştırılmamıştır.
+              Daha ucuz model "daha iyi" anlamına gelmez.</li>{% endif %}
         </ul>
       </div>
     </details>

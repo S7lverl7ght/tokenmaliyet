@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 {% set nav = 'hakkinda' %}
-{% block title %}Hakkında ve veri metodolojisi | {{ site_name }}{% endblock %}
-{% block description %}TokenMaliyet nasıl çalışır: fiyatlar hangi kaynaklardan toplanır, nasıl doğrulanır, hangi kurallarla yayınlanır ve hangi sınırları vardır.{% endblock %}
+{% block title %}{{ 'About and data methodology' if lang == 'en' else 'Hakkında ve veri metodolojisi' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'How TokenMaliyet works: which sources prices come from, how they are verified, under which rules they are published and what the limits are.' if lang == 'en' else 'TokenMaliyet nasıl çalışır: fiyatlar hangi kaynaklardan toplanır, nasıl doğrulanır, hangi kurallarla yayınlanır ve hangi sınırları vardır.' }}{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width:860px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Hakkında</li></ol></nav>
-    <h1>Hakkında ve metodoloji</h1>
-    <p class="lede">{{ site_name }}, AI API fiyatlarını kaynağıyla birlikte sunan yerel bir veri motorudur.
-      Fiyatlar tahmin edilmez; resmî kaynaklardan okunur, doğrulanır ve tarihçesi korunarak saklanır.</p>
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'About' if lang == 'en' else 'Hakkında' }}</li></ol></nav>
+    <h1>{{ 'About and methodology' if lang == 'en' else 'Hakkında ve metodoloji' }}</h1>
+    <p class="lede">{% if lang == 'en' %}{{ site_name }} is an independent data engine that publishes AI API prices together with their source. Prices are never estimated; they are read from official sources, verified and stored with their history preserved.{% else %}{{ site_name }}, AI API fiyatlarını kaynağıyla birlikte sunan yerel bir veri motorudur.
+      Fiyatlar tahmin edilmez; resmî kaynaklardan okunur, doğrulanır ve tarihçesi korunarak saklanır.{% endif %}</p>
   </header>
 
   <article class="prose">
-    <h2>Veri nereden geliyor?</h2>
-    <p>Her fiyat, sağlayıcının kendi resmî kaynağından okunur. {{ sources|length }} kaynak var: {{ sources|length - 1 }} resmî sağlayıcı API'si ve 1 pazaryeri (OpenRouter).</p>
+    <h2>{{ 'Where does the data come from?' if lang == 'en' else 'Veri nereden geliyor?' }}</h2>
+    <p>{% if lang == 'en' %}Every price is read from the provider&rsquo;s own official source. There are {{ sources|length }} sources: {{ sources|length - 1 }} official provider APIs and 1 marketplace (OpenRouter).{% else %}Her fiyat, sağlayıcının kendi resmî kaynağından okunur. {{ sources|length }} kaynak var: {{ sources|length - 1 }} resmî sağlayıcı API'si ve 1 pazaryeri (OpenRouter).{% endif %}</p>
     <table>
-      <thead><tr><th>Sağlayıcı</th><th>Kaynak</th><th>Yöntem</th></tr></thead>
+      <thead><tr><th>{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th><th>{{ 'Source' if lang == 'en' else 'Kaynak' }}</th><th>{{ 'Method' if lang == 'en' else 'Yöntem' }}</th></tr></thead>
       <tbody>
         {% for p in sources %}
         <tr>
@@ -29,14 +29,22 @@
             </div>
             {% endif %}
           </td>
-          <td>{{ p.method }}</td>
+          <td>{% if lang == 'en' %}{{ p.method_en or p.method }}{% else %}{{ p.method }}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2>Doğrulama kuralları</h2>
-    <ul>
+    <h2>{{ 'Verification rules' if lang == 'en' else 'Doğrulama kuralları' }}</h2>
+    {% if lang == 'en' %}<ul>
+      <li><strong>Required fields:</strong> a record is not published without source URL, observation time, currency, billing unit and price dimension.</li>
+      <li><strong>Negative prices are rejected.</strong> A zero price is accepted only when the source says &ldquo;free&rdquo;.</li>
+      <li><strong>Unit is preserved:</strong> whatever unit the source gives (USD/1M tokens, USD/image, USD/request) is stored; a 1M-token equivalent is calculated separately for comparison.</li>
+      <li><strong>Price history is immutable:</strong> when a price changes the old row is never deleted or updated; a new observation row is added.</li>
+      <li><strong>Unapproved data is never published:</strong> records that fail verification are invisible in the UI and the API.</li>
+      <li><strong>Channels are not mixed:</strong> direct provider prices and marketplace (OpenRouter) prices carry separate labels.</li>
+      <li><strong>Freshness:</strong> a price older than {{ stale_days }} days is flagged as &ldquo;stale&rdquo; and never presented as current.</li>
+    </ul>{% else %}<ul>
       <li><strong>Zorunlu alanlar:</strong> kaynak URL, gözlem zamanı, para birimi, fatura birimi ve fiyat boyutu olmadan kayıt yayınlanmaz.</li>
       <li><strong>Negatif fiyat reddedilir.</strong> Sıfır fiyat yalnızca kaynakta "ücretsiz" ibaresi varsa kabul edilir.</li>
       <li><strong>Birim korunur:</strong> kaynak hangi birimi veriyorsa (USD/1M token, USD/görsel, USD/istek) o saklanır; karşılaştırma için ayrıca 1M token karşılığı hesaplanır.</li>
@@ -44,59 +52,82 @@
       <li><strong>Onaysız veri yayınlanmaz:</strong> doğrulama kontrolünden geçmeyen kayıt arayüzde ve API'de görünmez.</li>
       <li><strong>Kanallar karıştırılmaz:</strong> doğrudan sağlayıcı fiyatı ile pazaryeri (OpenRouter) fiyatı ayrı etiketlenir.</li>
       <li><strong>Güncellik:</strong> bir fiyat {{ stale_days }} günden eskiyse "güncelliği geçmiş" olarak işaretlenir; güncel gibi sunulmaz.</li>
-    </ul>
+    </ul>{% endif %}
 
-    <h2>Kur (TRY) nasıl hesaplanıyor?</h2>
+    <h2>{{ 'How is the TRY rate calculated?' if lang == 'en' else 'Kur (TRY) nasıl hesaplanıyor?' }}</h2>
     <p>
+      {% if lang == 'en' %}Prices are in USD at the source. The TRY equivalent is converted with a <strong>dated</strong> rate and
+      the rate date is shown everywhere{% if fx_date %} (currently: 1 USD = {{ fx_rate|tl(3) }} TRY, {{ fx_date }}){% endif %}.
+      Rate movement does not change the source USD price; it only affects the TRY display.{% else %}
       Fiyatlar kaynakta USD'dir. TRY karşılığı, <strong>tarihli</strong> bir kurla çevrilir ve kurun tarihi
       her yerde gösterilir{% if fx_date %} (şu an: 1 USD = {{ fx_rate|tl(3) }} TRY, {{ fx_date }}){% endif %}.
       Kur değişikliği kaynak USD fiyatını değiştirmez; yalnızca TRY gösterimini etkiler.
-    </p>
+    {% endif %}</p>
 
-    <h2>Neyi yapmıyoruz?</h2>
-    <ul>
+    <h2>{{ 'What we do not do' if lang == 'en' else 'Neyi yapmıyoruz?' }}</h2>
+    {% if lang == 'en' %}{% if lang == 'en' %}{% if lang == 'en' %}<ul>
+      <li>We do not measure quality, latency or context window. A cheaper model does not mean a better one.</li>
+      <li>We do not show sample, estimated or hard-coded prices. If there is no data the page stays empty and says why.</li>
+      <li>We do not account for tax, FX differences or contract discounts; results are estimates.</li>
+      <li>When a provider changes its pricing page we do not automatically accept it as &ldquo;correct&rdquo;; if collection fails the old price is not presented as current.</li>
+    </ul>{% else %}<ul>
+      <li>We do not measure quality, latency or context window. A cheaper model does not mean a better one.</li>
+      <li>We do not show sample, estimated or hard-coded prices. If there is no data the page stays empty and says why.</li>
+      <li>We do not account for tax, FX differences or contract discounts; results are estimates.</li>
+      <li>When a provider changes its pricing page we do not automatically accept it as &ldquo;correct&rdquo;; if collection fails the old price is not presented as current.</li>
+    </ul>{% endif %}{% else %}<ul>
+      <li><strong>Required fields:</strong> a record is not published without source URL, observation time, currency, billing unit and price dimension.</li>
+      <li><strong>Negative prices are rejected.</strong> A zero price is accepted only when the source says &ldquo;free&rdquo;.</li>
+      <li><strong>Unit is preserved:</strong> whatever unit the source gives (USD/1M tokens, USD/image, USD/request) is stored; a 1M-token equivalent is calculated separately for comparison.</li>
+      <li><strong>Price history is immutable:</strong> when a price changes the old row is never deleted or updated; a new observation row is added.</li>
+      <li><strong>Unapproved data is never published:</strong> records that fail verification are invisible in the UI and the API.</li>
+      <li><strong>Channels are not mixed:</strong> direct provider prices and marketplace (OpenRouter) prices carry separate labels.</li>
+      <li><strong>Freshness:</strong> a price older than {{ stale_days }} days is flagged as &ldquo;stale&rdquo; and never presented as current.</li>
+    </ul>{% endif %}{% else %}<ul>
       <li>Kalite, gecikme (latency) veya bağlam penceresi ölçmüyoruz. Daha ucuz model "daha iyi" demek değildir.</li>
       <li>Örnek, tahmini veya sabit kodlanmış fiyat göstermiyoruz. Veri yoksa sayfa boş kalır ve nedeni yazılır.</li>
       <li>Vergi, kur farkı ve sözleşme indirimlerini hesaba katmıyoruz; sonuç tahmindir.</li>
       <li>Sağlayıcıların fiyat sayfaları değiştiğinde otomatik olarak "doğru" kabul etmiyoruz; toplama başarısızsa
           eski fiyat güncel gibi gösterilmez.</li>
-    </ul>
+    </ul>{% endif %}
 
-    <h2>GPU fiyatları</h2>
-    <p>
-      GPU kiralama fiyatları ayrı bir toplama hattıyla, ayrı birimde (USD/GPU-saat) tutulur ve token
-      fiyatlarıyla aynı tabloya karıştırılmaz. Beş kaynak kullanılır: Runpod (resmî GraphQL API),
-      DataCrunch, Lambda, Hyperstack (resmî fiyat sayfaları) ve Vast.ai (pazaryeri; yalnızca doğrulanmış
-      hostların medyanı). Varsayılan karşılaştırma <strong>on-demand</strong> fiyatıdır; spot ve topluluk
-      fiyatları ayrı gösterilir. On-demand fiyatın çok altında kalan aykırı teklifler elenir.
-    </p>
+    <h2>{{ 'GPU prices' if lang == 'en' else 'GPU fiyatları' }}</h2>
+    <p>{{ 'The default comparison is the on-demand price; spot and community prices are shown separately. Outliers far below the on-demand price are filtered out. Five sources are used: Runpod (official GraphQL API), DataCrunch, Lambda, Hyperstack (official pricing pages) and Vast.ai (marketplace; median of verified hosts only).' if lang == 'en' else 'GPU kiralama fiyatları ayrı bir toplama hattıyla, ayrı birimde (USD/GPU-saat) tutulur ve token fiyatlarıyla aynı tabloya karıştırılmaz. Beş kaynak kullanılır: Runpod (resmî GraphQL API), DataCrunch, Lambda, Hyperstack (resmî fiyat sayfaları) ve Vast.ai (pazaryeri; yalnızca doğrulanmış hostların medyanı). Varsayılan karşılaştırma on-demand fiyatıdır; spot ve topluluk fiyatları ayrı gösterilir. On-demand fiyatın çok altında kalan aykırı teklifler elenir.' }}</p>
 
-    <h2>Diller ve para birimi</h2>
-    <p>
+    <h2>{{ 'Languages and currency' if lang == 'en' else 'Diller ve para birimi' }}</h2>
+    {% if lang == 'en' %}{% if lang == 'en' %}<p>The interface is available in Turkish and English. Prices are in USD at the source; the TRY view is
+      converted from a dated rate and the rate date is always stated. The TRY display is a <em>conversion</em>,
+      it does not change the source price.</p>{% else %}<p>GPU rental prices are kept in a separate collection pipeline and a separate unit (USD/GPU-hour) and are never
+      mixed into the same table as token prices. Five sources are used: Runpod (official GraphQL API),
+      DataCrunch, Lambda, Hyperstack (official pricing pages) and Vast.ai (marketplace; median of verified hosts only).
+      The default comparison is the <strong>on-demand</strong> price; spot and community prices are shown separately.
+      Outliers far below the on-demand price are filtered out.</p>{% endif %}{% else %}<p>
       Arayüz Türkçe ve İngilizce sunulur (`?lang=en`). Fiyatlar kaynakta USD'dir; TRY görünümü
       tarihli kurdan çevrilir ve her zaman kur tarihi belirtilir. TRY gösterimi <em>dönüşüm</em>dür,
       kaynak fiyatı değiştirmez.
-    </p>
+    </p>{% endif %}
 
-    <h2>Teknik yapı</h2>
+    <h2>{{ 'Technical stack' if lang == 'en' else 'Teknik yapı' }}</h2>
     <p>
       Python + FastAPI, PostgreSQL 18, SQLAlchemy ve Jinja2 ile sunucu tarafında render edilir.
       Toplama, doğrulama ve yayınlama ayrı adımlardır; hiçbir fiyat insan/otomatik onay olmadan yayınlanmaz.
       Ham kaynak yanıtları ileride inceleme için saklanır.
     </p>
-    <h2>Yayıncı ve iletişim</h2>
-    <p>
+    <h2>{{ 'Publisher and contact' if lang == 'en' else 'Yayıncı ve iletişim' }}</h2>
+    {% if lang == 'en' %}<p>Rendered server-side with Python + FastAPI, PostgreSQL 18, SQLAlchemy and Jinja2.
+      Collection, verification and publishing are separate steps; no price is published without human or automatic approval.
+      Raw source responses are stored for later review.</p>{% else %}<p>
       {{ site_name }} bağımsız bir veri projesidir; herhangi bir AI sağlayıcısıyla ortaklığı, sponsorluğu
       veya satış anlaşması yoktur. Site reklam geliriyle değil, veri kalitesiyle ayakta kalır.
-    </p>
+    </p>{% endif %}
     <ul>
-      <li>İletişim: <a href="/iletisim">{{ contact_email }}</a></li>
-      <li>Yayımlanmış düzeltmeler: <a href="/duzeltmeler">Düzeltmeler</a></li>
-      <li>Gizlilik ve KVKK: <a href="/gizlilik">Gizlilik</a></li>
+      <li>{{ 'Contact:' if lang == 'en' else 'İletişim:' }} <a href="/iletisim">{{ contact_email }}</a></li>
+      <li>{{ 'Published corrections:' if lang == 'en' else 'Yayımlanmış düzeltmeler:' }} <a href="/duzeltmeler">Düzeltmeler</a></li>
+      <li>{{ 'Privacy and data protection:' if lang == 'en' else 'Gizlilik ve KVKK:' }} <a href="/gizlilik">Gizlilik</a></li>
     </ul>
     <p class="text-sm text-muted">
-      Son veri kontrolü: {{ last_checked }} · Onaylı gözlem sayısı: {{ observation_count }} ·
-      GPU fiyatı: {{ gpu_count }} · API: <a href="/docs">/docs</a>
+      {{ 'Last data check:' if lang == 'en' else 'Son veri kontrolü:' }} {{ last_checked }} · {{ 'Approved observations:' if lang == 'en' else 'Onaylı gözlem sayısı:' }} {{ observation_count }} ·
+      {{ 'GPU prices:' if lang == 'en' else 'GPU fiyatı:' }} {{ gpu_count }} · API: <a href="/docs">/docs</a>
     </p>
   </article>
 </div>

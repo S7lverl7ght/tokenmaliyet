@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set nav = 'gpu' %}
-{% block title %}GPU kiralama maliyetleri — saatlik fiyat karşılaştırma | {{ site_name }}{% endblock %}
+{% block title %}{{ 'GPU rental costs — hourly price comparison' if lang == 'en' else 'GPU kiralama maliyetleri — saatlik fiyat karşılaştırma' }} | {{ site_name }}{% endblock %}
 {% block description %}H100, H200, B200, A100 ve RTX GPU kiralama fiyatları: Runpod, Vast.ai, DataCrunch, Lambda ve Hyperstack saatlik ücretleri, kaynak ve gözlem tarihiyle.{% endblock %}
 
 {% block content %}
@@ -25,18 +25,18 @@
 
   <form class="toolbar" method="get" action="/gpu-maliyetleri" role="search" aria-label="GPU filtreleri">
     <div class="field field-xs">
-      <label for="provider">Sağlayıcı</label>
+      <label for="provider">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</label>
       <select id="provider" name="provider">
-        <option value="">Tümü</option>
+        <option value="">{{ 'All' if lang == 'en' else 'Tümü' }}</option>
         {% for slug, name in provider_options %}
         <option value="{{ slug }}" {% if f.provider == slug %}selected{% endif %}>{{ name }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="field field-xs">
-      <label for="kind">Fiyat türü</label>
+      <label for="kind">{{ 'Price type' if lang == 'en' else 'Fiyat türü' }}</label>
       <select id="kind" name="kind">
-        <option value="">Tümü</option>
+        <option value="">{{ 'All' if lang == 'en' else 'Tümü' }}</option>
         <option value="on_demand" {% if f.kind == 'on_demand' %}selected{% endif %}>On-demand</option>
         <option value="spot" {% if f.kind == 'spot' %}selected{% endif %}>Spot</option>
         <option value="reserved" {% if f.kind == 'reserved' %}selected{% endif %}>Rezerve</option>
@@ -46,28 +46,27 @@
     <div class="field field-xs">
       <label for="sort">{{ t('gpu.sort') }}</label>
       <select id="sort" name="sort">
-        <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>VRAM: yüksek → düşük</option>
-        <option value="price" {% if f.sort == 'price' %}selected{% endif %}>Fiyat: düşük → yüksek</option>
+        <option value="vram" {% if f.sort == 'vram' %}selected{% endif %}>{{ 'VRAM: high → low' if lang == 'en' else 'VRAM: yüksek → düşük' }}</option>
+        <option value="price" {% if f.sort == 'price' %}selected{% endif %}>{{ 'Price: low → high' if lang == 'en' else 'Fiyat: düşük → yüksek' }}</option>
       </select>
     </div>
     <div class="field"><button class="btn" type="submit">Uygula</button></div>
   </form>
 
   <section class="surface" aria-labelledby="gpu-tablo">
-    <h2 id="gpu-tablo" class="sr-only">GPU fiyat tablosu</h2>
+    <h2 id="gpu-tablo" class="sr-only">{{ 'GPU price table' if lang == 'en' else 'GPU fiyat tablosu' }}</h2>
     <div class="table-wrap">
       <table class="prices">
-        <caption>GPU ailesi başına en düşük <strong>on-demand</strong> saatlik fiyat. Spot ve topluluk fiyatları
-          ayrı satırda gösterilir. GPU adına tıklayarak tüm sağlayıcıları görebilirsiniz.</caption>
+        <caption>{{ 'Lowest per GPU family' if lang == 'en' else 'GPU ailesi başına en düşük' }} <strong>on-demand</strong> {{ 'hourly price. Spot and community prices are shown on a separate row. Click a GPU name to see all providers.' if lang == 'en' else 'saatlik fiyat. Spot ve topluluk fiyatları ayrı satırda gösterilir. GPU adına tıklayarak tüm sağlayıcıları görebilirsiniz.' }}</caption>
         <thead>
           <tr>
             <th scope="col" style="width:22%">GPU</th>
             <th scope="col" style="width:10%">VRAM</th>
-            <th scope="col" style="width:20%">En düşük fiyat</th>
+            <th scope="col" style="width:20%">{{ 'Lowest price' if lang == 'en' else 'En düşük fiyat' }}</th>
             <th scope="col" style="width:12%">$/GB VRAM</th>
-            <th scope="col" style="width:16%">Sağlayıcı</th>
+            <th scope="col" style="width:16%">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th>
             <th scope="col" style="width:14%">Tip</th>
-            <th scope="col" style="width:14%">On-demand aralık</th>
+            <th scope="col" style="width:14%">{{ 'On-demand range' if lang == 'en' else 'On-demand aralık' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -87,7 +86,7 @@
               </details>
             </td>
             <td data-label="VRAM" class="text-sm">{{ f.vram ~ ' GB' if f.vram else '—' }}</td>
-            <td data-label="En düşük" class="cell-price">
+            <td data-label="{{ 'Lowest' if lang == 'en' else 'En düşük' }}" class="cell-price">
               {% if currency == 'TRY' and fx_rate %}
               <span class="pv">{{ (f.best.price * fx_rate)|tl(2) }} <span class="cur">TRY</span></span>
               <span class="pu">{{ f.best.price|tl_dyn }} USD · {{ 'saat' if lang == 'tr' else 'hour' }}</span>
@@ -98,7 +97,7 @@
               <span class="pu">≈ {% if fx_rate %}{{ (f.best.price * 730 * fx_rate)|tl(0) }}{% else %}—{% endif %} {% if lang == 'tr' %}₺ / ay (730 saat){% else %}TRY / mo (730 h){% endif %}</span>
             </td>
             <td data-label="$/GB" class="text-sm num">{% if f.per_gb %}{{ f.per_gb|tl(4) }} ${% else %}—{% endif %}</td>
-            <td data-label="Sağlayıcı" class="text-sm">{{ f.best.provider }}</td>
+            <td data-label="{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}" class="text-sm">{{ f.best.provider }}</td>
             <td data-label="Tip">
               {% if f.best.kind == 'on_demand' %}<span class="badge badge-info">On-demand</span>
               {% elif f.best.kind == 'spot' %}<span class="badge badge-warn">Spot</span>
@@ -110,7 +109,7 @@
               </span>
               {% endif %}
             </td>
-            <td data-label="Aralık" class="text-sm num">
+            <td data-label="{{ 'Range' if lang == 'en' else 'Aralık' }}" class="text-sm num">
               {% if f.max > f.best.price %}{{ f.best.price|tl_dyn }} – {{ f.max|tl_dyn }} $
               {% else %}{{ f.best.price|tl_dyn }} ${% endif %}
             </td>
@@ -126,9 +125,9 @@
       <h2 style="font-size:var(--fs-h3)">Kaynaklar</h2>
       <div class="table-wrap mt-3">
         <table class="prices" style="table-layout:auto">
-          <caption class="sr-only">GPU sağlayıcıları ve fiyat aralıkları</caption>
-          <thead><tr><th scope="col">Sağlayıcı</th><th scope="col">Tip</th><th scope="col" class="is-num">Kalem</th>
-            <th scope="col" class="is-num">En düşük</th><th scope="col" class="is-num">En yüksek</th></tr></thead>
+          <caption class="sr-only">{{ 'GPU providers and price ranges' if lang == 'en' else 'GPU sağlayıcıları ve fiyat aralıkları' }}</caption>
+          <thead><tr><th scope="col">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th><th scope="col">Tip</th><th scope="col" class="is-num">Kalem</th>
+            <th scope="col" class="is-num">{{ 'Lowest' if lang == 'en' else 'En düşük' }}</th><th scope="col" class="is-num">{{ 'Highest' if lang == 'en' else 'En yüksek' }}</th></tr></thead>
           <tbody>
           {% for p in providers %}
             <tr>
@@ -144,20 +143,21 @@
       </div>
     </div>
     <aside style="grid-column:span 5" class="surface surface-pad">
-      <h2 style="font-size:var(--fs-h3)">Kaynak ve tazelik</h2>
-      <p class="text-sm text-muted mt-2">
+      <h2 style="font-size:var(--fs-h3)">{{ 'Source and freshness' if lang == 'en' else 'Kaynak ve tazelik' }}</h2>
+      <p{% if lang == 'en' %} The source of every row is the provider&rsquo;s official pricing page; the observation time becomes
+      visible when the row is expanded. Last collection: <strong>{{ last_checked }}</strong>. {% else %} class="text-sm text-muted mt-2">
         Her satırın kaynağı sağlayıcının resmî fiyat sayfasıdır; gözlem zamanı satır açıldığında
         görünür. Son toplama: <strong>{{ last_checked }}</strong>.
-      </p>
-      <h2 style="font-size:var(--fs-h3);margin-top:var(--sp-5)">Bu veriyi nasıl okumalı?</h2>
+       {% endif %}</p>
+      <h2 style="font-size:var(--fs-h3);margin-top:var(--sp-5)">{{ 'How to read this data' if lang == 'en' else 'Bu veriyi nasıl okumalı?' }}</h2>
       <ul class="text-sm text-muted mt-3" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
-        <li><strong>On-demand</strong> = anında açılır, saatlik faturalanır.</li>
-        <li><strong>Spot</strong> = kapasite boşken ucuz, kesilebilir; uzun işler için riskli.</li>
-        <li><strong>Rezerve / kluster</strong> = minimum süre taahhüdü (ör. 2 hafta) karşılığında indirim.</li>
-        <li><strong>Topluluk</strong> = bireysel host ilanları; kararlılık değişken, medyan fiyat alınır.</li>
+        <li><strong>On-demand</strong> {{ '= available instantly, billed hourly.' if lang == 'en' else '= anında açılır, saatlik faturalanır.' }}</li>
+        <li><strong>Spot</strong> {{ '= cheap when capacity is idle, can be preempted; risky for long jobs.' if lang == 'en' else '= kapasite boşken ucuz, kesilebilir; uzun işler için riskli.' }}</li>
+        <li><strong>Rezerve / kluster</strong> {{ '= discount in exchange for a minimum commitment (e.g. 2 weeks).' if lang == 'en' else '= minimum süre taahhüdü (ör. 2 hafta) karşılığında indirim.' }}</li>
+        <li><strong>Topluluk</strong> {{ '= listings from individual hosts; reliability varies, median price is used.' if lang == 'en' else '= bireysel host ilanları; kararlılık değişken, medyan fiyat alınır.' }}</li>
       </ul>
-      <p class="help mt-4">Vergi, çıkış trafiği ve depolama dahil değildir. GPU-saat fiyatı token fiyatıyla
-        aynı tabloda karıştırılmaz.</p>
+      <p class="help mt-4">{{ 'Tax, egress traffic and storage are not included. GPU-hour prices are never' if lang == 'en' else 'Vergi, çıkış trafiği ve depolama dahil değildir. GPU-saat fiyatı token fiyatıyla' }}
+        {{ 'mixed into the same table as token prices.' if lang == 'en' else 'aynı tabloda karıştırılmaz.' }}</p>
       <p class="mt-4"><a class="btn btn-secondary" href="/hesaplayici">Token maliyeti hesapla</a></p>
     </aside>
   </section>

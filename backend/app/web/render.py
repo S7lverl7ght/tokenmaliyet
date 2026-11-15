@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Statik varlik surumu: tarayici onbellegini guvenle gecersiz kilmak icin.
-ASSET_VERSION = "20261113c"
+ASSET_VERSION = "20261115a"
 
 SITE_NAME = "TokenMaliyet"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
@@ -319,7 +319,11 @@ def base_context(db: Session, request, **extra) -> dict:
     checked = queries.last_checked(db)
     ctx = {
         "site_name": SITE_NAME,
-        "site_tagline": "AI API fiyat ve maliyet verisi",
+        "site_tagline": (
+            "AI API price and cost data"
+            if (lang or "tr") == "en"
+            else "AI API fiyat ve maliyet verisi"
+        ),
         "asset_version": ASSET_VERSION,
         "site_url": SITE_URL,
         "site_desc": SITE_DESC,

@@ -18,17 +18,17 @@
   </header>
 
   <section class="surface surface-pad" aria-labelledby="fiyat-degisim">
-    <h2 id="fiyat-degisim" style="font-size:var(--fs-h3)">Fiyat değişimleri</h2>
+    <h2 id="fiyat-degisim" style="font-size:var(--fs-h3)">{{ 'Fiyat değişimleri' if lang == 'en' else 'Fiyat değişimleri' }}</h2>
     {% if changes %}
     <div class="table-wrap mt-3">
       <table class="prices" style="table-layout:auto">
-        <caption class="sr-only">Son {{ days }} günde fiyatı değişen modeller</caption>
+        <caption class="sr-only">{{ 'Son {{ days }} günde fiyatı değişen modeller' if lang == 'en' else 'Son {{ days }} günde fiyatı değişen modeller' }}</caption>
         <thead><tr>
           <th scope="col">Model</th>
           <th scope="col">Kalem</th>
-          <th scope="col" class="is-num">Önce</th>
-          <th scope="col" class="is-num">Şimdi</th>
-          <th scope="col" class="is-num">Değişim</th>
+          <th scope="col" class="is-num">{{ 'Önce' if lang == 'en' else 'Önce' }}</th>
+          <th scope="col" class="is-num">{{ 'Şimdi' if lang == 'en' else 'Şimdi' }}</th>
+          <th scope="col" class="is-num">{{ 'Değişim' if lang == 'en' else 'Değişim' }}</th>
           <th scope="col">Tarih</th>
         </tr></thead>
         <tbody>
@@ -57,11 +57,11 @@
   </section>
 
   <section class="surface surface-pad mt-4" aria-labelledby="duzeltme">
-    <h2 id="duzeltme" style="font-size:var(--fs-h3)">Veri düzeltmeleri</h2>
+    <h2 id="duzeltme" style="font-size:var(--fs-h3)">{{ 'Veri düzeltmeleri' if lang == 'en' else 'Veri düzeltmeleri' }}</h2>
     <p class="help mt-2">Yanlış bir sayı yayımlandığında sessizce değiştirmiyoruz; eski değer burada kalır.</p>
     {% if corrections %}
     <details class="disclosure mt-3">
-      <summary>Teknik doğrulama günlüklerini göster ({{ corrections|length }} kayıt)</summary>
+      <summary>{{ 'Teknik doğrulama günlüklerini göster ({{ corrections|length }} kayıt)' if lang == 'en' else 'Teknik doğrulama günlüklerini göster ({{ corrections|length }} kayıt)' }}</summary>
       <div class="body">
         <ul class="text-sm" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
           {% for c in corrections %}
@@ -77,7 +77,7 @@
   </section>
 
   <section class="surface surface-pad mt-4">
-    <h2 style="font-size:var(--fs-h3)">Nasıl takip edilir?</h2>
+    <h2 style="font-size:var(--fs-h3)">{{ 'Nasıl takip edilir?' if lang == 'en' else 'Nasıl takip edilir?' }}</h2>
     <ul class="text-sm text-muted mt-3" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
       <li>Veri günde iki kez toplanır (06:10 ve 18:10).</li>
       <li>%30'dan büyük değişim otomatik yayınlanmaz; insan incelemesine düşer.</li>

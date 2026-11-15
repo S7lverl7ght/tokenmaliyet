@@ -19,10 +19,10 @@
 
 <form class="surface surface-pad" method="get" action="/hesaplayici" id="calc-form" novalidate>
     <fieldset class="fieldset">
-      <legend>Modeller</legend>
+      <legend>{{ 'Models' if lang == 'en' else 'Modeller' }}</legend>
       <div class="form-grid">
                 <div class="field">
-          <label for="from-q">Mevcut model</label>
+          <label for="from-q">{{ 'Current model' if lang == 'en' else 'Mevcut model' }}</label>
           <div class="picker" data-picker>
             <input type="text" id="from-q" class="picker-input" autocomplete="off" role="combobox"
                    aria-expanded="false" aria-controls="from-list" aria-autocomplete="list"
@@ -33,7 +33,7 @@
           </div>
         </div>
         <div class="field">
-          <label for="to-q">Alternatif model</label>
+          <label for="to-q">{{ 'Alternative model' if lang == 'en' else 'Alternatif model' }}</label>
           <div class="picker" data-picker>
             <input type="text" id="to-q" class="picker-input" autocomplete="off" role="combobox"
                    aria-expanded="false" aria-controls="to-list" aria-autocomplete="list"
@@ -96,7 +96,7 @@
       </div>
       <p class="help mt-3" id="formSummary" aria-live="polite"></p>
       <p class="mt-4"><button class="btn" type="submit">{{ t('calc.calc') }}</button>
-        <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">Alanları sıfırla</a></p>
+        <a class="btn btn-secondary" href="/hesaplayici" style="margin-left:var(--sp-2)">{{ 'Reset fields' if lang == 'en' else 'Alanları sıfırla' }}</a></p>
     </fieldset>
   </form>
 
@@ -136,7 +136,7 @@
     {% if result.tr_mult and result.tr_mult > 1 %}
     <div class="notice notice-info mt-3" role="note">
       <div>
-        <strong>Türkçe içerik varsayımı: {{ result.tr_mult|tl(2) }}×</strong> —
+        <strong>{{ 'Turkish content assumption:' if lang == 'en' else 'Türkçe içerik varsayımı:' }} {{ result.tr_mult|tl(2) }}×</strong> —
         <em>her iki modelin</em> maliyeti de aynı Türkçe token çarpanıyla hesaplandı
         (aynı içerik Türkçe'de yaklaşık {{ result.tr_mult|tl(2) }}× daha fazla token harcar).
         Bu bir tahmindir; İngilizce karşılaştırması için yukarıdan dili değiştirin.
@@ -167,27 +167,26 @@
     </figure>
 
     <details class="disclosure mt-4">
-      <summary>Hesaplama formülü ve varsayımlar</summary>
+      <summary>{{ 'Calculation formula and assumptions' if lang == 'en' else 'Hesaplama formülü ve varsayımlar' }}</summary>
       <div class="body">
-        <p>Formül:</p>
-        <p class="formula">maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)</p>
+        <p>{{ 'Formula:' if lang == 'en' else 'Formül:' }}</p>
+        <p class="formula">{{ 'cost = (input_tokens / 1,000,000 × input_price) + (output_tokens / 1,000,000 × output_price)' if lang == 'en' else 'maliyet = (girdi_token / 1.000.000 × girdi_fiyatı) + (çıktı_token / 1.000.000 × çıktı_fiyatı)' }}</p>
         <ul>
-          <li>Fiyatlar sağlayıcının resmî sayfasından alınan liste fiyatlarıdır; vergi ve indirimler dahil değildir.</li>
-          <li>Girdi fiyatı: {{ result.from_in|tl_dyn }} USD / 1M token ({{ result.from_name }})</li>
-          <li>Çıktı fiyatı: {{ result.from_out|tl_dyn }} USD / 1M token ({{ result.from_name }})</li>
-          <li>Girdi fiyatı: {{ result.to_in|tl_dyn }} USD / 1M token ({{ result.to_name }})</li>
-          <li>Çıktı fiyatı: {{ result.to_out|tl_dyn }} USD / 1M token ({{ result.to_name }})</li>
-          <li>Kur: 1 USD = {{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }} tarihli){% endif %}; kur değişimi USD maliyetini değiştirmez.</li>
-          <li>Önbellek (cache) ve toplu (batch) indirimleri hesaba katılmamıştır.</li>
-          <li>Kalite, gecikme ve bağlam penceresi karşılaştırılmamıştır; aynı kalite varsayımı yapılmamaktadır.</li>
+          <li>{{ 'Prices are list prices from the provider&rsquo;s official page; tax and discounts are not included.' if lang == 'en' else 'Fiyatlar sağlayıcının resmî sayfasından alınan liste fiyatlarıdır; vergi ve indirimler dahil değildir.' }}</li>
+          <li>{{ 'Input price: ' if lang == 'en' else 'Girdi fiyatı: ' }}{{ result.from_in|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.from_name }})</li>
+          <li>{{ 'Output price: ' if lang == 'en' else 'Çıktı fiyatı: ' }}{{ result.from_out|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.from_name }})</li>
+          <li>{{ 'Input price: ' if lang == 'en' else 'Girdi fiyatı: ' }}{{ result.to_in|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.to_name }})</li>
+          <li>{{ 'Output price: ' if lang == 'en' else 'Çıktı fiyatı: ' }}{{ result.to_out|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.to_name }})</li>
+          <li>{{ 'FX: 1 USD = ' if lang == 'en' else 'Kur: 1 USD = ' }}{{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }} tarihli){% endif %}; {% if lang == 'en' %}exchange-rate movement does not change the USD cost.{% else %}kur değişimi USD maliyetini değiştirmez.{% endif %}</li>
+          <li>{{ 'Cache and batch discounts are not included.' if lang == 'en' else 'Önbellek (cache) ve toplu (batch) indirimleri hesaba katılmamıştır.' }}</li>
+          <li>{{ 'Quality, latency and context window are not compared; no equal-quality assumption is made.' if lang == 'en' else 'Kalite, gecikme ve bağlam penceresi karşılaştırılmamıştır; aynı kalite varsayımı yapılmamaktadır.' }}</li>
         </ul>
       </div>
     </details>
 
     <p class="help mt-4">
-      Bağlantıyı paylaşabilirsiniz: bu sayfanın adresi seçimlerinizi ve token hacminizi taşır.
-      Hassas veri içermez.
-    </p>
+      {{ 'You can share the link: this page&rsquo;s address carries your selections and token volume.' if lang == 'en' else 'Bağlantıyı paylaşabilirsiniz: bu sayfanın adresi seçimlerinizi ve token hacminizi taşır.' }}
+      {% if lang == 'en' %}It contains no sensitive data.{% else %}Hassas veri içermez.{% endif %}</p>
   </section>
   {% endif %}
 </div>

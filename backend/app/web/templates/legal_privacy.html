@@ -1,12 +1,12 @@
 {% extends "legal.html" %}
 {% block body %}
-<h2>Kısaca</h2>
+<h2>{{ 'Kısaca' if lang == 'en' else 'Kısaca' }}</h2>
 <p>{{ site_name }} bir fiyat karşılaştırma sitesidir. Üyelik yok, ödeme yok, kullanıcı hesabı yok.
 Sizi tanımlayan bir veriyi toplamıyoruz.</p>
 
-<h2>Hangi veriler işleniyor?</h2>
+<h2>{{ 'Hangi veriler işleniyor?' if lang == 'en' else 'Hangi veriler işleniyor?' }}</h2>
 <table>
-  <thead><tr><th>Veri</th><th>Amaç</th><th>Saklama</th></tr></thead>
+  <thead><tr><th>Veri</th><th>{{ 'Amaç' if lang == 'en' else 'Amaç' }}</th><th>Saklama</th></tr></thead>
   <tbody>
     <tr><td>Sunucu erişim kayıtları (IP, tarayıcı, tarih)</td>
         <td>Güvenlik, hata ayıklama, kötüye kullanım tespiti</td>
@@ -23,16 +23,16 @@ Sizi tanımlayan bir veriyi toplamıyoruz.</p>
   </tbody>
 </table>
 
-<h2>Çerez kullanımı</h2>
+<h2>{{ 'Çerez kullanımı' if lang == 'en' else 'Çerez kullanımı' }}</h2>
 <p>Zorunlu olmayan çerez kullanmıyoruz. Tema tercihi çerez değil, tarayıcı yerel depolamasıdır ve
 sunucuya iletilmez. İleride analitik veya reklam eklenirse bu sayfa güncellenir ve onay istenir.</p>
 
-<h2>Üçüncü taraflar</h2>
+<h2>{{ 'Üçüncü taraflar' if lang == 'en' else 'Üçüncü taraflar' }}</h2>
 <p>Sayfalar yalnızca kendi sunucumuzdan yüklenir; harici yazı tipi, harici script veya gömülü
 reklam yoktur. Dış kaynak bağlantıları (sağlayıcı fiyat sayfaları) yeni sekmede açılır ve o sitelerin
 kendi gizlilik politikaları geçerlidir.</p>
 
-<h2>Haklarınız (KVKK md. 11)</h2>
+<h2>{{ 'Haklarınız (KVKK md. 11)' if lang == 'en' else 'Haklarınız (KVKK md. 11)' }}</h2>
 <p>Kişisel veri işlemediğimiz için silme/düzeltme talebi genellikle uygulanmaz; yine de aşağıdaki
 haklara sahipsiniz:</p>
 <ul>

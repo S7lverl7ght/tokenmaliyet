@@ -8,7 +8,7 @@
     <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">{{ page_title }}</li></ol></nav>
     <h1>{{ page_title }}</h1>
     <p class="lede">{{ page_desc }}</p>
-    <div class="meta"><span>Son güncelleme: <strong>11.11.2026</strong></span></div>
+    <div class="meta"><span>{{ 'Last updated:' if lang == 'en' else 'Son güncelleme:' }} <strong>11.11.2026</strong></span></div>
   </header>
   <article class="prose">
     {% block body %}{% endblock %}

@@ -24,11 +24,11 @@
   </header>
 
   <section class="surface" aria-labelledby="tablo-baslik">
-    <h2 id="tablo-baslik" class="sr-only">Model fiyat tablosu</h2>
+    <h2 id="tablo-baslik" class="sr-only">{{ 'Model price table' if lang == 'en' else 'Model fiyat tablosu' }}</h2>
 
     <form class="toolbar" method="get" action="/fiyatlar" id="filtreler" role="search" aria-label="Fiyat filtreleri">
       <div class="field field-search">
-        <label for="q">Model ara</label>
+        <label for="q">{{ 'Search model' if lang == 'en' else 'Model ara' }}</label>
         <input id="q" name="q" type="search" value="{{ f.q }}" placeholder="{{ 'örn. deepseek, gemini-4, gpt-6' if lang == 'tr' else 'e.g. deepseek, gemini-4, gpt-6' }}" autocomplete="off">
       </div>
       <div class="field field-xs">
@@ -56,8 +56,8 @@
           <option value="input_desc" {% if f.sort == 'input_desc' %}selected{% endif %}>{{ t('prices.sort.in_desc') }}</option>
           <option value="output_asc" {% if f.sort == 'output_asc' %}selected{% endif %}>{{ t('prices.sort.out_asc') }}</option>
           <option value="output_desc" {% if f.sort == 'output_desc' %}selected{% endif %}>{{ t('prices.sort.out_desc') }}</option>
-          <option value="name_asc" {% if f.sort == 'name_asc' %}selected{% endif %}>Model A–Z</option>
-          <option value="recent" {% if f.sort == 'recent' %}selected{% endif %}>En yeni</option>
+          <option value="name_asc" {% if f.sort == 'name_asc' %}selected{% endif %}>{{ 'Model A–Z' if lang == 'en' else 'Model A–Z' }}</option>
+          <option value="recent" {% if f.sort == 'recent' %}selected{% endif %}>{{ 'Newest' if lang == 'en' else 'En yeni' }}</option>
         </select>
       </div>
       <div class="field">
@@ -80,12 +80,12 @@
     <p class="sr-only" role="status">{% if lang == 'en' %}Showing {{ ((page-1)*page_size)+1 }}–{{ ((page-1)*page_size)+rows|length }} of {{ rows|length }} results{% else %}{{ rows|length }} sonuçtan {{ ((page-1)*page_size)+1 }}–{{ ((page-1)*page_size)+rows|length }} arası gösteriliyor.{% endif %}</p>
     <div class="surface surface-pad mt-4" id="instant-search" hidden>
     <div class="flex items-center gap-2 wrap" style="justify-content:space-between">
-      <strong id="live-title">Tüm modellerde arama</strong>
+      <strong id="live-title">{{ 'Search all models' if lang == 'en' else 'Tüm modellerde arama' }}</strong>
       <span class="text-xs text-muted" id="live-count"></span>
     </div>
     <div id="live-results" class="mt-3"></div>
     <p class="help-text mt-2" id="live-note">
-      Bu sayfa ilk 50 modeli listeler; yukarıdaki arama kutusu tüm modellerde çalışır.
+      {{ 'This page lists the first 50 models; the search box above covers all of them.' if lang == 'en' else 'Bu sayfa ilk 50 modeli listeler; yukarıdaki arama kutusu tüm modellerde çalışır.' }}
     </p>
   </div>
 
@@ -189,7 +189,13 @@
   <section class="grid12 mt-5" aria-labelledby="metodoloji">
     <div class="col-main surface surface-pad" style="grid-column:span 8">
       <h2 id="metodoloji" style="font-size:var(--fs-h3)">{{ 'Veri nasıl toplanıyor?' if lang == 'tr' else 'How is the data collected?' }}</h2>
-      <p class="text-sm text-muted mt-3">
+      <p>{% if lang == 'en' %}
+      Every price is read from the provider's official pricing page or official API. The raw response is
+      stored, normalised, then checked for required fields (source, observation time, currency, billing
+      unit) and consistency. Only records that pass these checks appear on this page.
+      Direct provider prices and marketplace (OpenRouter) prices carry separate channel labels.
+      {% else %}
+      
         {% if lang == 'en' %}
       Every price is read from the provider's official pricing page or official API. The raw response is stored,
       normalized, then checked for required fields (source, observation time, currency, billing unit) and
@@ -202,7 +208,7 @@
         normalize edilir, ardından zorunlu alan (kaynak, gözlem zamanı, para birimi, fatura birimi) ve
         tutarlılık kontrollerinden geçer. Yalnızca bu kontrolleri geçen kayıtlar bu sayfada görünür.
         Doğrudan sağlayıcı fiyatı ile pazaryeri (OpenRouter) fiyatı ayrı kanal etiketiyle sunulur.
-      </p>
+      {% endif %}</p>
       <p class="text-sm text-muted mt-3">
         Fiyatlar vergi ve ek ücretler hariç liste fiyatlarıdır. Gerçek fatura; kullanım dilimi, cache/batch
         oranı, bölge ve sözleşmeye göre değişebilir.

@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 import os
+import re
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -445,6 +446,47 @@ def calculator_page(
     return TEMPLATES.TemplateResponse(request, "calculator.html", ctx)
 
 
+
+
+@router.get("/hesaplayici/ses-maliyeti", response_class=HTMLResponse, include_in_schema=False)
+def media_cost_page(
+    request: Request,
+    grup: str = "tts",
+    miktar: str = "",
+    db: Session = Depends(get_session),
+):
+    """Ses / gorsel / video uretim maliyeti (rapor 8. tur arastirmasi).
+
+    Neden bu ozellik: seslendirme maliyeti en yuksek ROI'li arac cikti
+    (ElevenLabs affiliate %22, TR'de gercek arama talebi, zayif rekabet).
+    """
+    from . import media_cost as mc
+
+    lang = base_context(db, request).get("lang", "tr")
+    group = grup if grup in ("tts", "stt", "image", "video") else "tts"
+
+    # Varsayilan miktar: gruba gore anlamli bir sayi (uydurma fiyat degil, ornek hacim)
+    defaults = {"tts": "10000", "stt": "60", "image": "100", "video": "30"}
+    raw = (miktar or defaults[group]).strip()
+    try:
+        qty = float(re.sub(r"[^\d.]", "", raw) or 0)
+    except ValueError:
+        qty = 0.0
+    qty = max(0.0, min(qty, 100_000_000))
+
+    unit_labels = {
+        "tts": "karakter" if lang == "tr" else "characters",
+        "stt": "dakika" if lang == "tr" else "minutes",
+        "image": "görsel" if lang == "tr" else "images",
+        "video": "saniye" if lang == "tr" else "seconds",
+    }
+
+    rows = mc.compare(group, qty) if qty > 0 else []
+
+    ctx = base_context(db, request, nav="hesaplayici",
+                       grup=group, miktar=raw, birim=unit_labels[group], rows=rows)
+    ctx["canonical"] = SITE_URL + "/hesaplayici/ses-maliyeti"
+    return TEMPLATES.TemplateResponse(request, "ses_maliyeti.html", ctx)
 
 
 @router.get("/karsilastir", response_class=HTMLResponse, include_in_schema=False)
@@ -1159,6 +1201,7 @@ def about_page(request: Request, db: Session = Depends(get_session)):
 # bu yuzden ayni handler'a baglamak yeterli.
 # ---------------------------------------------------------------------------
 _VARIANT_PAGES = [
+    ("hesaplayici/ses-maliyeti", media_cost_page, "media-cost"),
     ("fiyatlar", prices_page, "prices"),
     ("hesaplayici", calculator_page, "calculator"),
     ("karsilastir", compare_page, "compare"),
@@ -1233,7 +1276,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     lastmod = (last_obs.date().isoformat() if last_obs else _dt.date.today().isoformat())
 
     urls: list[str] = [
-        "/", "/hesaplayici", "/fiyatlar", "/karsilastir", "/token-sayaci",
+        "/", "/hesaplayici", "/hesaplayici/ses-maliyeti", "/fiyatlar", "/karsilastir", "/token-sayaci",
         "/danismanlik", "/gpu-maliyetleri", "/rehber", "/hakkinda",
         "/gizlilik", "/iletisim", "/duzeltmeler",
         "/turkce-token-maliyeti", "/degisiklikler",
@@ -1244,7 +1287,7 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
     # Yalnizca GERCEKTEN var olan ve indekslenebilir Ingilizce sayfalar.
     # /en/uyari bilincli olarak noindex (form sayfasi) -> sitemap'e girmez.
     urls += [
-        "/en/fiyatlar", "/en/hesaplayici", "/en/karsilastir",
+        "/en/fiyatlar", "/en/hesaplayici", "/en/hesaplayici/ses-maliyeti", "/en/karsilastir",
         "/en/token-sayaci", "/en/gpu-maliyetleri", "/en/hakkinda",
     ]
 

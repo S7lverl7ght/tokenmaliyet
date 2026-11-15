@@ -72,6 +72,7 @@
           <a href="/hesaplayici" {% if nav == 'hesaplayici' %}aria-current="page"{% endif %}>{{ t('nav.calculator') }}</a>
           <a href="/karsilastir" {% if nav == 'karsilastir' %}aria-current="page"{% endif %}>{{ t('nav.compare') }}</a>
           <a href="/token-sayaci" {% if path == '/token-sayaci' %}aria-current="page"{% endif %}>{{ t('nav.token') }}</a>
+          <a href="/hesaplayici/ses-maliyeti" {% if path == '/hesaplayici/ses-maliyeti' %}aria-current="page"{% endif %}>{{ 'Voice & media cost' if lang == 'en' else 'Ses ve medya maliyeti' }}</a>
           <a href="/turkce-token-maliyeti" {% if path == '/turkce-token-maliyeti' %}aria-current="page"{% endif %}>{{ t('nav.tr_difference') }}</a>
         </div>
       </div>

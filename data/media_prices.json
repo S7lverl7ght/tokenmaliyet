@@ -1,0 +1,132 @@
+{
+ "_meta": {
+  "updated": "2026-11-15",
+  "note": "Fiyatlar saglayicilarin resmi fiyat sayfalarindan alinmistir. Her kayit kaynak URL tasir.",
+  "sources": [
+   "https://elevenlabs.io/pricing/api",
+   "https://platform.openai.com/docs/pricing",
+   "https://bfl.ai/pricing",
+   "https://docs.dev.runwayml.com/guides/pricing/"
+  ]
+ },
+ "tts": [
+  {
+   "provider": "ElevenLabs",
+   "model": "v4",
+   "unit": "1K karakter",
+   "usd_per_unit": 0.08,
+   "source": "https://elevenlabs.io/pricing/api",
+   "note": "Cok dilli, ses klonlama"
+  },
+  {
+   "provider": "ElevenLabs",
+   "model": "v4 Turbo",
+   "unit": "1K karakter",
+   "usd_per_unit": 0.04,
+   "source": "https://elevenlabs.io/pricing/api",
+   "note": "Daha hizli, daha ucuz"
+  },
+  {
+   "provider": "OpenAI",
+   "model": "tts-1",
+   "unit": "1M karakter",
+   "usd_per_unit": 15,
+   "source": "https://platform.openai.com/docs/pricing",
+   "note": "Standart kalite"
+  },
+  {
+   "provider": "OpenAI",
+   "model": "tts-1-hd",
+   "unit": "1M karakter",
+   "usd_per_unit": 30,
+   "source": "https://platform.openai.com/docs/pricing",
+   "note": "Yuksek kalite"
+  }
+ ],
+ "stt": [
+  {
+   "provider": "OpenAI",
+   "model": "Whisper",
+   "unit": "dakika",
+   "usd_per_unit": 0.006,
+   "source": "https://platform.openai.com/docs/pricing",
+   "note": "Transkripsiyon"
+  },
+  {
+   "provider": "OpenAI",
+   "model": "gpt-transcribe",
+   "unit": "dakika",
+   "usd_per_unit": 0.0045,
+   "source": "https://platform.openai.com/docs/pricing",
+   "note": "Daha ucuz toplu"
+  },
+  {
+   "provider": "ElevenLabs",
+   "model": "Scribe",
+   "unit": "saat",
+   "usd_per_unit": 0.2,
+   "source": "https://elevenlabs.io/pricing/api",
+   "note": "Konusmaci ayrimi"
+  }
+ ],
+ "image": [
+  {
+   "provider": "Black Forest Labs",
+   "model": "FLUX 3 Image",
+   "unit": "gorsel",
+   "usd_per_unit": 0.041,
+   "source": "https://bfl.ai/pricing",
+   "note": "Standart"
+  },
+  {
+   "provider": "Black Forest Labs",
+   "model": "FLUX 3 Image (HD)",
+   "unit": "gorsel",
+   "usd_per_unit": 0.1,
+   "source": "https://bfl.ai/pricing",
+   "note": "Yuksek cozunurluk"
+  },
+  {
+   "provider": "Black Forest Labs",
+   "model": "FLUX 3 Klein",
+   "unit": "gorsel",
+   "usd_per_unit": 0.008,
+   "source": "https://bfl.ai/pricing",
+   "note": "En ucuz"
+  }
+ ],
+ "video": [
+  {
+   "provider": "Runway",
+   "model": "kling3.0_standard",
+   "unit": "saniye",
+   "usd_per_unit": 0.09,
+   "source": "https://docs.dev.runwayml.com/guides/pricing/",
+   "note": "Standart kalite"
+  },
+  {
+   "provider": "Runway",
+   "model": "kling3.0_pro",
+   "unit": "saniye",
+   "usd_per_unit": 0.12,
+   "source": "https://docs.dev.runwayml.com/guides/pricing/",
+   "note": "Pro kalite"
+  },
+  {
+   "provider": "Runway",
+   "model": "kling3.0_4K",
+   "unit": "saniye",
+   "usd_per_unit": 0.43,
+   "source": "https://docs.dev.runwayml.com/guides/pricing/",
+   "note": "4K"
+  },
+  {
+   "provider": "Runway",
+   "model": "seedance2_5 1080p",
+   "unit": "saniye",
+   "usd_per_unit": 0.68,
+   "source": "https://docs.dev.runwayml.com/guides/pricing/",
+   "note": "1080p"
+  }
+ ]
+}

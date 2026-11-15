@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set nav = 'hesaplayici' %}
+{% block title %}{{ 'Voice, image & video cost calculator' if lang == 'en' else 'Ses, görsel ve video maliyet hesaplayıcı' }} | {{ site_name }}{% endblock %}
+{% block description %}{{ 'Calculate what AI voice-over, transcription, image and video generation cost. Real list prices from ElevenLabs, OpenAI, FLUX and Runway with source links.' if lang == 'en' else 'Yapay zeka seslendirme, transkripsiyon, görsel ve video üretiminin maliyetini hesaplayın. ElevenLabs, OpenAI, FLUX ve Runway liste fiyatları, kaynak bağlantılarıyla.' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header class="page-head">
+    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/hesaplayici">{{ 'Calculator' if lang == 'en' else 'Hesaplayıcı' }}</a></li><li aria-current="page">{{ 'Media cost' if lang == 'en' else 'Medya maliyeti' }}</li></ol></nav>
+    <h1>{{ 'Voice, image and video cost' if lang == 'en' else 'Ses, görsel ve video maliyeti' }}</h1>
+    <p class="lede">
+      {{ 'Enter how much audio, image or video you need; see what each provider charges. Prices are list prices from official pages, each with a source link.' if lang == 'en' else 'Ne kadar ses, görsel veya video üreteceğinizi girin; her sağlayıcının ne kadar ücret aldığını görün. Fiyatlar resmî sayfalardan alınan liste fiyatlarıdır, her biri kaynak bağlantısı taşır.' }}
+    </p>
+  </header>
+
+  <form class="surface surface-pad" method="get" action="/hesaplayici/ses-maliyeti" id="mediaForm">
+    <fieldset class="fieldset">
+      <legend>{{ 'What are you producing?' if lang == 'en' else 'Ne üretiyorsunuz?' }}</legend>
+      <div class="form-grid">
+        <div class="field">
+          <label for="grup">{{ 'Type' if lang == 'en' else 'Tür' }}</label>
+          <select id="grup" name="grup">
+            <option value="tts" {% if grup == 'tts' %}selected{% endif %}>{{ 'Voice-over (text to speech)' if lang == 'en' else 'Seslendirme (metinden sese)' }}</option>
+            <option value="stt" {% if grup == 'stt' %}selected{% endif %}>{{ 'Transcription (speech to text)' if lang == 'en' else 'Transkripsiyon (sesten metne)' }}</option>
+            <option value="image" {% if grup == 'image' %}selected{% endif %}>{{ 'Image generation' if lang == 'en' else 'Görsel üretimi' }}</option>
+            <option value="video" {% if grup == 'video' %}selected{% endif %}>{{ 'Video generation' if lang == 'en' else 'Video üretimi' }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="miktar" id="miktarLabel">{{ 'Quantity' if lang == 'en' else 'Miktar' }}</label>
+          <input id="miktar" name="miktar" type="text" inputmode="numeric" value="{{ miktar }}" aria-describedby="miktar-help">
+          <span class="help-text" id="miktar-help">{{ 'Characters for voice-over, minutes for transcription, count for images, seconds for video.' if lang == 'en' else 'Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye.' }}</span>
+        </div>
+      </div>
+      <p class="mt-4"><button class="btn" type="submit">{{ 'Calculate' if lang == 'en' else 'Hesapla' }}</button></p>
+    </fieldset>
+  </form>
+
+  {% if rows %}
+  <section class="mt-5" aria-labelledby="sonuc-baslik">
+    <h2 id="sonuc-baslik" style="font-size:var(--fs-h3)">{{ 'Result' if lang == 'en' else 'Sonuç' }} · {{ miktar }} {{ birim }}</h2>
+    <div class="table-wrap">
+      <table class="prices">
+        <caption>{{ 'Sorted cheapest first. List prices, excluding tax.' if lang == 'en' else 'En ucuzdan pahalıya. Liste fiyatları, vergi hariç.' }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}</th>
+            <th scope="col">{{ 'Model' if lang == 'en' else 'Model' }}</th>
+            <th scope="col" class="is-num">{{ 'Unit price' if lang == 'en' else 'Birim fiyat' }}</th>
+            <th scope="col" class="is-num">{{ 'Total (USD)' if lang == 'en' else 'Toplam (USD)' }}</th>
+            <th scope="col" class="is-num">{{ 'TRY' if lang == 'en' else 'TRY' }}</th>
+            <th scope="col">{{ 'Source' if lang == 'en' else 'Kaynak' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td data-label="{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}">{{ r.provider }}</td>
+            <td data-label="{{ 'Model' if lang == 'en' else 'Model' }}"><div class="cell-model"><span class="name">{{ r.model }}</span>{% if r.note %}<span class="variant">{{ r.note }}</span>{% endif %}</div></td>
+            <td data-label="{{ 'Unit price' if lang == 'en' else 'Birim fiyat' }}" class="num text-sm">{{ r.usd_per_unit|tl_dyn }} USD / {{ r.unit }}</td>
+            <td data-label="{{ 'Total (USD)' if lang == 'en' else 'Toplam (USD)' }}" class="num"><strong>{{ r.usd|tl(2) }}</strong> USD</td>
+            <td data-label="TRY" class="num text-sm">{% if fx_rate %}≈ {{ (r.usd * fx_rate)|tl(0) }} ₺{% else %}—{% endif %}</td>
+            <td data-label="{{ 'Source' if lang == 'en' else 'Kaynak' }}" class="text-sm"><a href="{{ r.source }}" target="_blank" rel="noopener nofollow">{{ 'Official page' if lang == 'en' else 'Resmî sayfa' }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="surface surface-pad mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'How is this calculated?' if lang == 'en' else 'Nasıl hesaplanıyor?' }}</h2>
+    <p class="mt-2">
+      {{ 'Cost = quantity × unit price. Voice-over prices are per character, transcription per minute, images per image and video per second. Prices are read from a data file where every entry carries its official source URL.' if lang == 'en' else 'Maliyet = miktar × birim fiyat. Seslendirme karakter başına, transkripsiyon dakika başına, görseller adet başına, video saniye başına fiyatlandırılır. Fiyatlar, her kaydı resmî kaynak URL&rsquo;si taşıyan bir veri dosyasından okunur.' }}
+    </p>
+    <p class="help mt-3">
+      {{ 'List prices exclude tax, and providers change them frequently — always check the source link before committing to a budget.' if lang == 'en' else 'Liste fiyatları vergi hariçtir ve sağlayıcılar bunları sık değiştirir — bütçe planlamadan önce kaynak bağlantısını kontrol edin.' }}
+    </p>
+  </section>
+
+  <section class="mt-5">
+    <h2 style="font-size:var(--fs-h3)">{{ 'Related tools' if lang == 'en' else 'İlgili araçlar' }}</h2>
+    <p class="mt-2">
+      <a class="btn btn-secondary" href="/hesaplayici">{{ 'Monthly API cost calculator' if lang == 'en' else 'Aylık API maliyet hesaplayıcı' }}</a>
+      <a class="btn btn-secondary" href="/token-sayaci" style="margin-left:var(--sp-2)">{{ 'Token counter' if lang == 'en' else 'Token sayacı' }}</a>
+      <a class="btn btn-secondary" href="/gpu-maliyetleri" style="margin-left:var(--sp-2)">{{ 'GPU prices' if lang == 'en' else 'GPU fiyatları' }}</a>
+      <a class="btn btn-secondary" href="/uyari" style="margin-left:var(--sp-2)">{{ 'Price alerts' if lang == 'en' else 'Fiyat uyarısı' }}</a>
+    </p>
+  </section>
+</div>
+{% endblock %}

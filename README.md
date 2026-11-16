@@ -79,6 +79,7 @@ Restore provası sonucu: `approved=1528` (yedek bütünlüğü doğrulandı).
 | `reports/AI_Maliyet_Raporu_<tarih>.xlsx` | Türkiye için TRY fiyat karşılaştırma + aylık senaryo + grafik |
 | `reports/savings.py` | model değiştirme tasarruf hesaplayıcı (aylık/yıllık TRY) |
 | `docs/GELIR_PLANI.md` | bu veriyi paraya çevirme planı |
+| `docs/UYGULAMA_GUNLUGU.md` | turların özeti, kilitli hatalar ve açık işler |
 
 ```powershell
 .\reports\savings.py --from claude-sonnet-4.5 --to deepseek-v4-pro --input-tokens 100000000 --output-tokens 25000000

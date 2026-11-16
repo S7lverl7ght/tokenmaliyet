@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container" style="max-width:960px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">Değişiklikler</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">Değişiklikler</li></ol></nav>
     <h1>Fiyatlarda ne değişti?</h1>
     <p class="lede">Son {{ days }} günde fiyatı değişen modeller, yeni eklenen kaynaklar ve veri düzeltmeleri.
       Her satır kaynağıyla ve tarihiyle birlikte.</p>

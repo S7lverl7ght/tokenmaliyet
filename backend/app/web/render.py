@@ -36,6 +36,14 @@ CHANNEL_LABELS = {
     "direct": "Dogrudan API",
     "marketplace": "Pazaryeri",
 }
+# Dile duyarli kanal etiketleri.
+# DIKKAT (16.11.2026, CI'da yakalandi): sabit Turkce etiket yuzunden /en/fiyatlar
+# tablosunda "Pazaryeri" ve "Dogrudan API" gorunuyordu. base_context artik
+# channel_labels degerini dile gore secer.
+CHANNEL_LABELS_EN = {
+    "direct": "Direct API",
+    "marketplace": "Marketplace",
+}
 
 
 def tl(value: float | Decimal | None, decimals: int = 2) -> str:
@@ -118,24 +126,52 @@ def price_value(dim: dict | None) -> tuple[float | None, str]:
     return (amount, unit_label(dim))
 
 
-def freshness_badge(value) -> dict:
+def freshness_badge(value, lang: str = "tr") -> dict:
     """Tazelik gostergesi: tek kaynak, tum sayfalar ayni kurali kullanir.
 
     Rapor 3. tur bulgu 9/10: "UPDATED" kolonu her satirda ayni tarihi gosteriyordu
     ve sayfa basligi ile satirlar farkli tarihler tasiyordu.
-    Kural: <=24 saat -> yesil nokta + "bugun"; <=48 saat -> sari; sonrasi tarih.
+    Kural: <=24 saat -> yesil nokta + "guncel"; <=48 saat -> sari; sonrasi tarih.
+
+    DIKKAT (16.11.2026, CI'da yakalandi): etiketler sabit Turkce yaziliydi; bu yuzden
+    /en/fiyatlar sayfasinin fiyat tablosunda "güncel" kelimesi gorunuyordu. Etiketler
+    artik 'lang' parametresine gore secilir. Varsayilan "tr" -> mevcut cagrilar bozulmaz.
     """
     import datetime as _dt
 
+    en = (lang or "tr").lower() == "en"
     if value is None:
-        return {"state": "unknown", "label": "Bilinmiyor", "dot": False, "css": "badge-neutral"}
+        return {
+            "state": "unknown",
+            "label": "Unknown" if en else "Bilinmiyor",
+            "dot": False,
+            "css": "badge-neutral",
+        }
     ref = value if getattr(value, "tzinfo", None) else value.replace(tzinfo=_dt.timezone.utc)
     hours = (_dt.datetime.now(_dt.timezone.utc) - ref).total_seconds() / 3600
     if hours <= 24:
-        return {"state": "fresh", "label": "güncel", "dot": True, "css": "badge-ok", "hours": round(hours, 1)}
+        return {
+            "state": "fresh",
+            "label": "current" if en else "güncel",
+            "dot": True,
+            "css": "badge-ok",
+            "hours": round(hours, 1),
+        }
     if hours <= 48:
-        return {"state": "recent", "label": "son 48 saat", "dot": True, "css": "badge-neutral", "hours": round(hours, 1)}
-    return {"state": "stale", "label": dt_tr(value), "dot": False, "css": "badge-warn", "hours": round(hours, 1)}
+        return {
+            "state": "recent",
+            "label": "last 48 hours" if en else "son 48 saat",
+            "dot": True,
+            "css": "badge-neutral",
+            "hours": round(hours, 1),
+        }
+    return {
+        "state": "stale",
+        "label": dt_tr(value),
+        "dot": False,
+        "css": "badge-warn",
+        "hours": round(hours, 1),
+    }
 
 
 def price_digits(value: float | None) -> int:
@@ -358,7 +394,7 @@ def base_context(db: Session, request, **extra) -> dict:
         "fx_date": dt_tr(fx.effective_at) if fx else None,
         "fx_source": fx.source_url if fx else None,
         "provider_labels": PROVIDER_LABELS,
-        "channel_labels": CHANNEL_LABELS,
+        "channel_labels": CHANNEL_LABELS_EN if lang == "en" else CHANNEL_LABELS,
         "footer_providers": queries.providers(db),
         "path": request.url.path,
         "request": request,

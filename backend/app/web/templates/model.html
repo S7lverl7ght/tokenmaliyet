@@ -7,7 +7,7 @@
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu">
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}">
       <ol class="breadcrumb">
         <li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li>
         <li><a href="/fiyatlar?provider={{ primary.provider_slug }}">{{ provider_label }}</a></li>

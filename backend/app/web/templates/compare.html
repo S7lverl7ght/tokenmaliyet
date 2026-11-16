@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li><li aria-current="page">{{ 'Compare' if lang == 'en' else 'Karşılaştır' }}</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Compare' if lang == 'en' else 'Karşılaştır' }}</li></ol></nav>
     <h1>{{ 'Compare models' if lang == 'en' else 'Modelleri karşılaştır' }}</h1>
     <p class="lede">{{ 'Pick 2–4 models and see the monthly cost side by side for the same token volume.' if lang == 'en' else '2–4 model seçin; aynı token hacmiyle aylık maliyeti yan yana görün.' }}
       {{ 'This comparison is <strong>cost only</strong>: quality, speed and context window are not measured.</p>'|safe if lang == 'en' else 'Bu karşılaştırma <strong>yalnızca maliyettir</strong>: kalite, hız ve bağlam penceresi ölçülmemiştir.</p>'|safe }}

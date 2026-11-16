@@ -6,8 +6,8 @@
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu">
-      <ol class="breadcrumb"><li><a href="/fiyatlar">Fiyatlar</a></li></ol>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}">
+      <ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li></ol>
     </nav>
     <h1>{{ t('prices.title') }}</h1>
     {% if lang == 'en' %}
@@ -26,7 +26,7 @@
   <section class="surface" aria-labelledby="tablo-baslik">
     <h2 id="tablo-baslik" class="sr-only">{{ 'Model price table' if lang == 'en' else 'Model fiyat tablosu' }}</h2>
 
-    <form class="toolbar" method="get" action="/fiyatlar" id="filtreler" role="search" aria-label="Fiyat filtreleri">
+    <form class="toolbar" method="get" action="/fiyatlar" id="filtreler" role="search" aria-label="{{ 'Price filters' if lang == 'en' else 'Fiyat filtreleri' }}">
       <div class="field field-search">
         <label for="q">{{ 'Search model' if lang == 'en' else 'Model ara' }}</label>
         <input id="q" name="q" type="search" value="{{ f.q }}" placeholder="{{ 'örn. deepseek, gemini-4, gpt-6' if lang == 'tr' else 'e.g. deepseek, gemini-4, gpt-6' }}" autocomplete="off">
@@ -45,7 +45,7 @@
         <select id="channel" name="channel">
           <option value="">{{ t('prices.kind.all') }}</option>
           <option value="direct" {% if f.channel == 'direct' %}selected{% endif %}>{{ t('prices.channel.direct') }}</option>
-          <option value="marketplace" {% if f.channel == 'marketplace' %}selected{% endif %}>Pazaryeri</option>
+          <option value="marketplace" {% if f.channel == 'marketplace' %}selected{% endif %}>{{ 'Marketplace' if lang == 'en' else 'Pazaryeri' }}</option>
         </select>
       </div>
       <div class="field field-xs">
@@ -148,7 +148,7 @@
               {% else %}<span class="text-muted">{{ t('common.unknown') }}</span>{% endif %}
             </td>
             <td data-label="{{ t('col.updated') }}" class="cell-date">
-              {% set fb = freshness_badge(row.observed_at) %}
+              {% set fb = freshness_badge(row.observed_at, lang) %}
               {% if fb.dot %}
               <span class="badge {{ fb.css }}" title="{{ row.observed_at|dt_tr }}"><span class="dot" aria-hidden="true"></span>{{ fb.label }}</span>
               {% else %}

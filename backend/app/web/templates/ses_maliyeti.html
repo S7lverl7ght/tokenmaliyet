@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/hesaplayici">{{ 'Calculator' if lang == 'en' else 'Hesaplayıcı' }}</a></li><li aria-current="page">{{ 'Media cost' if lang == 'en' else 'Medya maliyeti' }}</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/hesaplayici">{{ 'Calculator' if lang == 'en' else 'Hesaplayıcı' }}</a></li><li aria-current="page">{{ 'Media cost' if lang == 'en' else 'Medya maliyeti' }}</li></ol></nav>
     <h1>{{ 'Voice, image and video cost' if lang == 'en' else 'Ses, görsel ve video maliyeti' }}</h1>
     <p class="lede">
       {{ 'Enter how much audio, image or video you need; see what each provider charges. Prices are list prices from official pages, each with a source link.' if lang == 'en' else 'Ne kadar ses, görsel veya video üreteceğinizi girin; her sağlayıcının ne kadar ücret aldığını görün. Fiyatlar resmî sayfalardan alınan liste fiyatlarıdır, her biri kaynak bağlantısı taşır.' }}

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container" style="max-width:640px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Price alert' if lang == 'en' else 'Fiyat uyarısı' }}</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Price alert' if lang == 'en' else 'Fiyat uyarısı' }}</li></ol></nav>
     <h1>{{ t('alert.title') }}</h1>
     <p class="lede">{% if form.target_label %}<strong>{{ form.target_label }}</strong> {{ 'for' if lang == 'en' else 'için' }} {% endif %}{{ 'we will email you when the price changes. Free; cancel any time with one click.' if lang == 'en' else 'fiyat değiştiğinde e-posta gönderelim. Ücretsiz; istediğiniz an tek tıkla iptal edebilirsiniz.' }}</p>
 

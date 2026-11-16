@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container" style="max-width:860px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'About' if lang == 'en' else 'Hakkında' }}</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'About' if lang == 'en' else 'Hakkında' }}</li></ol></nav>
     <h1>{{ 'About and methodology' if lang == 'en' else 'Hakkında ve metodoloji' }}</h1>
     <p class="lede">{% if lang == 'en' %}{{ site_name }} is an independent data engine that publishes AI API prices together with their source. Prices are never estimated; they are read from official sources, verified and stored with their history preserved.{% else %}{{ site_name }}, AI API fiyatlarını kaynağıyla birlikte sunan yerel bir veri motorudur.
       Fiyatlar tahmin edilmez; resmî kaynaklardan okunur, doğrulanır ve tarihçesi korunarak saklanır.{% endif %}</p>

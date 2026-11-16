@@ -493,3 +493,82 @@ def test_dataset_url_matches_canonical():
     blocks = re.findall(r'<script type="application/ld\+json">([\s\S]*?)</script>', html)
     ds = next(d for d in (json.loads(b) for b in blocks) if d.get("@type") == "Dataset")
     assert ds["url"] == canon, f"Dataset.url {ds['url']} != canonical {canon}"
+
+# --------------------------------------------------------------------------
+# HATA 12: EN sayfalarda ASCII-only Turkce kelimeler (16.11.2026, CI'da yakalandi)
+#
+# Onceki testler yalnizca Turkce'ye ozgu HARFLERI (ç, ğ, ı...) ariyordu. Bu yuzden
+# "Pazaryeri", "Dogrudan API", "Temizle", "Fiyatlar" gibi ASCII ile yazilan
+# Turkce kelimeler gozden kacti. Gercek hata: /en/fiyatlar tablosunda kanal
+# etiketi "Pazaryeri" gorunuyordu; /en/fiyatlar'da tazelik rozeti "güncel" idi.
+# --------------------------------------------------------------------------
+
+# Turkce'ye ozgu harf icermeyen ama Ingilizce metinde asla gecmeyen kelimeler.
+ASCII_TURKISH = [
+    "Pazaryeri", "Dogrudan", "Girdi", "Cikti", "Fiyat", "Fiyatlar",
+    "Temizle", "Hesapla", "Hesaplayici", "Kaynak", "Saglayici",
+    "Sayfa yolu", "Filtreler", "Guncelle", "Toplam", "Seciniz",
+    "Tum modeller", "Onaylandi", "Bilinmiyor", "Dogrulandi",
+]
+
+
+def _visible_text(html: str) -> str:
+    """Etiketleri ve scriptleri atar; kullaniciya gorunen metni dondurur."""
+    t = re.sub(r"<script[\s\S]*?</script>", " ", html)
+    t = re.sub(r"<style[\s\S]*?</style>", " ", t)
+    t = re.sub(r"<!--[\s\S]*?-->", " ", t)
+    t = re.sub(r"<[^>]+>", " ", t)
+    t = re.sub(r"&[a-z]+;", " ", t)
+    return re.sub(r"\s+", " ", t)
+
+
+def test_english_pages_have_no_ascii_turkish_words():
+    """EN sayfalarda ASCII ile yazilmis Turkce kelime de olmamali."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    bad = []
+    for f in sorted((DIST / "en").rglob("index.html")):
+        text = _visible_text(f.read_text(encoding="utf-8", errors="ignore"))
+        hits = [w for w in ASCII_TURKISH if w in text]
+        if hits:
+            bad.append((f.parent.relative_to(DIST).as_posix(), hits))
+    assert not bad, f"EN sayfada Turkce kelime: {bad[:6]}"
+
+
+def test_english_attribute_labels_are_localised():
+    """aria-label / placeholder gibi gorunur etiketler de cevrilmeli."""
+    if not DIST.exists():
+        pytest.skip("dist/ yok")
+    bad = []
+    for f in sorted((DIST / "en").rglob("index.html")):
+        html = f.read_text(encoding="utf-8", errors="ignore")
+        for attr in re.findall(r'(?:aria-label|placeholder|title|alt)="([^"]*)"', html):
+            if any(w in attr for w in ASCII_TURKISH):
+                bad.append((f.parent.relative_to(DIST).as_posix(), attr[:50]))
+    assert not bad, f"EN sayfada Turkce etiket: {bad[:6]}"
+
+
+def test_freshness_badge_is_language_aware():
+    """Tazelik rozeti dile gore etiket uretmeli (sabit Turkce olmamali)."""
+    from app.web.render import freshness_badge
+
+    import datetime as _dt
+
+    now = _dt.datetime.now(_dt.timezone.utc)
+    tr = freshness_badge(now, "tr")
+    en = freshness_badge(now, "en")
+    assert tr["label"] != en["label"], "rozet dili degismiyor"
+    assert tr["label"] == "güncel"
+    assert en["label"] == "current"
+    # Geriye donuk uyum: dil verilmezse Turkce
+    assert freshness_badge(now)["label"] == "güncel"
+
+
+def test_channel_labels_are_language_aware():
+    """Kanal etiketleri (Pazaryeri/Marketplace) dile gore secilmeli."""
+    from app.web.render import CHANNEL_LABELS, CHANNEL_LABELS_EN
+
+    assert CHANNEL_LABELS["marketplace"] == "Pazaryeri"
+    assert CHANNEL_LABELS_EN["marketplace"] == "Marketplace"
+    src = (ROOT / "backend" / "app" / "web" / "render.py").read_text(encoding="utf-8")
+    assert '"channel_labels": CHANNEL_LABELS_EN if lang == "en" else CHANNEL_LABELS' in src

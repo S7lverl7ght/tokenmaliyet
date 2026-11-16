@@ -4,9 +4,9 @@
 <div class="container">
   <div class="grid12">
     <div style="grid-column:span 8">
-      <nav aria-label="Sayfa yolu" style="padding-top:var(--sp-6)">
+      <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}" style="padding-top:var(--sp-6)">
         <ol class="breadcrumb">
-          <li><a href="/fiyatlar">Fiyatlar</a></li>
+          <li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li>
           <li><a href="/rehber">Rehber</a></li>
           <li aria-current="page">{{ guide.title }}</li>
         </ol>

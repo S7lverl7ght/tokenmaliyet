@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container" style="max-width:1080px">
   <header class="page-head">
-    <nav aria-label="Sayfa yolu"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Token counter' if lang == 'en' else 'Token sayacı' }}</li></ol></nav>
+    <nav aria-label="{{ 'Breadcrumb' if lang == 'en' else 'Sayfa yolu' }}"><ol class="breadcrumb"><li><a href="/fiyatlar">{{ 'Prices' if lang == 'en' else 'Fiyatlar' }}</a></li><li aria-current="page">{{ 'Token counter' if lang == 'en' else 'Token sayacı' }}</li></ol></nav>
     <h1>{{ t('tok.title') }}</h1>
     <p class="lede">{{ 'Paste your text to see the token count and what it costs on the model you pick.' if lang == 'en' else 'Metninizi yapıştırın; token sayısını ve seçtiğiniz modeldeki maliyetini görün.' }}
       {{ 'The counter runs in your browser — your text is <strong>never sent</strong> to the server.</p>'|safe if lang == 'en' else 'Sayaç tarayıcınızda çalışır — metniniz sunucuya <strong>gönderilmez</strong>.</p>'|safe }}
@@ -22,7 +22,7 @@
           <span class="help-text" id="text-help">{{ 'The count updates as you paste. Your text never leaves your device.' if lang == 'en' else 'Yapıştırınca sayım otomatik güncellenir. Metin cihazınızdan çıkmaz.' }}</span>
         </div>
         <div class="flex gap-2 mt-3 wrap">
-          <button type="button" class="btn btn-secondary" id="clear">Temizle</button>
+          <button type="button" class="btn btn-secondary" id="clear">{{ 'Clear' if lang == 'en' else 'Temizle' }}</button>
           <button type="button" class="btn btn-secondary" id="sample">{{ 'Sample text' if lang == 'en' else 'Örnek metin' }}</button>
         </div>
       </div>

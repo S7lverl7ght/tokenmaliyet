@@ -24,7 +24,8 @@ ${body}
 </main></body></html>`,
     {
       status: ok ? 200 : 400,
-      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
+      "x-robots-tag": "noindex" },
     },
   );
 }

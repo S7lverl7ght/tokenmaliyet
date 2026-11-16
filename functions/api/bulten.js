@@ -25,6 +25,7 @@ function json(data, status = 200) {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
+      "x-robots-tag": "noindex",
     },
   });
 }
@@ -46,7 +47,8 @@ function htmlPage(title, body, status = 200) {
     "</main></body></html>";
   return new Response(doc, {
     status,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
+      "x-robots-tag": "noindex" },
   });
 }
 

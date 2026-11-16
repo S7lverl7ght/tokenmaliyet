@@ -1,0 +1,74 @@
+name: Haftalik bulten
+
+# Her pazartesi 09:00 TR (06:00 UTC).
+# Neden ayri workflow: refresh.yml her push'ta calisiyor; bulten YALNIZCA
+# haftada bir kez gitmeli. Ayrilik, yanlislikla toplu e-posta atma riskini kaldirir.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Sadece icerigi uret, e-posta gonderme"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bulten
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Bagimliliklari kur
+        run: pip install "psycopg[binary]"
+
+      - name: Bulten icerigini uret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: python scripts/bulten_icerik.py --out data/bulten_payload.json --days 7
+
+      - name: Ozet
+        run: |
+          python - <<'PY'
+          import json
+          d = json.load(open("data/bulten_payload.json"))
+          print("bos:", d.get("empty"), "| hareket:", len(d.get("items", [])))
+          print("konu:", d.get("subject", "-"))
+          PY
+
+      - name: Gonder
+        # Elle tetiklendiginde varsayilan dry_run=true; zamanlanmis calismada gonderir.
+        if: ${{ github.event_name == 'schedule' || inputs.dry_run == false }}
+        env:
+          BILDIR_SECRET: ${{ secrets.BILDIR_SECRET }}
+        run: |
+          COUNT=$(python -c "import json;d=json.load(open('data/bulten_payload.json'));print(len(d.get('items',[])))")
+          if [ "$COUNT" = "0" ]; then
+            echo "Hareket yok, bulten gonderilmedi."
+            exit 0
+          fi
+          python - <<'PY' > /tmp/payload.json
+          import json
+          d = json.load(open("data/bulten_payload.json"))
+          d.pop("empty", None)
+          print(json.dumps(d, ensure_ascii=False))
+          PY
+          curl -sS -X POST "https://tokenmaliyet.com/api/bulten-gonder" \
+            -H "Content-Type: application/json" \
+            -H "x-bildir-secret: $BILDIR_SECRET" \
+            --data @/tmp/payload.json | head -c 600
+          echo ""

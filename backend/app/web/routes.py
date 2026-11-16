@@ -1329,6 +1329,7 @@ def robots():
             "Disallow: /api/bulten\n"
             "Disallow: /api/bulten-onay\n"
             "Disallow: /api/bulten-iptal\n"
+            "Disallow: /api/bulten-gonder\n"
             "Disallow: /api/onayla\n"
             "Disallow: /api/iptal\n"
             # Filtre parametreleri: ayni sayfanin sonsuz varyanti (kopya icerik).

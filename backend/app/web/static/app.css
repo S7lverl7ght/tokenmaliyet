@@ -625,3 +625,20 @@ details.disclosure .body{padding:0 var(--sp-4) var(--sp-4); font-size:var(--fs-s
 /* Metin icinde dugme gorunumu (or. "formu yeniden acin") */
 .link-btn{background:none;border:0;padding:0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline}
 .link-btn:hover{color:var(--accent-strong,var(--accent))}
+
+
+/* --- Bulten formu: mobilde dokunma hedefi (rapor 8. tur 3.2) ---
+   480px altinda "Abone ol" butonu ile e-posta alani arasindaki bosluk 4px artirilir;
+   buton tam genislikte kalir, boylece yanlis dokunma azalir. */
+@media (max-width: 480px) {
+  #bultenForm .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--sp-3);
+  }
+  #bultenForm .field + .field {
+    margin-top: 4px;
+  }
+  #bultenForm button[type="submit"] {
+    min-height: 44px;
+  }
+}

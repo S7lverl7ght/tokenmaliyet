@@ -15,6 +15,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from .affiliate import is_affiliate, with_affiliate
+
 ROOT = Path(__file__).resolve().parents[3]
 DATA_FILE = ROOT / "data" / "media_prices.json"
 
@@ -31,6 +33,12 @@ class MediaPrice:
     @property
     def key(self) -> str:
         return f"{self.provider}|{self.model}"
+
+    @property
+    def slug(self) -> str:
+        """Affiliate anahtari icin saglayici slug'i (or. ElevenLabs -> elevenlabs)."""
+        import re
+        return re.sub(r"[^a-z0-9]+", "", self.provider.lower())
 
 
 def load_prices() -> dict[str, list[MediaPrice]]:
@@ -77,16 +85,15 @@ def cost(group: str, key: str, quantity: float) -> dict | None:
         if p.key != key:
             continue
         q = max(0.0, float(quantity))
-        if group == "tts" or group == "stt":
-            # unit "1K karakter" / "1M karakter" / "dakika" / "saat"
-            if "1K" in p.unit:
-                units = q / 1000.0
-            elif "1M" in p.unit:
-                units = q / 1_000_000.0
-            else:
-                units = q
+        # Bolen TEK yerden hesaplanir; istemci tarafi motor da AYNI degeri kullanir
+        # (data-divisor). Boylece sunucu ve tarayici ayni sonucu verir.
+        if "1K" in p.unit:
+            divisor = 1000.0
+        elif "1M" in p.unit:
+            divisor = 1_000_000.0
         else:
-            units = q
+            divisor = 1.0
+        units = q / divisor
         return {
             "provider": p.provider,
             "model": p.model,
@@ -94,8 +101,11 @@ def cost(group: str, key: str, quantity: float) -> dict | None:
             "usd_per_unit": p.usd_per_unit,
             "quantity": q,
             "units": units,
+            "divisor": divisor,
             "usd": units * p.usd_per_unit,
-            "source": p.source,
+            # Affiliate: AFFILIATE_<SLUG> tanimliysa parametre eklenir, degilse duz URL.
+            "source": with_affiliate(p.source, p.slug),
+            "affiliate": is_affiliate(p.slug),
         }
     return None
 

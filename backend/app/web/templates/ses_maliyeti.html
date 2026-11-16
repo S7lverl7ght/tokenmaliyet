@@ -54,13 +54,15 @@
         </thead>
         <tbody>
           {% for r in rows %}
-          <tr>
+          {# data-* : istemci motoru (asagidaki script) bu degerlerle aninda yeniden hesaplar.
+             Sunucu ve tarayici AYNI bolen/fiyat degerini kullanir -> sonuc tutarli. #}
+          <tr data-unit-price="{{ r.usd_per_unit }}" data-divisor="{{ r.divisor }}">
             <td data-label="{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}">{{ r.provider }}</td>
             <td data-label="{{ 'Model' if lang == 'en' else 'Model' }}"><div class="cell-model"><span class="name">{{ r.model }}</span>{% if r.note %}<span class="variant">{{ r.note }}</span>{% endif %}</div></td>
             <td data-label="{{ 'Unit price' if lang == 'en' else 'Birim fiyat' }}" class="num text-sm">{{ r.usd_per_unit|tl_dyn }} USD / {{ r.unit }}</td>
-            <td data-label="{{ 'Total (USD)' if lang == 'en' else 'Toplam (USD)' }}" class="num"><strong>{{ r.usd|tl(2) }}</strong> USD</td>
-            <td data-label="TRY" class="num text-sm">{% if fx_rate %}≈ {{ (r.usd * fx_rate)|tl(0) }} ₺{% else %}—{% endif %}</td>
-            <td data-label="{{ 'Source' if lang == 'en' else 'Kaynak' }}" class="text-sm"><a href="{{ r.source }}" target="_blank" rel="noopener nofollow">{{ 'Official page' if lang == 'en' else 'Resmî sayfa' }}</a></td>
+            <td data-label="{{ 'Total (USD)' if lang == 'en' else 'Toplam (USD)' }}" class="num"><strong class="cell-total-usd">{{ r.usd|tl(2) }}</strong> USD</td>
+            <td data-label="TRY" class="num text-sm"><span class="cell-total-try">{% if fx_rate %}≈ {{ (r.usd * fx_rate)|tl(0) }}{% else %}—{% endif %}</span>{% if fx_rate %} ₺{% endif %}</td>
+            <td data-label="{{ 'Source' if lang == 'en' else 'Kaynak' }}" class="text-sm"><a href="{{ r.source }}" target="_blank" rel="noopener{% if not r.affiliate %} nofollow{% endif %}">{{ 'Official page' if lang == 'en' else 'Resmî sayfa' }}</a>{% if r.affiliate %}<span class="variant" title="{{ 'Affiliate link' if lang == 'en' else 'Ortaklık bağlantısı' }}">{{ 'affiliate' if lang == 'en' else 'ortaklık' }}</span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -89,4 +91,96 @@
     </p>
   </section>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+/* ---------- Ses/medya maliyeti: istemci tarafi anlik hesap ----------
+   Statik sitede sunucu yok; "Hesapla" demeden de sonuc guncellenmeli.
+   Bolen ve birim fiyat SUNUCUDAN gelir (data-divisor / data-unit-price),
+   boylece tarayici ile sunucu ayni sayiyi uretir. */
+(function(){
+  var input = document.getElementById("miktar");
+  var grup = document.getElementById("grup");
+  var form  = document.getElementById("mediaForm");
+  if (!input || !form) return;
+
+  var body = document.body;
+  var FX = Number(body.dataset.fx) || 0;
+  var EN = document.documentElement.lang === "en";
+
+  /* Grup basina: birim etiketi ve varsayilan miktar (sunucudaki defaults ile ayni) */
+  var GROUPS = {
+    tts:   { unit: EN ? "characters" : "karakter", def: "10000" },
+    stt:   { unit: EN ? "minutes"    : "dakika",   def: "60"    },
+    image: { unit: EN ? "images"     : "görsel",   def: "100"   },
+    video: { unit: EN ? "seconds"    : "saniye",   def: "30"    }
+  };
+  var HELP = {
+    tts:   EN ? "Characters for voice-over, minutes for transcription, count for images, seconds for video."
+              : "Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye.",
+    stt:   EN ? "Characters for voice-over, minutes for transcription, count for images, seconds for video."
+              : "Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye.",
+    image: EN ? "Characters for voice-over, minutes for transcription, count for images, seconds for video."
+              : "Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye.",
+    video: EN ? "Characters for voice-over, minutes for transcription, count for images, seconds for video."
+              : "Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye."
+  };
+
+  function num(el) {
+    return parseFloat(String(el.value || "").replace(/[^0-9.,]/g, "").replace(",", ".")) || 0;
+  }
+  function fmtUsd(n) {
+    return n.toLocaleString(EN ? "en-US" : "tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  }
+  function fmtTry(n) {
+    return n.toLocaleString(EN ? "en-US" : "tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function update() {
+    var q = num(input);
+    var rows = document.querySelectorAll("table.prices tbody tr");
+    Array.prototype.forEach.call(rows, function (tr) {
+      var unitPrice = parseFloat(tr.dataset.unitPrice) || 0;
+      var divisor = parseFloat(tr.dataset.divisor) || 1;
+      var usd = (q / divisor) * unitPrice;
+      var cellUsd = tr.querySelector(".cell-total-usd");
+      var cellTry = tr.querySelector(".cell-total-try");
+      if (cellUsd) cellUsd.textContent = fmtUsd(usd);
+      if (cellTry) cellTry.textContent = FX ? ("≈ " + fmtTry(usd * FX)) : "—";
+    });
+
+    /* Sonuc basligindaki miktar/birim de aninda guncellensin */
+    var head = document.getElementById("sonuc-baslik");
+    var g = (grup && grup.value) || "tts";
+    if (head) {
+      var label = (GROUPS[g] || GROUPS.tts).unit;
+      var prefix = EN ? "Result" : "Sonuç";
+      head.textContent = prefix + " · " + (q ? q.toLocaleString(EN ? "en-US" : "tr-TR") : "0") + " " + label;
+    }
+  }
+
+  input.addEventListener("input", update);
+
+  /* Grup degisince varsayilan miktari ve birim ipucunu guncelle */
+  if (grup) {
+    grup.addEventListener("change", function () {
+      var g = GROUPS[grup.value] || GROUPS.tts;
+      input.value = g.def;
+      var help = document.getElementById("miktar-help");
+      if (help) help.textContent = HELP[grup.value] || HELP.tts;
+      update();
+    });
+  }
+
+  /* Statik sitede form gonderimi sayfayi yeniler; JS varsa engelle, sadece hesapla.
+     (Grup degisimi icin yine de sunucudan yeni tablo gerekir -> sadece miktar engellenir.) */
+  form.addEventListener("submit", function (e) {
+    if (window.__STATIC__ !== true) return;
+    e.preventDefault();
+    update();
+  });
+
+  update();
+})();
+</script>
 {% endblock %}

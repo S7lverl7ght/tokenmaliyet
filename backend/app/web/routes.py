@@ -1498,6 +1498,11 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
             f"<url><loc>{canonical_url(f'/karsilastir/{_slug}')}</loc>"
             f"<lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq></url>"
         )
+        # Ingilizce karsiligi da gercekten uretiliyor (export_static.py) -> listelenmeli.
+        body.append(
+            f"<url><loc>{canonical_url(f'/en/karsilastir/{_slug}')}</loc>"
+            f"<lastmod>{lastmod}</lastmod><changefreq>weekly</changefreq></url>"
+        )
 
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")

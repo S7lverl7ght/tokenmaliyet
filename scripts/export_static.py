@@ -204,6 +204,32 @@ def main() -> int:
                         f'<meta property="og:description" content="{cmp_desc}">', html, count=1)
         target.write_text(html, encoding="utf-8")
 
+        # --- EN karsilastirma sayfasi (global trafik) ---
+        # Turkce'den 10-20 kat fazla aranan Ingilizce sorgular icin ayni cift.
+        resp_en = client.get("/en/karsilastir", params=[("models", ka), ("models", kb),
+                                                        ("in", "100000000"), ("out", "25000000")])
+        if resp_en.status_code == 200:
+            target_en = DIST / "en" / "karsilastir" / slug / "index.html"
+            target_en.parent.mkdir(parents=True, exist_ok=True)
+            html_en = resp_en.text.replace("<head>", '<head>\n<script>window.__STATIC__=true;</script>', 1)
+            en_title = f"{a.name} vs {b.name} pricing | TokenMaliyet"
+            if len(en_title) > 70:
+                en_title = f"{a.slug} vs {b.slug} | TokenMaliyet"
+            if len(en_title) > 70:
+                en_title = f"{_short_slug(a.slug, 28)} vs {_short_slug(b.slug, 28)}"
+            en_desc = (
+                f"{a.name} vs {b.name}: monthly API cost for 100M input + 25M output "
+                f"tokens. USD list prices with dated TRY equivalent."
+            )[:155]
+            html_en = _re2.sub(r"<title>.*?</title>", f"<title>{en_title}</title>", html_en, count=1, flags=_re2.S)
+            html_en = _re2.sub(r'<meta name="description" content="[^"]*">',
+                               f'<meta name="description" content="{en_desc}">', html_en, count=1)
+            html_en = _re2.sub(r'<meta property="og:title" content="[^"]*">',
+                               f'<meta property="og:title" content="{en_title}">', html_en, count=1)
+            html_en = _re2.sub(r'<meta property="og:description" content="[^"]*">',
+                               f'<meta property="og:description" content="{en_desc}">', html_en, count=1)
+            target_en.write_text(html_en, encoding="utf-8")
+
     # Cloudflare Pages guvenlik basliklari (rapor 4. tur bolum 6)
     headers_txt = "\n".join([
         "/*",

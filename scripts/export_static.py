@@ -160,16 +160,14 @@ def main() -> int:
     from app.web import default_models as _dm
     from app.web import queries as _q
 
-    populer = []
-    with _SL2() as db2:
-        for row in _q.price_rows(db2):
-            if _dm.is_indexable(row):
-                populer.append(row)
-            if len(populer) >= 8:
-                break
+    # --- Karsilastirma ciftleri (TEK kaynak: app.web.compare_pairs) ---
+    from app.web.compare_pairs import comparison_pairs
 
-    import itertools
-    for a, b in itertools.islice(itertools.combinations(populer, 2), 20):
+    with _SL2() as db2:
+        pair_rows = comparison_pairs(_q.price_rows(db2))
+
+    print(f"[cmp] {len(pair_rows)} karsilastirma cifti secildi")
+    for a, b in pair_rows:
         ka = f"{a.provider_slug}|{a.slug}|{a.variant or ''}"
         kb = f"{b.provider_slug}|{b.slug}|{b.variant or ''}"
         resp = client.get("/karsilastir", params=[("models", ka), ("models", kb),
@@ -223,9 +221,14 @@ def main() -> int:
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         "",
         # MIME: yalnizca JSON uclari json; onay/iptal HTML doner (rapor 5. tur Hata 7).
+        #
+        # DIKKAT (19.11.2026): burada X-Robots-Tag: noindex VARDI. robots.txt ise
+        # "Allow: /api/v1/" diyordu. Iki sinyal CELISIYORDU: Google "robots izin
+        # veriyor ama sayfa noindex" gorunce taramayi birakiyor; API sayfasi
+        # indekslenemiyordu. Site "ucretsiz JSON API" vaat ediyor, o yuzden noindex
+        # KALDIRILDI. Form/yazma uclari asagida noindex olarak kaliyor.
         "/api/v1/*",
         "  Content-Type: application/json; charset=utf-8",
-        "  X-Robots-Tag: noindex",
         "",
         "/api/uyari",
         "  Content-Type: application/json; charset=utf-8",
@@ -358,6 +361,7 @@ def main() -> int:
     # sitemap + robots + static
     (DIST / "sitemap.xml").write_bytes(client.get("/sitemap.xml").content)
     (DIST / "robots.txt").write_bytes(client.get("/robots.txt").content)
+    (DIST / "rss.xml").write_bytes(client.get("/rss.xml").content)
     shutil.copytree(ROOT / "backend" / "app" / "web" / "static", DIST / "static", dirs_exist_ok=True)
 
     # Kok dizin: GERCEK 301 benzeri yonlendirme (meta refresh DEGIL).

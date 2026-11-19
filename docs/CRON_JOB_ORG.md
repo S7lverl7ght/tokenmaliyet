@@ -1,75 +1,70 @@
-# Dış Tetikleyici Kurulumu — cron-job.org (13.11.2026)
+# Dış Tetikleyici — cron-job.org (GÜNCELLENDİ 19.11.2026)
 
-## Neden gerekli
+## Durum: 422 hatası alıyorsunuz
 
-GitHub Actions'ın `schedule` (cron) tetikleyicisi **garantili değil**.
-Ölçüm: 12.11.2026 22:50'de 10 dakikalık test cron'u kuruldu, **9+ saat**
-boyunca hiç tetiklenmedi (0 çalışma). GitHub resmî dokümanı:
+cron-job.org panelinde her çalışma şunu gösteriyor:
 
-> "The schedule event can be delayed during periods of high loads...
-> some queued jobs may be dropped."
+```
+Başarısız (HTTP hatası) 422 Unprocessable Entity
+```
 
-## Çözüm: cron-job.org (ücretsiz)
+## Kesin neden (test edildi)
 
-### Kurulan iş
+GitHub `workflow/dispatches` ucu, gövde yoksa veya yanlışsa **422** döner.
+Dört senaryo test edildi:
+
+| Gönderilen gövde | Sonuç |
+|---|---|
+| (gövde yok) | `422 — nil is not an object` |
+| `{}` | `422 — "ref" wasn't supplied` |
+| `{"ref":"master"}` | `422 — No ref found for: master` |
+| **`{"ref":"main"}`** | **204 OK** |
+
+Yani panelde **gövde (body) alanı boş** kalmış veya `master` yazılmış.
+
+## Doğru yapılandırma
 
 | Alan | Değer |
 |---|---|
-| Başlık | TokenMaliyet veri yenileme |
 | URL | `https://api.github.com/repos/S7lverl7ght/tokenmaliyet/actions/workflows/refresh.yml/dispatches` |
-| Yöntem | **POST** |
-| Gövde | `{"ref":"main"}` |
-| Zamanlama | `0 */6 * * *` (6 saatte bir) |
-| Saat dilimi | Europe/Istanbul |
-| Durum | Aktif (yeşil) |
+| Yöntem | `POST` |
+| **Gövde (Body)** | `{"ref":"main"}` |
+| İçerik türü | `application/json` |
+| Başlık | `Authorization: Bearer <PAT>` |
+| Başlık | `Accept: application/vnd.github+json` |
+| Başlık | `User-Agent: cron-job-org` (zorunlu — GitHub UA'sız isteği reddeder) |
 
-### Header'lar
+**Kritik:** `Authorization` başlığında `Bearer ` öneki (boşluk dahil) olmalı.
 
+## 422 alıyorsanız sırayla kontrol edin
+
+1. **Gövde boş mu?** → `{"ref":"main"}` yazın.
+2. **`master` mı yazıyor?** → dal adı `main`.
+3. **Content-Type** `application/json` mı?
+4. **User-Agent** başlığı var mı? (yoksa GitHub 403 verir)
+5. **PAT süresi dolmuş mu?** → 401 alırsınız, 422 değil.
+
+## Artık şart mı?
+
+**Hayır, ama faydalı.** 19.11.2026'da `refresh.yml` zamanlaması
+**6 saatte bir → 2 saatte bir** yapıldı. Ölçüm: GitHub'ın kendi cron'u
+8+ saat gecikiyordu (03:10Z yerine 11:30Z). 2 saatte bir denemede gün içinde
+birkaç çalışma mutlaka düşer.
+
+Yine de dış tetikleyici **belirleyici zamanlama** sağlar (ör. her sabah 06:00'da
+kesin çalışsın istiyorsanız). Kurulu kalabilir; bozukken zararı yok, çünkü
+GitHub cron'u zaten çalışıyor.
+
+## Kontrol komutu
+
+```powershell
+curl.exe -sS -o NUL -w "%{http_code}\n" -X POST \
+  "https://api.github.com/repos/S7lverl7ght/tokenmaliyet/actions/workflows/refresh.yml/dispatches" \
+  -H "Authorization: Bearer $env:GITHUB_PAT" \
+  -H "Accept: application/vnd.github+json" \
+  -H "User-Agent: cron-job-org" \
+  -H "Content-Type: application/json" \
+  -d '{"ref":"main"}'
 ```
-Authorization: Bearer <GITHUB_PAT>
-Content-Type: application/json
-```
 
-### Doğrulama (uçtan uca)
-
-Aynı isteği elle göndererek test ettim:
-
-```
-POST .../refresh.yml/dispatches
-Body: {"ref":"main"}
--> 204 No Content          (GitHub kabul etti)
--> GitHub Actions: workflow_dispatch, 08:08 TR
--> 18/18 adım SUCCESS (deploy dahil)
-```
-
-## Artık 3 katmanlı yedeklilik var
-
-| Tetikleyici | Sıklık | Bağımlılık |
-|---|---|---|
-| GitHub `push` | Kod gönderince | Elle |
-| GitHub `schedule` | 06:10 / 18:10 TR | Garanti değil |
-| **cron-job.org** | **6 saatte bir** | GitHub dışı |
-
-Bir tanesi çalışmasa diğerleri devreye girer.
-
-## Not: PAT süresi
-
-Kullanılan GitHub PAT (`ghp_...`) **30 gün** geçerli (12.12.2026'ya kadar).
-Süresi dolunca cron-job.org isteği 401 alır.
-
-**Yenileme:** GitHub → Settings → Developer settings → Personal access
-tokens → yeni token → cron-job.org'da ilgili işin `Authorization`
-header'ını güncelleyin.
-
-Uzun vadeli çözüm: fine-grained token ile 1 yıl geçerlilik verin.
-
-## İzleme
-
-- cron-job.org: https://console.cron-job.org/jobs
-- GitHub Actions: https://github.com/S7lverl7ght/tokenmaliyet/actions
-- Site: https://tokenmaliyet.com
-
-## Sonuç
-
-Site ve form **PC kapalıyken kesin çalışır**. Veri yenileme artık
-**6 saatte bir, GitHub cron'undan bağımsız** olarak garanti altında.
+Beklenen: `204`. 422 alırsanız gövde/Content-Type hatalı.

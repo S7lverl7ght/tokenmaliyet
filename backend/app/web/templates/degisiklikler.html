@@ -22,7 +22,7 @@
     {% if changes %}
     <div class="table-wrap mt-3">
       <table class="prices" style="table-layout:auto">
-        <caption class="sr-only">{{ 'Son {{ days }} günde fiyatı değişen modeller' if lang == 'en' else 'Son {{ days }} günde fiyatı değişen modeller' }}</caption>
+        <caption class="sr-only">{{ 'Models whose price changed in the last' if lang == 'en' else 'Son' }} {{ days }} {{ 'days' if lang == 'en' else 'günde fiyatı değişen modeller' }}</caption>
         <thead><tr>
           <th scope="col">Model</th>
           <th scope="col">Kalem</th>
@@ -61,7 +61,7 @@
     <p class="help mt-2">Yanlış bir sayı yayımlandığında sessizce değiştirmiyoruz; eski değer burada kalır.</p>
     {% if corrections %}
     <details class="disclosure mt-3">
-      <summary>{{ 'Teknik doğrulama günlüklerini göster ({{ corrections|length }} kayıt)' if lang == 'en' else 'Teknik doğrulama günlüklerini göster ({{ corrections|length }} kayıt)' }}</summary>
+      <summary>{{ 'Show technical verification logs' if lang == 'en' else 'Teknik doğrulama günlüklerini göster' }} ({{ corrections|length }} {{ 'records' if lang == 'en' else 'kayıt' }})</summary>
       <div class="body">
         <ul class="text-sm" style="padding-left:var(--sp-5);display:grid;gap:var(--sp-2)">
           {% for c in corrections %}

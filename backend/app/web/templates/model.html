@@ -31,7 +31,9 @@
         <h2 id="fiyatlar-baslik" style="font-size:var(--fs-h3)">Fiyat kalemleri</h2>
         <div class="table-wrap mt-4">
           <table class="prices" style="table-layout:auto">
-            <caption class="sr-only">{{ '{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı' if lang == 'en' else '{{ primary.name }} için fiyat kalemleri, birim ve TRY karşılığı' }}</caption>
+            {# DIKKAT: ic ice {{ }} YAZILMAZ. Once yanlislikla '{{ primary.name }}' metin
+               olarak gomulmustu; sayfada ham "{{ primary.name }}" gorunuyordu. #}
+            <caption class="sr-only">{{ primary.name }} {{ 'price items, unit and TRY equivalent' if lang == 'en' else 'için fiyat kalemleri, birim ve TRY karşılığı' }}</caption>
             <thead>
               <tr>
                 <th scope="col">Kalem</th>

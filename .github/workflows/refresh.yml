@@ -2,8 +2,14 @@ name: Veri yenile ve yayinla
 
 on:
   schedule:
-    # 06:10 ve 18:10 TR (UTC+3) -> 03:10 ve 15:10 UTC
-    - cron: "10 3,15 * * *"
+    # GitHub schedule GARANTILI DEGIL: olcumde 8+ saat gecikti (03:10Z yerine 11:30Z).
+    # GitHub resmi dokumani: "yinelenen isler yuk altinda gecikebilir veya dusurulebilir".
+    #
+    # Cozum: sabit 2 saatte bir tetikle. GitHub gecikse bile gun icinde bir kac
+    # calisma mutlaka duser; 6 saatte bir olsaydi tek bir kacirma tum gunu kaybettirirdi.
+    # Uretim adimlari (toplama/derleme) zaten idempotent: ayni gun 12 kez calissa da
+    # ayni sonucu verir, mukerrer kayit olusmaz.
+    - cron: "10 */2 * * *"
   workflow_dispatch:
   push:
     branches: [main]

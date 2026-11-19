@@ -19,8 +19,8 @@ from . import default_models as web_defaults
 from . import queries
 from ..collectors import COLLECTORS
 from .affiliate import with_affiliate
-from .render import (PROVIDER_LABELS, SITE_URL, TEMPLATES, base_context, canonical_url,
-                     configure, price_value, turkce_multiplier)
+from .render import (PROVIDER_LABELS, SITE_NAME, SITE_URL, TEMPLATES, base_context,
+                     canonical_url, configure, price_value, turkce_multiplier)
 
 router = APIRouter()
 configure()
@@ -1335,7 +1335,80 @@ def robots():
             # Filtre parametreleri: ayni sayfanin sonsuz varyanti (kopya icerik).
             "Disallow: /fiyatlar?\n"
             "\n"
-            f"Sitemap: {SITE_URL}/sitemap.xml\n")
+            f"Sitemap: {SITE_URL}/sitemap.xml\n"
+            f"# RSS: fiyat hareketleri akisi\n"
+            f"# {SITE_URL}/rss.xml\n")
+
+
+@router.get("/rss.xml", include_in_schema=False)
+def rss(db: Session = Depends(get_session)) -> Response:
+    """RSS 2.0: fiyat hareketleri + guncel sayfalar.
+
+    Neden: sitede dagitim kanali yoktu. RSS, okuyucu uygulamalari ve Google
+    Discover/News icin gercek bir besleme; ayrica tarayicilara "site canli"
+    sinyali verir.
+    """
+    import datetime as _dt
+    from xml.sax.saxutils import escape as _esc
+
+    rows = queries.price_rows(db)
+    last_obs = queries.last_checked(db)
+    now = _dt.datetime.now(_dt.timezone.utc)
+    stamp = (last_obs or now).strftime("%a, %d %b %Y %H:%M:%S +0000")
+
+    items: list[str] = []
+
+    def add(title: str, link: str, desc: str, pub: str) -> None:
+        items.append(
+            "<item>"
+            f"<title>{_esc(title)}</title>"
+            f"<link>{_esc(link)}</link>"
+            f"<guid isPermaLink=\"true\">{_esc(link)}</guid>"
+            f"<description>{_esc(desc)}</description>"
+            f"<pubDate>{pub}</pubDate>"
+            "</item>"
+        )
+
+    # 1) Bu hafta guncellenen en pahali/populer modeller
+    for r in sorted(rows, key=_popular_key)[:12]:
+        pin = price_value(r.dim("input"))[0]
+        pout = price_value(r.dim("output"))[0]
+        if pin is None or pout is None:
+            continue
+        add(
+            f"{r.name} fiyatı: {pin:g} USD girdi / {pout:g} USD çıktı (1M token)",
+            canonical_url(f"/modeller/{r.provider_slug}/{r.slug}"),
+            f"{r.provider_name} · girdi {pin:g} USD/1M, çıktı {pout:g} USD/1M. "
+            f"Kaynak: {r.source_url} · doğrulama {r.observed_at.strftime('%d.%m.%Y')}",
+            stamp,
+        )
+
+    # 2) Karsilastirma sayfalari
+    from .compare_pairs import comparison_pairs
+
+    for a, b in comparison_pairs(rows)[:10]:
+        slug = f"{a.slug}-vs-{b.slug}".replace("/", "-").lower()[:120]
+        add(
+            f"{a.name} vs {b.name} — aylık maliyet karşılaştırması",
+            canonical_url(f"/karsilastir/{slug}"),
+            f"100M girdi + 25M çıktı token varsayımıyla iki modelin aylık maliyeti.",
+            stamp,
+        )
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">'
+        "<channel>"
+        f"<title>{_esc(SITE_NAME)} — AI API fiyat hareketleri</title>"
+        f"<link>{_esc(SITE_URL)}/fiyatlar/</link>"
+        "<description>AI API ve GPU fiyatları: değişimler, karşılaştırmalar ve maliyet hesaplama.</description>"
+        "<language>tr</language>"
+        f"<lastBuildDate>{stamp}</lastBuildDate>"
+        f'<atom:link href="{_esc(SITE_URL)}/rss.xml" rel="self" type="application/rss+xml"/>'
+        + "".join(items)
+        + "</channel></rss>"
+    )
+    return Response(xml, media_type="application/rss+xml; charset=utf-8")
 
 
 @router.get("/sitemap.xml", include_in_schema=False)
@@ -1414,18 +1487,12 @@ def sitemap(db: Session = Depends(get_session)) -> Response:
             f"<lastmod>{lastmod}</lastmod><changefreq>daily</changefreq></url>"
         )
 
-    # Programatik karsilastirma sayfalari (export ile ayni 20 cift).
-    from . import default_models as _dm2
+    # Programatik karsilastirma sayfalari — export_static.py ile AYNI kaynak.
+    # ONEMLI: burada ayri bir "ilk 8 modelin kombinasyonu" mantigi vardi; export
+    # 60 cift uretirken sitemap 21 gosteriyordu. Artik tek kaynak kullanilir.
+    from .compare_pairs import comparison_pairs as _cmp_pairs
 
-    _pop: list = []
-    for _row in queries.price_rows(db):
-        if _dm2.is_indexable(_row):
-            _pop.append(_row)
-        if len(_pop) >= 8:
-            break
-    import itertools as _it
-
-    for _a, _b in _it.islice(_it.combinations(_pop, 2), 20):
+    for _a, _b in _cmp_pairs(queries.price_rows(db)):
         _slug = f"{_a.slug}-vs-{_b.slug}".replace("/", "-").lower()[:120]
         body.append(
             f"<url><loc>{canonical_url(f'/karsilastir/{_slug}')}</loc>"

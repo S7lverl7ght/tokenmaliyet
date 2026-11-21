@@ -210,16 +210,17 @@
       <figcaption class="text-xs text-muted" style="margin-bottom:var(--sp-2)">{{ t('cmp.monthly_chart') }}</figcaption>
       <div style="display:grid;gap:var(--sp-2)">
         <div>
+          {# data-role: recalc() bu dugumleri gunceller. Onceden grafik SABIT kaliyordu. #}
           <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">
-            <span>{{ result.from_name }}</span><span class="num">{{ result.from_usd|tl_dyn }} USD</span>
+            <span data-role="chart-from-name">{{ result.from_name }}</span><span class="num" data-role="chart-from-usd">{{ result.from_usd|tl(2) }} USD</span>
           </div>
-          <div class="bar" style="height:14px"><span style="width:100%;background:var(--danger)"></span></div>
+          <div class="bar" style="height:14px"><span data-role="chart-from-bar" style="width:100%;background:var(--danger)"></span></div>
         </div>
         <div>
           <div class="flex" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--muted)">
-            <span>{{ result.to_name }}</span><span class="num">{{ result.to_usd|tl_dyn }} USD</span>
+            <span data-role="chart-to-name">{{ result.to_name }}</span><span class="num" data-role="chart-to-usd">{{ result.to_usd|tl(2) }} USD</span>
           </div>
-          <div class="bar" style="height:14px"><span style="width:{{ result.to_bar }}%;background:var(--success)"></span></div>
+          <div class="bar" style="height:14px"><span data-role="chart-to-bar" style="width:{{ result.to_bar }}%;background:var(--success)"></span></div>
         </div>
       </div>
     </figure>
@@ -236,7 +237,10 @@
           <li>{{ 'Input price: ' if lang == 'en' else 'Girdi fiyatı: ' }}{{ result.to_in|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.to_name }})</li>
           <li>{{ 'Output price: ' if lang == 'en' else 'Çıktı fiyatı: ' }}{{ result.to_out|tl_dyn }} USD {{ '/ 1M tokens (' if lang == 'en' else '/ 1M token (' }}{{ result.to_name }})</li>
           <li>{{ 'FX: 1 USD = ' if lang == 'en' else 'Kur: 1 USD = ' }}{{ fx_rate|tl(3) }} TRY{% if fx_date %} ({{ fx_date }} tarihli){% endif %}; {% if lang == 'en' %}exchange-rate movement does not change the USD cost.{% else %}kur değişimi USD maliyetini değiştirmez.{% endif %}</li>
-          <li>{{ 'Cache and batch discounts are not included.' if lang == 'en' else 'Önbellek (cache) ve toplu (batch) indirimleri hesaba katılmamıştır.' }}</li>
+          {# Onbellek metni ARTIK DINAMIK: form onbellek oranini hesaba katiyor,
+             bu yuzden "onbellek hesaba katilmadi" demek celiskiydi (21.11.2026). #}
+          <li data-role="cache-note" data-cache-off="{{ 'Cache discounts are not included (cache read set to 0%).' if lang == 'en' else 'Önbellek indirimi hesaba katılmamıştır (önbellek okuma %0).' }}" data-cache-on="{{ 'Cache read is included: the given share of input tokens is billed at the cache rate.' if lang == 'en' else 'Önbellek okuması hesaba katıldı: girdinin belirtilen yüzdesi önbellek fiyatıyla faturalanır.' }}">{{ 'Cache discounts are not included (cache read set to 0%).' if lang == 'en' else 'Önbellek indirimi hesaba katılmamıştır (önbellek okuma %0).' }}</li>
+          <li>{{ 'Batch (bulk) discounts are not included.' if lang == 'en' else 'Toplu (batch) indirimleri hesaba katılmamıştır.' }}</li>
           <li>{{ 'Quality, latency and context window are not compared; no equal-quality assumption is made.' if lang == 'en' else 'Kalite, gecikme ve bağlam penceresi karşılaştırılmamıştır; aynı kalite varsayımı yapılmamaktadır.' }}</li>
         </ul>
       </div>
@@ -441,6 +445,11 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
         if(!target) return;
         target.value = Number(btn.dataset.value).toLocaleString("tr-TR");
         target.focus();
+        /* ONEMLI (21.11.2026): input olayini elle tetikle.
+           Programatik value atamasi "input" olayini DOGURMAZ; bu yuzden hizli
+           token butonlarina basinca kartlar ve grafik guncellenmiyordu. */
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.dispatchEvent(new Event("change", { bubbles: true }));
       });
     });
   });
@@ -518,6 +527,13 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
     if (el) el.textContent = text;
   }
 
+  /* TEK yuvarlama kaynagi (21.11.2026).
+     Once kartlar 2 ondalik, grafik ise tl_dyn ile farkli basamak kullaniyordu;
+     ayni deger iki yerde farkli gorunuyordu (211,83 vs 211,82).
+     Artik hem kart hem grafik bu fonksiyonlardan gecer. */
+  function usdFixed(n) { return CALC.fmt(n, 2); }
+  function tryFixed(n) { return CALC.fmt(n, 0); }
+
   function recalc() {
     var section = document.getElementById("sonuc-alani");
     if (!section || !OPTIONS.length) return;
@@ -525,8 +541,10 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
     var fx = Number(section.dataset.fx) || CALC.fx || 0;
     var trMult = Number(section.dataset.trMult) || CALC.trMult;
 
-    var fromKey = document.getElementById("from").value;
-    var toKey = document.getElementById("to").value;
+    var fromEl = document.getElementById("from");
+    var toEl = document.getElementById("to");
+    if (!fromEl || !toEl) return;
+    var fromKey = fromEl.value, toKey = toEl.value;
     if (!fromKey || !toKey) return;
 
     var fromOpt = OPTIONS.find(function (o) { return o.value === fromKey; });
@@ -538,29 +556,51 @@ window.__MODEL_OPTIONS__ = {{ options|tojson }};
     var dilEl = document.getElementById("dil");
     var mult = (dilEl && dilEl.value === "tr") ? trMult : 1.0;
     var cacheEl = document.getElementById("cache");
-    var cacheShare = 0;
+    var cachePct = 0;
     if (cacheEl) {
       var cv = parseFloat(String(cacheEl.value || "0").replace(/[^\d.,]/g, "").replace(",", "."));
-      if (isFinite(cv)) cacheShare = Math.max(0, Math.min(95, cv)) / 100;
+      if (isFinite(cv)) cachePct = Math.max(0, Math.min(95, cv));
     }
+    var cacheShare = cachePct / 100;
 
     var a = CALC.cost(fromOpt, inTok, outTok, mult, cacheShare);
     var b = CALC.cost(toOpt, inTok, outTok, mult, cacheShare);
     var diff = a.total - b.total;
     var pct = a.total > 0 ? (diff / a.total) * 100 : 0;
 
+    /* --- Sonuc kartlari --- */
     setText("from-name", fromOpt.label);
-    setText("from-usd", CALC.fmt(a.total, 2));
-    setText("from-try", fx ? CALC.fmt(a.total * fx, 0) : "—");
+    setText("from-usd", usdFixed(a.total));
+    setText("from-try", fx ? tryFixed(a.total * fx) : "—");
     setText("to-name", toOpt.label);
-    setText("to-usd", CALC.fmt(b.total, 2));
-    setText("to-try", fx ? CALC.fmt(b.total * fx, 0) : "—");
-    setText("diff-usd", CALC.fmt(diff, 2));
-    setText("diff-try", fx ? CALC.fmt(diff * fx, 0) : "—");
-    setText("year-try", fx ? CALC.fmt(diff * fx * 12, 0) : "—");
+    setText("to-usd", usdFixed(b.total));
+    setText("to-try", fx ? tryFixed(b.total * fx) : "—");
+    setText("diff-usd", usdFixed(diff));
+    setText("diff-try", fx ? tryFixed(diff * fx) : "—");
+    setText("year-try", fx ? tryFixed(diff * fx * 12) : "—");
 
     var pctEl = document.querySelector('[data-role="pct"]');
     if (pctEl) pctEl.textContent = "%" + CALC.fmt(Math.abs(pct), 1);
+
+    /* --- GRAFIK: AYNI dongude guncellenir (onceden sabit kaliyordu) --- */
+    var top = Math.max(a.total, b.total) || 1;
+    setText("chart-from-name", fromOpt.label);
+    setText("chart-from-usd", usdFixed(a.total) + " USD");
+    setText("chart-to-name", toOpt.label);
+    setText("chart-to-usd", usdFixed(b.total) + " USD");
+    var fromBar = document.querySelector('[data-role="chart-from-bar"]');
+    var toBar = document.querySelector('[data-role="chart-to-bar"]');
+    if (fromBar) fromBar.style.width = Math.max(2, (a.total / top) * 100) + "%";
+    if (toBar) toBar.style.width = Math.max(2, (b.total / top) * 100) + "%";
+
+    /* --- Onbellek varsayim metni: form ile CELISMEYECEK sekilde guncelle --- */
+    var cacheNote = document.querySelector('[data-role="cache-note"]');
+    if (cacheNote) {
+      var on = cachePct > 0;
+      var txtOn = cacheNote.getAttribute("data-cache-on") || cacheNote.textContent;
+      var txtOff = cacheNote.getAttribute("data-cache-off") || cacheNote.textContent;
+      cacheNote.textContent = on ? txtOn : txtOff;
+    }
   }
 
   // Secim/token/onbellek degisimlerini dinle

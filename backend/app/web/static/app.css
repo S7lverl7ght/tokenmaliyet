@@ -332,7 +332,10 @@ textarea{
   padding:12px; font:inherit; font-size:var(--fs-sm); resize:vertical;
 }
 textarea:focus{outline:none; border-color:var(--primary); box-shadow:var(--focus)}
-input[type="text"],input[type="search"],input[type="number"],select{
+/* input[type="email"] eklendi (21.11.2026): bulten kutusundaki e-posta alani
+   bu seciciden yararlanmadigi icin min-height/kenarlik almiyor ve yanindaki
+   "Abone ol" butonundan kisa kaliyordu. */
+input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="tel"],input[type="url"],select{
   width:100%; appearance:none; background:var(--surface); color:var(--ink);
   border:1px solid var(--border-strong); border-radius:var(--r-sm);
   padding:9px 12px; font:inherit; font-size:var(--fs-sm); min-height:40px;
@@ -480,6 +483,10 @@ table.prices tbody tr:target{background:var(--primary-soft)}
   display:flex; gap:var(--sp-3); padding:var(--sp-3) var(--sp-4); border-radius:var(--r-sm);
   border:1px solid var(--border); background:var(--surface-2); color:var(--ink-soft); font-size:var(--fs-sm);
 }
+/* .notice-ok eklendi (21.11.2026): iletisim ve bulten formlari basarili
+   gonderimde "notice-ok" sinifini kullaniyor ama CSS'te karsiligi yoktu;
+   bu yuzden basari mesaji renksiz/kenarliksiz goruntuleniyordu. */
+.notice-ok{background:var(--success-soft, #ECFDF5); border-color:var(--success, #059669); color:var(--success, #065F46)}
 .notice-warn{background:var(--warn-soft); border-color:var(--warn); color:var(--warn)}
 .notice-danger{background:var(--danger-soft); border-color:var(--danger); color:var(--danger)}
 .notice-info{background:var(--info-soft); border-color:var(--info); color:var(--info)}

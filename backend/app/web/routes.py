@@ -527,8 +527,20 @@ def media_cost_page(
 
     rows = mc.compare(group, qty) if qty > 0 else []
 
+    # TUM gruplarin satirlari istemciye verilir (21.11.2026).
+    # Neden: statik sitede "Tur" secildiginde sunucu yok; tablo ses modellerinde
+    # kaliyordu. Artik JS, secilen grubun satirlarini bu JSON'dan cizip
+    # miktara gore aninda hesaplar. Sunucu ile AYNI fonksiyon (mc.compare) kullanilir.
+    all_rows = {g: mc.compare(g, qty_by_group) for g, qty_by_group in {
+        "tts": qty if group == "tts" else float(defaults["tts"]),
+        "stt": qty if group == "stt" else float(defaults["stt"]),
+        "image": qty if group == "image" else float(defaults["image"]),
+        "video": qty if group == "video" else float(defaults["video"]),
+    }.items()}
+
     ctx = base_context(db, request, nav="hesaplayici",
-                       grup=group, miktar=raw, birim=unit_labels[group], rows=rows)
+                       grup=group, miktar=raw, birim=unit_labels[group], rows=rows,
+                       all_rows=all_rows, unit_labels=unit_labels)
     ctx["canonical"] = canonical_url("/hesaplayici/ses-maliyeti")
     return TEMPLATES.TemplateResponse(request, "ses_maliyeti.html", ctx)
 

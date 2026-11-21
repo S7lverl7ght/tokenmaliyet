@@ -36,11 +36,11 @@
     </fieldset>
   </form>
 
-  {% if rows %}
-  <section class="mt-5" aria-labelledby="sonuc-baslik">
+  {# Tablo JS ile de cizilir: "Tur" degisince sunucu olmadan icerik degisir. #}
+  <section class="mt-5" aria-labelledby="sonuc-baslik" id="sonuc-bolumu">
     <h2 id="sonuc-baslik" style="font-size:var(--fs-h3)">{{ 'Result' if lang == 'en' else 'Sonuç' }} · {{ miktar }} {{ birim }}</h2>
     <div class="table-wrap">
-      <table class="prices">
+      <table class="prices" id="mediaTable">
         <caption>{{ 'Sorted cheapest first. List prices, excluding tax.' if lang == 'en' else 'En ucuzdan pahalıya. Liste fiyatları, vergi hariç.' }}</caption>
         <thead>
           <tr>
@@ -56,7 +56,10 @@
           {% for r in rows %}
           {# data-* : istemci motoru (asagidaki script) bu degerlerle aninda yeniden hesaplar.
              Sunucu ve tarayici AYNI bolen/fiyat degerini kullanir -> sonuc tutarli. #}
-          <tr data-unit-price="{{ r.usd_per_unit }}" data-divisor="{{ r.divisor }}">
+          {# data-* : JS hem yeniden hesaplar hem tabloyu yeniden cizebilir. #}
+          <tr data-unit-price="{{ r.usd_per_unit }}" data-divisor="{{ r.divisor }}"
+              data-provider="{{ r.provider }}" data-model="{{ r.model }}" data-note="{{ r.note }}"
+              data-unit="{{ r.unit }}" data-source="{{ r.source }}" data-affiliate="{{ 1 if r.affiliate else 0 }}">
             <td data-label="{{ 'Provider' if lang == 'en' else 'Sağlayıcı' }}">{{ r.provider }}</td>
             <td data-label="{{ 'Model' if lang == 'en' else 'Model' }}"><div class="cell-model"><span class="name">{{ r.model }}</span>{% if r.note %}<span class="variant">{{ r.note }}</span>{% endif %}</div></td>
             <td data-label="{{ 'Unit price' if lang == 'en' else 'Birim fiyat' }}" class="num text-sm">{{ r.usd_per_unit|tl_dyn }} USD / {{ r.unit }}</td>
@@ -69,7 +72,6 @@
       </table>
     </div>
   </section>
-  {% endif %}
 
   <section class="surface surface-pad mt-5">
     <h2 style="font-size:var(--fs-h3)">{{ 'How is this calculated?' if lang == 'en' else 'Nasıl hesaplanıyor?' }}</h2>
@@ -93,22 +95,35 @@
 </div>
 {% endblock %}
 {% block scripts %}
+{# Tum gruplarin satirlari: "Tur" degisiminde tabloyu istemci tarafinda cizmek icin.
+   Sunucu ile AYNI hesap (media_cost.compare) kullanildi; uydurma veri yok. #}
 <script>
-/* ---------- Ses/medya maliyeti: istemci tarafi anlik hesap ----------
-   Statik sitede sunucu yok; "Hesapla" demeden de sonuc guncellenmeli.
-   Bolen ve birim fiyat SUNUCUDAN gelir (data-divisor / data-unit-price),
-   boylece tarayici ile sunucu ayni sayiyi uretir. */
+window.__MEDIA_ROWS__ = {{ all_rows|tojson }};
+</script>
+<script>
+/* ---------- Ses/medya maliyeti: istemci tarafi motor ----------
+   (21.11.2026'da yeniden yazildi)
+
+   ONCEKI HATALAR:
+     1) "Tur" degisince tablo ses modellerinde kaliyordu (tablo sunucudan geliyordu).
+     2) "Hesapla" formu sayfayi yeniden yukluyor ve miktar varsayilana donuyordu.
+
+   COZUM: tum gruplarin satirlari JSON olarak gomulur; tur degisince tablo
+   istemci tarafinda yeniden cizilir, hesaplama sunucuyla AYNI kuralla yapilir.
+   Sunucu hala calisir (JS kapaliysa klasik GET formu devreye girer). */
 (function(){
   var input = document.getElementById("miktar");
   var grup = document.getElementById("grup");
   var form  = document.getElementById("mediaForm");
+  var table = document.getElementById("mediaTable");
   if (!input || !form) return;
 
-  var body = document.body;
-  var FX = Number(body.dataset.fx) || 0;
+  var FX = Number(document.body.dataset.fx) || 0;
   var EN = document.documentElement.lang === "en";
 
-  /* Grup basina: birim etiketi ve varsayilan miktar (sunucudaki defaults ile ayni) */
+  /* Tum gruplarin satirlari (sunucudan, compare() ile ayni) */
+  var ALL = window.__MEDIA_ROWS__ || {};
+
   var GROUPS = {
     tts:   { unit: EN ? "characters" : "karakter", def: "10000" },
     stt:   { unit: EN ? "minutes"    : "dakika",   def: "60"    },
@@ -125,6 +140,12 @@
     video: EN ? "Characters for voice-over, minutes for transcription, count for images, seconds for video."
               : "Seslendirme için karakter, transkripsiyon için dakika, görsel için adet, video için saniye."
   };
+  var UNITS = {
+    tts:   EN ? "characters" : "karakter",
+    stt:   EN ? "minutes"    : "dakika",
+    image: EN ? "images"     : "görsel",
+    video: EN ? "seconds"    : "saniye"
+  };
 
   function num(el) {
     return parseFloat(String(el.value || "").replace(/[^0-9.,]/g, "").replace(",", ".")) || 0;
@@ -135,52 +156,104 @@
   function fmtTry(n) {
     return n.toLocaleString(EN ? "en-US" : "tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
-
-  function update() {
-    var q = num(input);
-    var rows = document.querySelectorAll("table.prices tbody tr");
-    Array.prototype.forEach.call(rows, function (tr) {
-      var unitPrice = parseFloat(tr.dataset.unitPrice) || 0;
-      var divisor = parseFloat(tr.dataset.divisor) || 1;
-      var usd = (q / divisor) * unitPrice;
-      var cellUsd = tr.querySelector(".cell-total-usd");
-      var cellTry = tr.querySelector(".cell-total-try");
-      if (cellUsd) cellUsd.textContent = fmtUsd(usd);
-      if (cellTry) cellTry.textContent = FX ? ("≈ " + fmtTry(usd * FX)) : "—";
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
+  }
 
-    /* Sonuc basligindaki miktar/birim de aninda guncellensin */
+  /* Bir satiri HTML'e cevir (sunucu sablonunun ayni yapisi) */
+  function rowHtml(r, q) {
+    var usd = (q / (r.divisor || 1)) * r.usd_per_unit;
+    var tryTxt = FX ? ("≈ " + fmtTry(usd * FX) + " ₺") : "—";
+    var L = EN ? {
+      provider: "Provider", model: "Model", unit: "Unit price",
+      total: "Total (USD)", source: "Source", official: "Official page", aff: "affiliate"
+    } : {
+      provider: "Sağlayıcı", model: "Model", unit: "Birim fiyat",
+      total: "Toplam (USD)", source: "Kaynak", official: "Resmî sayfa", aff: "ortaklık"
+    };
+    var rel = r.affiliate ? "noopener" : "noopener nofollow";
+    var aff = r.affiliate
+      ? '<span class="variant" title="' + (EN ? "Affiliate link" : "Ortaklık bağlantısı") + '">' + L.aff + "</span>"
+      : "";
+    var note = r.note ? '<span class="variant">' + esc(r.note) + "</span>" : "";
+    return '<tr data-unit-price="' + r.usd_per_unit + '" data-divisor="' + (r.divisor || 1) + '">' +
+      '<td data-label="' + L.provider + '">' + esc(r.provider) + "</td>" +
+      '<td data-label="' + L.model + '"><div class="cell-model"><span class="name">' + esc(r.model) + "</span>" + note + "</div></td>" +
+      '<td data-label="' + L.unit + '" class="num text-sm">' + fmtUsd(r.usd_per_unit) + " USD / " + esc(r.unit) + "</td>" +
+      '<td data-label="' + L.total + '" class="num"><strong class="cell-total-usd">' + fmtUsd(usd) + "</strong> USD</td>" +
+      '<td data-label="TRY" class="num text-sm"><span class="cell-total-try">' + tryTxt + "</span></td>" +
+      '<td data-label="' + L.source + '" class="text-sm"><a href="' + esc(r.source) + '" target="_blank" rel="' + rel + '">' + L.official + "</a>" + aff + "</td>" +
+      "</tr>";
+  }
+
+  /* Tabloyu tamamen yeniden ciz (tur degisiminde) */
+  function renderTable(group, q) {
+    if (!table) return;
+    var rows = ALL[group] || [];
+    var tbody = table.querySelector("tbody");
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted">' +
+        (EN ? "No data for this category." : "Bu tür için veri yok.") + "</td></tr>";
+      return;
+    }
+    tbody.innerHTML = rows.map(function (r) { return rowHtml(r, q); }).join("");
+  }
+
+  /* Yalnizca toplamlari guncelle (miktar degisiminde) */
+  function updateTotals() {
+    var q = num(input);
+    var group = (grup && grup.value) || "tts";
+    var tbody = table && table.querySelector("tbody");
+    if (tbody) {
+      Array.prototype.forEach.call(tbody.querySelectorAll("tr"), function (tr) {
+        var unitPrice = parseFloat(tr.dataset.unitPrice) || 0;
+        var divisor = parseFloat(tr.dataset.divisor) || 1;
+        var usd = (q / divisor) * unitPrice;
+        var cellUsd = tr.querySelector(".cell-total-usd");
+        var cellTry = tr.querySelector(".cell-total-try");
+        if (cellUsd) cellUsd.textContent = fmtUsd(usd);
+        if (cellTry) cellTry.textContent = FX ? ("≈ " + fmtTry(usd * FX) + " ₺") : "—";
+      });
+    }
+    /* Sonuc basligi: miktar + birim */
     var head = document.getElementById("sonuc-baslik");
-    var g = (grup && grup.value) || "tts";
     if (head) {
-      var label = (GROUPS[g] || GROUPS.tts).unit;
+      var label = UNITS[group] || UNITS.tts;
       var prefix = EN ? "Result" : "Sonuç";
-      head.textContent = prefix + " · " + (q ? q.toLocaleString(EN ? "en-US" : "tr-TR") : "0") + " " + label;
+      var qtyTxt = q ? q.toLocaleString(EN ? "en-US" : "tr-TR") : "0";
+      head.textContent = prefix + " · " + qtyTxt + " " + label;
     }
   }
 
-  input.addEventListener("input", update);
+  input.addEventListener("input", updateTotals);
 
-  /* Grup degisince varsayilan miktari ve birim ipucunu guncelle */
+  /* TUR DEGISIMI: tabloyu yeniden ciz + varsayilan miktari uygula */
   if (grup) {
     grup.addEventListener("change", function () {
       var g = GROUPS[grup.value] || GROUPS.tts;
       input.value = g.def;
       var help = document.getElementById("miktar-help");
       if (help) help.textContent = HELP[grup.value] || HELP.tts;
-      update();
+      renderTable(grup.value, num(input));
+      updateTotals();
     });
   }
 
-  /* Statik sitede form gonderimi sayfayi yeniler; JS varsa engelle, sadece hesapla.
-     (Grup degisimi icin yine de sunucudan yeni tablo gerekir -> sadece miktar engellenir.) */
+  /* ONEMLI: form gonderimini HER ZAMAN engelle (statik sitede sunucu yok).
+     Once yalnizca window.__STATIC__ === true iken engelleniyordu; bu yuzden
+     "Hesapla" sayfayi yeniden yukleyip varsayilan degerlere donuyordu. */
   form.addEventListener("submit", function (e) {
-    if (window.__STATIC__ !== true) return;
     e.preventDefault();
-    update();
+    var group = (grup && grup.value) || "tts";
+    renderTable(group, num(input));
+    updateTotals();
   });
 
-  update();
+  /* Ilk yukleme: mevcut grup icin miktara gore toplamlari senkronla */
+  updateTotals();
 })();
 </script>
 {% endblock %}

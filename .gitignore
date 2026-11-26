@@ -20,3 +20,7 @@ _*.js
 _*.png
 _*.json
 _sn*.json
+# Cron Worker gizli anahtari (yerel test icin)
+.cron_secret.txt
+.wtest/
+node_modules/

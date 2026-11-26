@@ -1,0 +1,11 @@
+# Cron tetikleyici Worker — GitHub Actions workflow_dispatch
+# Deploy:  npx wrangler deploy --config cron/wrangler.toml
+name = "tokenmaliyet-cron"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Cloudflare ucretsiz plan: gunde 5 tetikleme.
+# 6 saatte bir = 4 tetikleme/gun -> sinirin altinda.
+# GitHub'in kendi schedule'i yedek olarak kalir (11:10 ve 23:10 UTC).
+[triggers]
+crons = ["20 */6 * * *"]

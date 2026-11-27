@@ -1,27 +1,27 @@
 {
-  "last_run": "2026-11-26T21:27:36.026047+00:00",
+  "last_run": "2026-11-27T00:21:55.094213+00:00",
   "last_summary": {
-    "started_at": "2026-11-26T21:26:31.037514+00:00",
+    "started_at": "2026-11-27T00:20:52.735137+00:00",
     "only": null,
     "tokens": {
-      "parsed": 1618,
-      "new": 1618,
+      "parsed": 1616,
+      "new": 1616,
       "failed": []
     },
     "qa": {
       "passed": 1561,
-      "failed": 57
+      "failed": 55
     },
     "approval": {
       "approved": 1561,
       "held_for_review": 0
     },
     "gpu": {
-      "quotes": 154,
-      "new": 152,
+      "quotes": 155,
+      "new": 153,
       "failed": []
     },
-    "finished_at": "2026-11-26T21:27:36.026047+00:00"
+    "finished_at": "2026-11-27T00:21:55.094213+00:00"
   },
-  "runs": 67
+  "runs": 68
 }
